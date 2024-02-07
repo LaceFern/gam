@@ -55,6 +55,7 @@ void Server::ProcessRdmaRequest(ibv_wc& wc) {
   epicLog(LOG_DEBUG, "transferred %d (qp_num %d, src_qp %d)", wc.byte_len,
           wc.qp_num, wc.src_qp);
 
+  agent_stats_inst.byte_len = wc.byte_len;
   switch (wc.opcode) {
     case IBV_WC_SEND:
       epicLog(LOG_DEBUG, "get send completion event");
@@ -131,6 +132,8 @@ void Server::ProcessRdmaRequest(ibv_wc& wc) {
       break;
     }
     case IBV_WC_RECV_RDMA_WITH_IMM: {
+      agent_stats_inst.add_starting_point_4st();
+
       epicLog(LOG_DEBUG, "Get recv with IMM completion event");
       char* data = cli->RecvComp(wc);
 
@@ -139,6 +142,9 @@ void Server::ProcessRdmaRequest(ibv_wc& wc) {
       //resource->ClearSlot(wc.wr_id);
       int n = resource->PostRecvSlot(wc.wr_id);
       //epicAssert(n == 1);
+
+      string s = "??? node: poll CQ -> process IBV_WC_RECV_RDMA_WITH_IMM, byte_len = " + to_string(agent_stats_inst.byte_len);
+      agent_stats_inst.add_ending_point_4st(s);
       break;
     }
     default:

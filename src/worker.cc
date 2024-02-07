@@ -189,6 +189,8 @@ void Worker::StartService(Worker* w) {
 #ifdef MULTITHREAD_RECV
       w->ioService.post(boost::bind(RdmaHandler, w, wc[i]));
 #else
+
+      
       w->ProcessRdmaRequest(wc[i]);
 #endif
     }

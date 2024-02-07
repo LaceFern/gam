@@ -37,6 +37,7 @@ void Worker::ProcessRemoteHTable(Client* cli, WorkRequest* wr) {
     wr->status = SUCCESS;
     this->SubmitRequest(cli, wr);
     delete wr;
+
 }
 
 void Worker::ProcessHTableReply(Client* cli, WorkRequest* wr) {
@@ -71,6 +72,7 @@ void Worker::ProcessHTableReply(Client* cli, WorkRequest* wr) {
 
     if (cli)
         delete wr;
+
 }
 #endif // DHT
 
@@ -106,6 +108,7 @@ void Worker::ProcessRemoteMemStat(Client* client, WorkRequest* wr) {
    */
   delete wr;
   wr = nullptr;
+
 }
 
 void Worker::ProcessRemoteMalloc(Client* client, WorkRequest* wr) {
@@ -134,6 +137,7 @@ void Worker::ProcessRemoteMalloc(Client* client, WorkRequest* wr) {
   SubmitRequest(client, wr);
   delete wr;
   wr = nullptr;
+
 }
 
 void Worker::ProcessRemoteMallocReply(Client* client, WorkRequest* wr) {
@@ -152,6 +156,7 @@ void Worker::ProcessRemoteMallocReply(Client* client, WorkRequest* wr) {
   }
   delete wr;
   wr = nullptr;
+
 }
 
 void Worker::ProcessRemoteGetReply(Client* client, WorkRequest* wr) {
@@ -174,6 +179,7 @@ void Worker::ProcessRemoteGetReply(Client* client, WorkRequest* wr) {
   epicAssert(ret);
   delete wr;
   wr = nullptr;
+
 }
 
 void Worker::ProcessRemoteEvictShared(Client* client, WorkRequest* wr) {
@@ -191,6 +197,7 @@ void Worker::ProcessRemoteEvictShared(Client* client, WorkRequest* wr) {
   directory.unlock(laddr);
   delete wr;
   wr = nullptr;
+
 }
 
 void Worker::ProcessRemoteEvictDirty(Client* client, WorkRequest* wr) {
@@ -210,6 +217,7 @@ void Worker::ProcessRemoteEvictDirty(Client* client, WorkRequest* wr) {
   client->WriteWithImm(nullptr, nullptr, 0, wr->id);
   delete wr;
   wr = nullptr;
+
 }
 
 void Worker::ProcessRequest(Client* client, WorkRequest* wr) {
@@ -217,17 +225,22 @@ void Worker::ProcessRequest(Client* client, WorkRequest* wr) {
       client->GetWorkerId());
   epicAssert(wr->wid == 0 || wr->wid == client->GetWorkerId());
 
+  agent_stats_inst.add_starting_point_4st();
   switch (wr->op) {
 
 #ifdef DHT
     case GET_HTABLE: 
     {
         this->ProcessRemoteHTable(client, wr);
+        string s = "??? node: poll CQ -> process MALLOC_REPLY, byte_len = " + to_string(agent_stats_inst.byte_len);
+        agent_stats_inst.add_ending_point_4st(s);
         break;
     }
     case GET_HTABLE_REPLY:
     {
         this->ProcessHTableReply(client, wr);
+        string s = "??? node: poll CQ -> process GET_HTABLE_REPLY, byte_len = " + to_string(agent_stats_inst.byte_len);
+        agent_stats_inst.add_ending_point_4st(s);
         break;
     }
 #endif //DHT
@@ -236,16 +249,22 @@ void Worker::ProcessRequest(Client* client, WorkRequest* wr) {
     case BROADCAST_MEM_STATS: 
       {
         ProcessRemoteMemStat(client, wr);
+        string s = "??? node: poll CQ -> process FETCH_MEM_STATS_REPLY or BROADCAST_MEM_STATS, byte_len = " + to_string(agent_stats_inst.byte_len);
+        agent_stats_inst.add_ending_point_4st(s);
         break;
       }
     case MALLOC: 
       {
         ProcessRemoteMalloc(client, wr);
+        string s = "??? node: poll CQ -> process MALLOC, byte_len = " + to_string(agent_stats_inst.byte_len);
+        agent_stats_inst.add_ending_point_4st(s);
         break;
       }
     case MALLOC_REPLY: 
       {
         ProcessRemoteMallocReply(client, wr);
+        string s = "??? node: poll CQ -> process MALLOC_REPLY, byte_len = " + to_string(agent_stats_inst.byte_len);
+        agent_stats_inst.add_ending_point_4st(s);
         break;
       }
     case FREE: 
@@ -259,32 +278,57 @@ void Worker::ProcessRequest(Client* client, WorkRequest* wr) {
           SyncMaster();
         delete wr;
         wr = nullptr;
+        string s = "??? node: poll CQ -> process FREE, byte_len = " + to_string(agent_stats_inst.byte_len);
+        agent_stats_inst.add_ending_point_4st(s);
         break;
       }
     case GET_REPLY: 
       {
         ProcessRemoteGetReply(client, wr);
+        string s = "??? node: poll CQ -> process GET_REPLY, byte_len = " + to_string(agent_stats_inst.byte_len);
+        agent_stats_inst.add_ending_point_4st(s);
         break;
       }
     case READ:
       {
         ProcessRemoteRead(client, wr);
+        string s = "home node: poll CQ -> process READ, byte_len = " + to_string(agent_stats_inst.byte_len);
+        agent_stats_inst.add_ending_point_4st(s);
         break;
       }
     case READ_FORWARD:
     case FETCH_AND_SHARED: 
       {
+        if(wr->op == READ_FORWARD){
+          string s = "cache node: poll CQ -> process READ_FORWARD, byte_len = " + to_string(agent_stats_inst.byte_len);
+          agent_stats_inst.add_ending_point_4st(s);
+        }
+        else if(wr->op == FETCH_AND_SHARED){
+          string s = "cache node: poll CQ -> process FETCH_AND_SHARED, byte_len = " + to_string(agent_stats_inst.byte_len);
+          agent_stats_inst.add_ending_point_4st(s);
+        }
         ProcessRemoteReadCache(client, wr);
+        // agent_stats_inst.add_ending_point_4st(string s = "??? node: poll CQ -> process READ_FORWARD or FETCH_AND_SHARED");
         break;
       }
     case READ_REPLY:
       {
         ProcessRemoteReadReply(client, wr);
+        string s = "??? node: poll CQ -> process READ_REPLY, byte_len = " + to_string(agent_stats_inst.byte_len);
+        agent_stats_inst.add_ending_point_4st(s);
         break;
       }
     case WRITE:
     case WRITE_PERMISSION_ONLY: 
       {
+        if(wr->op == WRITE){
+          string s = "home node: poll CQ -> process WRITE, byte_len = " + to_string(agent_stats_inst.byte_len);
+          agent_stats_inst.add_ending_point_4st(s);
+        }
+        else if(wr->op == WRITE_PERMISSION_ONLY){
+          string s = "home node: poll CQ -> process WRITE_PERMISSION_ONLY, byte_len = " + to_string(agent_stats_inst.byte_len);
+          agent_stats_inst.add_ending_point_4st(s);
+        }
         ProcessRemoteWrite(client, wr);
         break;
       }
@@ -294,41 +338,75 @@ void Worker::ProcessRequest(Client* client, WorkRequest* wr) {
     case INVALIDATE_FORWARD:
     case WRITE_PERMISSION_ONLY_FORWARD: 
       {
+        string s;
+        if(wr->op == INVALIDATE){
+          s = "??? node: poll CQ -> process INVALIDATE, byte_len = " + to_string(agent_stats_inst.byte_len);
+        }
+        else if(wr->op == FETCH_AND_INVALIDATE){
+          s = "??? node: poll CQ -> process FETCH_AND_INVALIDATE, byte_len = " + to_string(agent_stats_inst.byte_len);
+        }
+        else if(wr->op == WRITE_FORWARD){
+          s = "??? node: poll CQ -> process WRITE_FORWARD, byte_len = " + to_string(agent_stats_inst.byte_len);
+        }
+        else if(wr->op == INVALIDATE_FORWARD){
+          s = "??? node: poll CQ -> process INVALIDATE_FORWARD, byte_len = " + to_string(agent_stats_inst.byte_len);
+        }
+        else if(wr->op == WRITE_PERMISSION_ONLY_FORWARD){
+          s = "??? node: poll CQ -> process WRITE_PERMISSION_ONLY_FORWARD, byte_len = " + to_string(agent_stats_inst.byte_len);
+        }
+        
+        agent_stats_inst.add_ending_point_4st(s);
         ProcessRemoteWriteCache(client, wr);
         break;
       }
     case WRITE_REPLY:
       {
         ProcessRemoteWriteReply(client, wr);
+        string s = "??? node: poll CQ -> process WRITE_REPLY, byte_len = " + to_string(agent_stats_inst.byte_len);
+        agent_stats_inst.add_ending_point_4st(s);
         break;
       }
     case ACTIVE_INVALIDATE:
       {
         ProcessRemoteEvictShared(client, wr);
+        string s = "??? node: poll CQ -> process ACTIVE_INVALIDATE, byte_len = " + to_string(agent_stats_inst.byte_len);
+        agent_stats_inst.add_ending_point_4st(s);
         break;
       }
     case WRITE_BACK:
       {
         ProcessRemoteEvictDirty(client, wr);
+        string s = "home node: poll CQ -> process WRITE_BACK, byte_len = " + to_string(agent_stats_inst.byte_len);
+        agent_stats_inst.add_ending_point_4st(s);
         break;
       }
 #ifdef NOCACHE
     case RLOCK:
       ProcessRemoteRLock(client, wr);
+      string s = "??? node: poll CQ -> process RLOCK, byte_len = " + to_string(agent_stats_inst.byte_len);
+      agent_stats_inst.add_ending_point_4st(s);
       break;
     case WLOCK:
       ProcessRemoteWLock(client, wr);
+      string s = "??? node: poll CQ -> process WLOCK, byte_len = " + to_string(agent_stats_inst.byte_len);
+      agent_stats_inst.add_ending_point_4st(s);
       break;
     case RLOCK_REPLY:
     case WLOCK_REPLY:
       ProcessRemoteLockReply(client, wr);
+      string s = "??? node: poll CQ -> process RLOCK_REPLY or WLOCK_REPLY, byte_len = " + to_string(agent_stats_inst.byte_len);
+      agent_stats_inst.add_ending_point_4st(s);
       break;
     case UNLOCK:
       ProcessRemoteUnLock(client, wr);
+      string s = "??? node: poll CQ -> process UNLOCK, byte_len = " + to_string(agent_stats_inst.byte_len);
+      agent_stats_inst.add_ending_point_4st(s);
       break;
 #ifndef ASYNC_UNLOCK
     case UNLOCK_REPLY:
       ProcessRemoteUnLockReply(client, wr);
+      string s = "??? node: poll CQ -> process UNLOCK_REPLY, byte_len = " + to_string(agent_stats_inst.byte_len);
+      agent_stats_inst.add_ending_point_4st(s);
       break;
 #endif
 #endif
