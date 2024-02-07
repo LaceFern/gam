@@ -511,7 +511,7 @@ int main(int argc, char **argv) {
     int *fd = new int[num_threads];
     for (int i = 0; i < num_threads; ++i) {
       fd[i] = open(argv[arg_log1 + i], O_RDONLY);
-      if (fd < 0) {
+      if (fd[i] < 0) {
         printf("fail to open log file\n");
         return 1;
       }

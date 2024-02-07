@@ -31,6 +31,13 @@ class WorkerHandle {
   void RegisterThread();
   void DeRegisterThread();
   int SendRequest(WorkRequest* wr);
+
+  /***********************************/
+  /******** MY CODE STARTS ********/
+  int SendRequest(WorkRequest* wr, userop_stats& userop_stats_inst);
+  /******** MY CODE ENDS ********/
+  /***********************************/
+
   inline int GetWorkerId() {
     return worker->GetWorkerId();
   }
