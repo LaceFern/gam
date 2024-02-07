@@ -42,9 +42,16 @@ void AcceptTcpClientHandle(aeEventLoop *el, int fd, void *data, int mask) {
     epicLog(LOG_INFO, "conn string %s\n", msg);
   }
 
+
+  epicLog(LOG_WARNING, "AcceptTcpClientHandle starts");
   if (unlikely(!(cli = server->NewClient(msg)))) {
     goto out;
+  }{
+    uint32_t qp = cli->GetQP();
+    epicLog(LOG_WARNING, "AcceptTcpClientHandle ends, qpn = %d", qp);
   }
+  
+
   server->UpdateWidMap(cli);
 
   if (unlikely(!(p = cli->GetConnString(server->GetWorkerId())))) {

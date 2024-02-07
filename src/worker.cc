@@ -96,8 +96,12 @@ Worker::Worker(const Conf& conf, RdmaResource* res)
 #endif
 
   //connect to the master
+  epicLog(LOG_WARNING, "Worker::Worker starts");
   master = this->NewClient(true);
   master->ExchConnParam(conf.master_ip.c_str(), conf.master_port, this);
+  uint32_t qp = master->GetQP();
+  epicLog(LOG_WARNING, "Worker::Worker ends, qpn = %d", qp);
+
   epicLog(LOG_DEBUG, "Worker connected to the master");
   SyncMaster();  //send the local stats to master
   SyncMaster(FETCH_MEM_STATS);  //fetch the mem states of other workers from master
@@ -142,7 +146,15 @@ Worker::Worker(const Conf& conf, RdmaResource* res)
   new thread(startEventLoop, el);
   sleep(2);  //wait for initialization complete
 #endif
+  
+
+/***********************************/
+/******** MY CODE STARTS ********/
+  this->qt = new thread(StartQueue, this);
   this->st = new thread(StartService, this);
+/******** MY CODE ENDS ********/
+/***********************************/
+  
 #if defined(ASYNC_RDMA_SEND)
   new thread(AsyncRdmaSendThread, this);
 #endif
@@ -167,8 +179,39 @@ void Worker::AsyncRdmaSendThread(Worker* w) {
 }
 #endif
 
-void Worker::StartService(Worker* w) {
-  epicLog(LOG_DEBUG, "Worker Start service!!!");
+/***********************************/
+/******** MY CODE STARTS ********/
+void Worker::enqueue_wc(entry_4_wq& entry){
+  std::lock_guard<std::mutex> lock(mtx_4_waiting_queue);
+  entry.queue_size = get_waiting_queue_size();
+  waiting_queue.push(entry);
+}
+
+std::tuple<bool, entry_4_wq> Worker::dequeue_wc(){
+  std::lock_guard<std::mutex> lock(mtx_4_waiting_queue);
+  bool is_empty = 0;
+  entry_4_wq entry;
+  
+  is_empty = is_waiting_queue_empty();
+  if(!is_empty){
+    entry = waiting_queue.front();
+    waiting_queue.pop();
+    entry.ending_point = std::chrono::system_clock::now();
+  }
+
+  return std::make_tuple(is_empty, entry);
+}
+
+int Worker::get_waiting_queue_size(){
+  return waiting_queue.size();
+}
+
+bool Worker::is_waiting_queue_empty(){
+  return waiting_queue.empty();
+};
+
+void Worker::StartQueue(Worker* w) {
+  epicLog(LOG_WARNING, "Queue starts!!!");
   aeEventLoop *eventLoop = w->el;
   //start epoll
   eventLoop->stop = 0;
@@ -177,69 +220,81 @@ void Worker::StartService(Worker* w) {
   ibv_wc wc[MAX_CQ_EVENTS];
   ibv_cq *cq = w->resource->GetCompQueue();
 
+  std::chrono::time_point<std::chrono::system_clock> poll_starting_point;
+  std::chrono::time_point<std::chrono::system_clock> poll_ending_point;
+
   while (likely(!eventLoop->stop)) {
-#ifdef RDMA_POLL
-    while (!(ne = ibv_poll_cq(cq, MAX_CQ_EVENTS, wc)))
-      ;
-    if (ne < 0) {
-      epicLog(LOG_WARNING, "poll CQ failed: %d:%s", errno, strerror(errno));
-    }
+
+    while (1){
+      poll_starting_point = std::chrono::system_clock::now();
+      ne = ibv_poll_cq(cq, MAX_CQ_EVENTS, wc);
+      poll_ending_point = std::chrono::system_clock::now();
+      if(ne != 0){
+        break;
+      }
+    };
+
+    if (ne < 0) epicLog(LOG_WARNING, "poll CQ failed: %d:%s", errno, strerror(errno));
     epicLog(LOG_DEBUG, "get completion %d event", ne);
+
     for (int i = 0; i < ne; ++i) {
-#ifdef MULTITHREAD_RECV
-      w->ioService.post(boost::bind(RdmaHandler, w, wc[i]));
-#else
-      w->ProcessRdmaRequest(wc[i]);
-#endif
+      entry_4_wq entry;
+      entry.poll_starting_point = poll_starting_point;
+      entry.poll_ending_point = poll_ending_point;
+      entry.starting_point = std::chrono::system_clock::now();
+      entry.wc = wc[i];
+      w->enqueue_wc(entry);
     }
-#else
-    if (eventLoop->beforesleep != NULL) {
-      eventLoop->beforesleep(eventLoop);
-    }
-    aeProcessEvents(eventLoop, AE_ALL_EVENTS | AE_DONT_WAIT);
-#endif
-
-#ifndef MULTITHREAD
-#ifdef USE_BOOST_QUEUE
-    while(w->wqueue->pop(wr)) {
-      epicLog(LOG_DEBUG, "wr->code = %d, wr->flag = %d, wr->addr = %lx, wr->size = %d, wr->fd = %d\n",
-          wr->op, wr->flag, wr->addr, wr->size, wr->fd);
-      w->ProcessLocalRequest(wr);
-    }
-#elif defined(USE_BUF_ONLY)
-    for(volatile int* buf: w->nbufs) {
-      if(*buf == 1) {
-        wr = *(WorkRequest**)(buf+1);
-        epicLog(LOG_DEBUG, "wr->code = %d, wr->flag = %d, wr->addr = %lx, wr->size = %d, wr->fd = %d\n",
-            wr->op, wr->flag, wr->addr, wr->size, wr->fd);
-        if(wr->flag & ASYNC) {
-          *buf = 2;  //notify the app thread to return immediately before we process the request
-        } else {
-          *buf = 0;
-        }
-        w->ProcessLocalRequest(wr);
-      }
-    }
-#else
-    for(volatile int* buf: w->nbufs) {
-      if(*buf == 1) {
-        while(w->wqueue->pop(wr)) {
-          epicLog(LOG_DEBUG, "wr->code = %d, wr->flag = %d, wr->addr = %lx, wr->size = %d, wr->fd = %d\n",
-              wr->op, wr->flag, wr->addr, wr->size, wr->fd);
-          w->ProcessLocalRequest(wr);
-        }
-      }
-    }
-#endif
-#endif
   }
-
-#ifdef USE_BOOST_THREADPOOL
-  w->ioService.stop();
-#endif
-  //end the service
   aeDeleteEventLoop(w->el);
 }
+
+void Worker::StartService(Worker* w) {
+  epicLog(LOG_WARNING, "Worker Start service!!!");
+  // float count = 0;
+  while(1){
+    // count++;
+    // int q_size = w->get_waiting_queue_size();
+    // bool is_empty = w->is_waiting_queue_empty();
+
+    auto result = w->dequeue_wc();
+    if(!(std::get<0>(result))){
+      // printf("sys thread! is_empty = %d, dequeue and process\n", std::get<0>(result));
+      w->ProcessRdmaRequest(std::get<1>(result));
+      // printf("sys thread! process ends\n");
+    }
+
+    // if(count == 1.0 * 1000 * 1000 * 1000 * 100){
+    //   printf("sys thread! count = 1e11, is_empty = %d\n", std::get<0>(result));
+    //   count = 0;
+    // }
+  }
+}
+// void Worker::StartService(Worker* w) {
+//   epicLog(LOG_DEBUG, "Worker Start service!!!");
+//   aeEventLoop *eventLoop = w->el;
+//   //start epoll
+//   eventLoop->stop = 0;
+//   WorkRequest* wr;
+//   int ne = 0;
+//   ibv_wc wc[MAX_CQ_EVENTS];
+//   ibv_cq *cq = w->resource->GetCompQueue();
+
+//   while (likely(!eventLoop->stop)) {
+//     while (!(ne = ibv_poll_cq(cq, MAX_CQ_EVENTS, wc)))
+//       ;
+//     if (ne < 0) {
+//       epicLog(LOG_WARNING, "poll CQ failed: %d:%s", errno, strerror(errno));
+//     }
+//     epicLog(LOG_DEBUG, "get completion %d event", ne);
+//     for (int i = 0; i < ne; ++i) {
+//       w->ProcessRdmaRequest(wc[i]);
+//     }
+//   }
+//   aeDeleteEventLoop(w->el);
+// }
+/******** MY CODE ENDS ********/
+/***********************************/
 
 /*
  * we use the socket to get the existing workers
@@ -543,7 +598,18 @@ unsigned long long Worker::SubmitRequest(Client* cli, WorkRequest* wr, int flag,
     rdma_queue->push(data);
 #else
     epicLog(LOG_DEBUG, "Start get free slot");
+
+
+    auto starting_point = std::chrono::system_clock::now();
     char* sbuf = cli->GetFreeSlot();
+    auto ending_point = std::chrono::system_clock::now();
+    auto threadId = std::this_thread::get_id();
+    agent_stats_inst.add_starting_point_4debug_slot(threadId, starting_point);
+    std::stringstream ss;
+    ss << threadId;
+    string s = "thread id = " + ss.str() + ", get lock for GetFreeSlot";
+    agent_stats_inst.add_ending_point_4debug_slot(threadId, ending_point, s);
+
     bool busy = false;
     if (sbuf == nullptr) {
       busy = true;

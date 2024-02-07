@@ -297,6 +297,7 @@ int Cache::ReadWrite(WorkRequest* wr) {
       //long time_stamp_6;
       //to intermediate state
       if (READ == wr->op) {
+        agent_stats_inst.add_time_tag_4at(wr->addr, "request node: call Read -> submit cache_Miss request");
         epicAssert(cline->state != CACHE_TO_SHARED);
         ToToShared(cline);
        // time_stamp_6 = get_time();
@@ -312,6 +313,7 @@ int Cache::ReadWrite(WorkRequest* wr) {
         }
 #endif
       } else {  //WRITE
+        agent_stats_inst.add_time_tag_4at(wr->addr, "request node: call Write -> submit cache_Miss request");
 #ifdef SELECTIVE_CACHING
       if(lwr->flag & NOT_CACHE) {
         GAddr gs = i > start ? i : start;
@@ -531,6 +533,12 @@ int Cache::Lock(WorkRequest* wr) {
 #else
     cline = SetCLine(i);
 #endif
+    if(wr->op == RLOCK){
+      agent_stats_inst.add_time_tag_4at(wr->addr, "request node: call RLock -> submit cache_Miss request");
+    }
+    else{
+      agent_stats_inst.add_time_tag_4at(wr->addr, "request node: call WLock -> submit cache_Miss request");
+    }
     wr->is_cache_hit_ = false;
     WorkRequest* lwr = new WorkRequest(*wr);
     //we hide the fact that it is whether a lock op or read/write from the remote side

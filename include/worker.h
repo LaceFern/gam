@@ -16,6 +16,7 @@
 #include <boost/bind.hpp>
 #include <boost/thread/thread.hpp>
 #include <syscall.h>
+#include <tuple>
 #include "settings.h"
 #include "structure.h"
 #include "client.h"
@@ -73,11 +74,33 @@ struct RDMASendData {
 };
 #endif
 
+/***********************************/
+/******** MY CODE STARTS ********/
+struct entry_4_wq {
+  std::chrono::time_point<std::chrono::system_clock> starting_point;
+  std::chrono::time_point<std::chrono::system_clock> ending_point;
+  std::chrono::time_point<std::chrono::system_clock> poll_starting_point;
+  std::chrono::time_point<std::chrono::system_clock> poll_ending_point;
+  ibv_wc wc;
+  int queue_size;
+};
+/******** MY CODE ENDS ********/
+/***********************************/
+
+
 class Worker : public Server {
   friend class Cache;
 
   //the handle to the worker thread
   thread* st;
+
+/***********************************/
+/******** MY CODE STARTS ********/
+  thread* qt;
+  std::queue<entry_4_wq> waiting_queue;
+  std::mutex mtx_4_waiting_queue;
+/******** MY CODE ENDS ********/
+/***********************************/
 
 #ifdef USE_LRU
 #ifdef USE_APPR_LRU
@@ -166,6 +189,17 @@ class Worker : public Server {
 #endif
 
  public:
+
+/***********************************/
+/******** MY CODE STARTS ********/
+  void enqueue_wc(entry_4_wq& wc);
+  std::tuple<bool, entry_4_wq> dequeue_wc();
+  int get_waiting_queue_size();
+  bool is_waiting_queue_empty();
+  static void StartQueue(Worker* w);
+/******** MY CODE ENDS ********/
+/***********************************/
+
   // cahce hit ratio statistics
   // number of local reads absorbed by the cache
   atomic<Size> no_local_reads_;
@@ -302,6 +336,12 @@ class Worker : public Server {
   void ProcessPendingEvictDirty(Client* cli, WorkRequest* wr);
   void ProcessPendingInvalidateForward(Client* cli, WorkRequest* wr);
   void ProcessToServeRequest(WorkRequest* wr);
+
+  /***********************************/
+  /******** MY CODE STARTS ********/
+  void ProcessRequest(Client* client, unsigned int id, entry_4_wq& entry);
+  /******** MY CODE ENDS ********/
+  /***********************************/
 
 #ifdef DHT
   int ProcessLocalHTable(WorkRequest* wr);

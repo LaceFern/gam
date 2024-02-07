@@ -18,7 +18,15 @@
 class GAlloc {
   WorkerHandle* wh;  //handle to communicate with local worker
 
+
+  /***********************************/
+  /******** MY CODE STARTS ********/
+  int Lock(userop_stats& userop_stats_inst, Work op, const GAddr addr, const Size count, Flag flag = 0);
   int Lock(Work op, const GAddr addr, const Size count, Flag flag = 0);
+  /******** MY CODE ENDS ********/
+  /***********************************/
+
+
  public:
   GAlloc(Worker* worker);
 
@@ -38,13 +46,34 @@ class GAlloc {
 
   void Free(const GAddr addr);
 
+
+  /***********************************/
+  /******** MY CODE STARTS ********/
+  int Read(userop_stats& userop_stats_inst, const GAddr addr, void* buf, const Size count, Flag flag = 0);
+  int Read(userop_stats& userop_stats_inst, const GAddr addr, const Size offset, void* buf, const Size count,
+           Flag flag = 0);
+  int Write(userop_stats& userop_stats_inst, const GAddr addr, void* buf, const Size count, Flag flag = 0);
+#ifdef GFUNC_SUPPORT
+  int Write(userop_stats& userop_stats_inst, const GAddr addr, const Size offset, void* buf, const Size count,
+            Flag flag = 0, GFunc* func = nullptr, uint64_t arg = 0);
+  int Write(userop_stats& userop_stats_inst, const GAddr addr, void* buf, const Size count, GFunc* func,
+            uint64_t arg = 0, Flag flag = 0);
+#else
+  int Write(userop_stats& userop_stats_inst, const GAddr addr, const Size offset, void* buf, const Size count, Flag flag = 0);
+#endif
+  void RLock(userop_stats& userop_stats_inst, const GAddr addr, const Size count);
+  void WLock(userop_stats& userop_stats_inst, const GAddr addr, const Size count);
+  int Try_RLock(userop_stats& userop_stats_inst, const GAddr addr, const Size count);
+  int Try_WLock(userop_stats& userop_stats_inst, const GAddr addr, const Size count);
+  /******** MY CODE ENDS ********/
+  /***********************************/
+
   /*
    * read is blocking until buf is filled with requested data
    */
   int Read(const GAddr addr, void* buf, const Size count, Flag flag = 0);
   int Read(const GAddr addr, const Size offset, void* buf, const Size count,
            Flag flag = 0);
-
   /*
    * Generally, write is non-blocking as we're using release memory consistency model
    */
@@ -57,17 +86,22 @@ class GAlloc {
 #else
   int Write(const GAddr addr, const Size offset, void* buf, const Size count, Flag flag = 0);
 #endif
+  void RLock(const GAddr addr, const Size count);
+  void WLock(const GAddr addr, const Size count);
+  int Try_RLock(const GAddr addr, const Size count);
+  int Try_WLock(const GAddr addr, const Size count);
+
+
+
 
   void MFence();
   void SFence();
 
-  void RLock(const GAddr addr, const Size count);
-  void WLock(const GAddr addr, const Size count);
+
 
   void UnLock(const GAddr addr, const Size count);
 
-  int Try_RLock(const GAddr addr, const Size count);
-  int Try_WLock(const GAddr addr, const Size count);
+
 
   Size Put(uint64_t key, const void* value, Size count);
   Size Get(uint64_t key, void* value);

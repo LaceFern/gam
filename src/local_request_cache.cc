@@ -19,7 +19,7 @@ int Worker::ProcessLocalRead(WorkRequest* wr) {
   //long time_stamp_1 = get_time();
 
   if (likely(IsLocal(wr->addr))) {
-    epicLog(LOG_WARNING, "Why are you here?\n");
+    // epicLog(LOG_WARNING, "Why are you here?\n");
     GAddr start = wr->addr;
     GAddr start_blk = TOBLOCK(start);
     GAddr end = GADD(start, wr->size);
@@ -68,6 +68,7 @@ int Worker::ProcessLocalRead(WorkRequest* wr) {
         epicAssert(!directory.IsBlockLocked(entry));
         directory.ToToShared(entry, rc);
         SubmitRequest(cli, lwr, ADD_TO_PENDING | REQUEST_SEND);
+        agent_stats_inst.add_time_tag_4at(wr->addr, "request node: call Read -> submit gmem_Hit_dir_M request");
       } else {
         GAddr gs = i > start ? i : start;
         void* ls = (void*) ((ptr_t) wr->ptr + GMINUS(gs, start));
@@ -283,6 +284,12 @@ int Worker::ProcessLocalWrite(WorkRequest* wr) {
           SubmitRequest(cli, lwr);
           //lwr->counter++;
         }
+        if(state == DIR_DIRTY){
+          agent_stats_inst.add_time_tag_4at(wr->addr, "request node: call Write -> submit gmem_Hit_dir_M request");
+        }
+        else{
+          agent_stats_inst.add_time_tag_4at(wr->addr, "request node: call Write -> submit gmem_Hit_dir_S request");
+        }
       } else {
 #ifdef GFUNC_SUPPORT
         if (wr->flag & GFUNC) {
@@ -443,6 +450,7 @@ int Worker::ProcessLocalRLock(WorkRequest* wr) {
       epicAssert(!directory.IsBlockLocked(entry));
       directory.ToToShared(entry, rc);
       SubmitRequest(cli, lwr, ADD_TO_PENDING | REQUEST_SEND);
+      agent_stats_inst.add_time_tag_4at(wr->addr, "request node: call RLock -> submit gmem_Hit_dir_M request");
     } else {
       int ret;
       if (entry) {
@@ -568,6 +576,12 @@ int Worker::ProcessLocalWLock(WorkRequest* wr) {
             lwr->op, cli->GetWorkerId(), state, lwr->counter.load());
         SubmitRequest(cli, lwr);
         //lwr->counter++;
+      }
+      if(state == DIR_DIRTY){
+        agent_stats_inst.add_time_tag_4at(wr->addr, "request node: call WLock -> submit gmem_Hit_dir_M request");
+      }
+      else{
+        agent_stats_inst.add_time_tag_4at(wr->addr, "request node: call WLock -> submit gmem_Hit_dir_S request");
       }
     } else if (DIR_UNSHARED == state) {
       int ret;
