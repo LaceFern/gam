@@ -14,10 +14,15 @@
 #include "hashtable.h"
 #include "locked_unordered_map.h"
 #include "map.h"
+// #include "worker.h"
 #define CDF_BUCKET_NUM 512
 class ServerFactory;
 class Server;
 class Client;
+
+class Worker;
+
+struct entry_4_wq;
 
 static int latency_to_bkt(unsigned long lat_in_us)
 {
@@ -33,6 +38,8 @@ static int latency_to_bkt(unsigned long lat_in_us)
     return 370 + ((lat_in_us - 100000) / 10000);
   return CDF_BUCKET_NUM - 1;	// over 1 sec
 }
+
+// class Worker;
 
 class Server {
   private:
@@ -72,6 +79,7 @@ class Server {
 
     void ProcessRdmaRequest();
     void ProcessRdmaRequest(ibv_wc& wc);
+
     virtual int PostAcceptWorker(int, void*) {
       return 0;
     }
@@ -81,6 +89,15 @@ class Server {
     virtual void ProcessRequest(Client* client, WorkRequest* wr) = 0;
     virtual void ProcessRequest(Client* client, unsigned int id) {}
     virtual void CompletionCheck(unsigned int id) {}
+
+
+    /***********************************/
+    /******** MY CODE STARTS ********/
+    // void ProcessRdmaRequest(ibv_wc& wc, Worker* w);
+    void ProcessRdmaRequest(entry_4_wq& entry);
+    virtual void ProcessRequest(Client* client, unsigned int id, entry_4_wq& entry) {}
+    /******** MY CODE ENDS ********/
+    /***********************************/
 
     const string& GetIP() const {
       return conf->worker_ip;

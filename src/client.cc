@@ -18,6 +18,9 @@ Client::Client(RdmaResource* res, bool isForMaster, const char* rdmaConnStr)
   this->ctx = res->NewRdmaContext(isForMaster);
   if (rdmaConnStr)
     this->SetRemoteConnParam(rdmaConnStr);
+
+  uint32_t qp = this->ctx->GetQP();
+  epicLog(LOG_WARNING, "NewRdmaContext, qpn = %d", qp);
 }
 
 int Client::ExchConnParam(const char* ip, int port, Server* server) {

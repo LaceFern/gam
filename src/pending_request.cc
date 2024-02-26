@@ -698,3 +698,36 @@ void Worker::ProcessRequest(Client* cli, unsigned int work_id) {
   epicAssert(wr->id == work_id);
   ProcessPendingRequest(cli, wr);
 }
+
+void Worker::ProcessRequest(Client* cli, unsigned int work_id, entry_4_wq& entry) {
+#ifdef NOCACHE
+  epicLog(LOG_WARNING, "shouldn't come here");
+  return;
+#endif
+  epicLog(LOG_DEBUG, "callback function work_id = %u, reply from %d", work_id,
+          cli->GetWorkerId());
+  WorkRequest* wr = GetPendingWork(work_id);
+
+  string s = "IBV_WC_RECV_RDMA_WITH_IMM waiting " + to_string(entry.queue_size);
+  agent_stats_inst.add_starting_point_4qt(wr->addr, entry.starting_point);
+  agent_stats_inst.add_ending_point_4qt(wr->addr, entry.ending_point, s);
+
+  agent_stats_inst.add_starting_point_4debug_q(wr->addr, entry.starting_point, entry.sys_thread_id);
+  agent_stats_inst.add_ending_point_4debug_q(wr->addr, entry.ending_point, s, entry.sys_thread_id);
+
+  agent_stats_inst.add_starting_point_4debug_poll(wr->addr, entry.poll_starting_point);
+  agent_stats_inst.add_ending_point_4debug_poll(wr->addr, entry.poll_ending_point, s);
+
+  GAddr tmp_addr = wr->addr;
+
+  // agent_stats_inst.add_starting_point_4st(tmp_addr);
+  agent_stats_inst.add_starting_point_4st(tmp_addr, agent_stats_inst.parse_starting_point);
+  // agent_stats_inst.add_starting_point_4st(tmp_addr, agent_stats_inst.poll_starting_point);
+
+  epicAssert(wr);
+  epicAssert(wr->id == work_id);
+  ProcessPendingRequest(cli, wr);
+
+  s = "??? node: poll CQ -> process IBV_WC_RECV_RDMA_WITH_IMM, byte_len = " + to_string(agent_stats_inst.byte_len);
+  agent_stats_inst.add_ending_point_4st(tmp_addr, s);
+}

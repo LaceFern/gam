@@ -308,3 +308,166 @@ void WorkerHandle::ResetCacheStatistics() {
     worker->no_remote_writes_direct_hit_ = 0;
 }
 
+
+/***********************************/
+/******** MY CODE STARTS ********/
+int WorkerHandle::SendRequest(WorkRequest* wr, userop_stats& userop_stats_inst) {
+  wr->flag |= LOCAL_REQUEST;
+#ifdef MULTITHREAD
+  *notify_buf = 1;  //not useful to set it to 1 if boost_queue is enabled
+  epicAssert(*(int* )notify_buf == 1);
+  wr->fd = recv_pipe[1];  //for legacy code
+  wr->notify_buf = this->notify_buf;
+  epicLog(LOG_DEBUG,
+      "workid = %d, wr->notify_buf = %d, wr->op = %d, wr->flag = %d, wr->status = %d, wr->addr = %lx, wr->size = %d, wr->fd = %d",
+      worker->GetWorkerId(), *wr->notify_buf, wr->op, wr->flag, wr->status,
+      wr->addr, wr->size, wr->fd);
+  long start_time = get_time();
+  int ret = worker->ProcessLocalRequest(wr);  //not complete due to remote or previously-sent similar requests
+  agent_stats_inst.add_ending_point_4at(wr->addr);
+
+  /***********************************/
+  /******** MY CODE STARTS ********/
+  if (ret) {
+    userop_stats_inst.cache_coherence_type = "CC";
+    // printf("checkpoint 0!");
+  }
+  else{
+    userop_stats_inst.cache_coherence_type = "NO-CC";
+  }
+  /******** MY CODE ENDS ********/
+  /***********************************/
+  
+  agent_stats_inst.add_starting_point_4at(wr->addr);
+  if (ret) {  //not complete due to remote or previously-sent similar requests
+    if (wr->flag & ASYNC) {
+      return SUCCESS;
+    } else {
+#ifdef USE_PIPE_W_TO_H
+      char buf[1];
+      if(1 != read(recv_pipe[0], buf, 1)) {  //blocking
+        epicLog(LOG_WARNING, "read notification from worker failed");
+      } else {
+        epicLog(LOG_DEBUG, "request returned %c", buf[0]);
+        if(wr->status) {
+          epicLog(LOG_INFO, "request failed %d\n", wr->status);
+        }
+      }
+#elif defined(USE_PTHREAD_COND)
+      int ret = pthread_cond_wait(&cond, &cond_lock);
+      epicAssert(!ret);
+#else
+      epicLog(LOG_DEBUG, "Waiting for remote reply");
+      agent_stats_inst.del_starting_point_4at(wr->addr);
+      agent_stats_inst.add_starting_point_4at(wr->addr);
+      while (*notify_buf != 2);
+      agent_stats_inst.add_ending_point_4at(wr->addr, "request node: wait -> wake up");
+      agent_stats_inst.add_starting_point_4at(wr->addr);
+      long end_time = get_time();
+      worker->cdf_cnt_remote[latency_to_bkt((end_time - start_time) / 1000)]++;
+      //if(wr->op == READ) {
+      //  worker->cache_read_miss_time_ += end_time - start_time;
+      //} else if (wr->op == WRITE) {
+      //  worker->cache_write_miss_time_ += end_time - start_time;
+      //}
+      epicLog(LOG_DEBUG, "get notified via buf");
+#endif
+      return wr->status;
+    }
+  } else {
+    long end_time = get_time();
+    worker->cdf_cnt_local[latency_to_bkt((end_time - start_time) / 1000)]++;
+    return wr->status;
+  }
+#else //if not MULTITHREAD
+
+  WorkRequest* to = wr;
+  char buf[1];
+  buf[0] = 's';
+
+  if(wr->flag & ASYNC) {  //if the work request is asynchronous, we return immediately
+    //copy the workrequest
+    to = wr->Copy();
+  }
+
+#ifdef USE_PIPE_W_TO_H
+  to->fd = recv_pipe[1];
+  wqueue->push(to);
+#elif defined(USE_PTHREAD_COND)
+  to->cond_lock = &cond_lock;
+  to->cond = &cond;
+  to->fd = recv_pipe[1];
+  wqueue->push(to);
+#else
+#ifdef USE_BOOST_QUEUE
+  *notify_buf = 1;  //not useful to set it to 1 if boost_queue is enabled
+  epicAssert(*(int*)notify_buf == 1);
+  to->fd = recv_pipe[1];//for legacy code
+  to->notify_buf = this->notify_buf;
+  wqueue->push(to);
+#elif defined(USE_BUF_ONLY)
+  *(WorkRequest**)(notify_buf+1) = to;
+  to->fd = recv_pipe[1];  //for legacy code
+  to->notify_buf = this->notify_buf;
+  *notify_buf = 1;//put last since it will trigger the process
+#else
+  *notify_buf = 1;  //put first since notify_buf = 1 may happen after notify_buf = 2 by worker
+  epicAssert(*(int*)notify_buf == 1);
+  to->fd = recv_pipe[1];//for legacy code
+  to->notify_buf = this->notify_buf;
+  wqueue->push(to);
+#endif
+#endif
+
+#ifndef USE_BUF_ONLY //otherwise, we have to return after the worker copy the data from notify_buf
+  //we return directly without writing to the pipe to notify the worker thread
+  if(to->flag & ASYNC) {
+    epicLog(LOG_DEBUG, "asynchronous request");
+    return SUCCESS;
+  }
+#endif
+
+#ifdef USE_PIPE_H_TO_W
+#ifdef WH_USE_LOCK
+  if(lock.try_lock()) {
+#endif
+    if (1 != write(send_pipe[1], buf, 1)) {
+      epicLog(LOG_WARNING, "write to pipe failed (%d:%s)", errno,
+          strerror(errno));
+    }
+
+    //we write twice in order to reduce the epoll latency
+    if (1 != write(send_pipe[1], buf, 1)) {
+      epicLog(LOG_WARNING, "write to pipe failed (%d:%s)", errno,
+          strerror(errno));
+    }
+
+#ifdef WH_USE_LOCK
+    lock.unlock();
+  }
+#endif
+#endif
+
+#ifdef USE_PIPE_W_TO_H
+  if(1 != read(recv_pipe[0], buf, 1)) {  //blocking
+    epicLog(LOG_WARNING, "read notification from worker failed");
+  } else {
+    epicLog(LOG_DEBUG, "request returned %c", buf[0]);
+    if(wr->status) {
+      epicLog(LOG_INFO, "request failed %d\n", wr->status);
+    }
+  }
+#elif defined(USE_PTHREAD_COND)
+  int ret = pthread_cond_wait(&cond, &cond_lock);
+  epicAssert(!ret);
+#else
+  while(*notify_buf != 2);
+//while(atomic_read(notify_buf) != 2);
+  epicLog(LOG_DEBUG, "get notified via buf");
+#endif
+  return wr->status;
+
+#endif //MULTITHREAD end
+}
+/******** MY CODE ENDS ********/
+/***********************************/

@@ -199,6 +199,7 @@ void Worker::ProcessRemoteReadCache(Client* client, WorkRequest* wr) {
   cache.unlock(blk);
   delete wr;
   wr = nullptr;
+
 }
 
 void Worker::ProcessRemoteReadReply(Client* client, WorkRequest* wr) {
@@ -273,6 +274,7 @@ void Worker::ProcessRemoteReadReply(Client* client, WorkRequest* wr) {
   delete wr;
   pwr = nullptr;
   wr = nullptr;
+
 }
 
 void Worker::ProcessRemoteWrite(Client* client, WorkRequest* wr) {
@@ -466,6 +468,7 @@ void Worker::ProcessRemoteWrite(Client* client, WorkRequest* wr) {
     SubmitRequest(cli, lwr, ADD_TO_PENDING | REQUEST_SEND);
   }
   directory.unlock(laddr);
+
 }
 
 void Worker::ProcessRemoteWriteCache(Client* client, WorkRequest* wr) {

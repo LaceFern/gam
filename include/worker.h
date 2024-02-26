@@ -16,6 +16,7 @@
 #include <boost/bind.hpp>
 #include <boost/thread/thread.hpp>
 #include <syscall.h>
+#include <tuple>
 #include "settings.h"
 #include "structure.h"
 #include "client.h"
@@ -73,11 +74,33 @@ struct RDMASendData {
 };
 #endif
 
+/***********************************/
+/******** MY CODE STARTS ********/
+struct entry_4_wq {
+  std::chrono::time_point<std::chrono::system_clock> starting_point;
+  std::chrono::time_point<std::chrono::system_clock> ending_point;
+  std::chrono::time_point<std::chrono::system_clock> poll_starting_point;
+  std::chrono::time_point<std::chrono::system_clock> poll_ending_point;
+  ibv_wc wc;
+  int queue_size;
+  int sys_thread_id;
+};
+/******** MY CODE ENDS ********/
+/***********************************/
+
+
 class Worker : public Server {
   friend class Cache;
 
+/***********************************/
+/******** MY CODE STARTS ********/
   //the handle to the worker thread
-  thread* st;
+  thread* st[MAX_SYS_THREAD];
+  thread* qt;
+  std::queue<entry_4_wq> waiting_queue[MAX_SYS_THREAD];
+  std::mutex mtx_4_waiting_queue[MAX_SYS_THREAD];
+/******** MY CODE ENDS ********/
+/***********************************/
 
 #ifdef USE_LRU
 #ifdef USE_APPR_LRU
@@ -166,6 +189,17 @@ class Worker : public Server {
 #endif
 
  public:
+
+/***********************************/
+/******** MY CODE STARTS ********/
+  void enqueue_wc(entry_4_wq& wc, int sys_thread_id);
+  std::tuple<bool, entry_4_wq> dequeue_wc(int sys_thread_id);
+  int get_waiting_queue_size(int sys_thread_id);
+  bool is_waiting_queue_empty(int sys_thread_id);
+  static void StartQueue(Worker* w);
+/******** MY CODE ENDS ********/
+/***********************************/
+
   // cahce hit ratio statistics
   // number of local reads absorbed by the cache
   atomic<Size> no_local_reads_;
@@ -229,7 +263,13 @@ class Worker : public Server {
    */
   Worker(const Conf& conf, RdmaResource* res = nullptr);
   inline void Join() {
-    st->join();
+    /***********************************/
+    /******** MY CODE STARTS ********/
+    for(int i = 0; i < agent_stats_inst.num_4_sys_thread; i++){
+      st[i]->join();
+    }
+    /******** MY CODE ENDS ********/
+    /***********************************/
   }
 
   inline bool IsMaster() {
@@ -302,6 +342,12 @@ class Worker : public Server {
   void ProcessPendingEvictDirty(Client* cli, WorkRequest* wr);
   void ProcessPendingInvalidateForward(Client* cli, WorkRequest* wr);
   void ProcessToServeRequest(WorkRequest* wr);
+
+  /***********************************/
+  /******** MY CODE STARTS ********/
+  void ProcessRequest(Client* client, unsigned int id, entry_4_wq& entry);
+  /******** MY CODE ENDS ********/
+  /***********************************/
 
 #ifdef DHT
   int ProcessLocalHTable(WorkRequest* wr);
@@ -437,7 +483,7 @@ class Worker : public Server {
 
   int Notify(WorkRequest* wr);
 
-  static void StartService(Worker* w);
+  static void StartService(Worker* w, int sys_thread_id);
   static void AsyncRdmaSendThread(Worker* w);
 
   ~Worker();
