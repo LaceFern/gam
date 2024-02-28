@@ -8,21 +8,21 @@
 #include "gallocator.h"
 #include "util.h"
 
-void IncrDouble(void* ptr, uint64_t arg) {
+void IncrDouble(void *ptr, uint64_t arg) {
   double a = force_cast<double>(arg);
   epicLog(LOG_WARNING, "a = %lf", a);
   if (arg == 0) {
-    (*(char*) ptr)++;
+    (*(char *)ptr)++;
   } else {
-    (*(char*) ptr) += a;
+    (*(char *)ptr) += a;
   }
 }
 
-void Incr(void* ptr, uint64_t arg) {
+void Incr(void *ptr, uint64_t arg) {
   if (arg == 0) {
-    (*(char*) ptr)++;
+    (*(char *)ptr)++;
   } else {
-    (*(char*) ptr) += arg;
+    (*(char *)ptr) += arg;
   }
 }
 
@@ -44,7 +44,7 @@ struct Vertex {
 void GatherPagerank(void *ptr, uint64_t argc) {
   // for simplicity and performance, we use push-based weight propagation instead of pull-based gathering
   // here, reduce value in vertex.accumulator atomically
-  Vertex *vertex = reinterpret_cast<Vertex*>(ptr);
+  Vertex *vertex = reinterpret_cast<Vertex *>(ptr);
   double value = force_cast<double>(argc);
   vertex->accumulator += value;
 }
@@ -52,11 +52,11 @@ void GatherPagerank(void *ptr, uint64_t argc) {
 void ApplyPagerank(void *ptr, uint64_t argc) {
   const static double REST_PROB = 0.15;
   const static double TOLERANCE = 0.01;
-  Vertex *vertex_data = reinterpret_cast<Vertex*>(ptr);
+  Vertex *vertex_data = reinterpret_cast<Vertex *>(ptr);
   if (vertex_data->active) {
     vertex_data->active = false;
     double new_pagerank = vertex_data->accumulator * (1.0 - REST_PROB)
-        + REST_PROB;
+      + REST_PROB;
     vertex_data->delta = new_pagerank - vertex_data->value;
     vertex_data->active_minor_step = std::abs(vertex_data->delta) > TOLERANCE;
     vertex_data->value = new_pagerank;
@@ -66,12 +66,12 @@ void ApplyPagerank(void *ptr, uint64_t argc) {
 }
 void ScatterPagerank(void *ptr, uint64_t argc) {
   double delta = force_cast<double>(argc);
-  Vertex *vertex_data = reinterpret_cast<Vertex*>(ptr);
+  Vertex *vertex_data = reinterpret_cast<Vertex *>(ptr);
   vertex_data->accumulator += delta;
   vertex_data->active = true;
 }
 
-int GetGFuncID(GFunc* gfunc) {
+int GetGFuncID(GFunc *gfunc) {
   if (!gfunc)
     return -1;
   for (int i = 0; i < sizeof(GAllocFactory::gfuncs); i++) {
@@ -83,7 +83,7 @@ int GetGFuncID(GFunc* gfunc) {
   return -1;
 }
 
-GFunc* GetGFunc(int id) {
+GFunc *GetGFunc(int id) {
   if (id == -1)
     return nullptr;
   epicAssert(id < sizeof(GAllocFactory::gfuncs));

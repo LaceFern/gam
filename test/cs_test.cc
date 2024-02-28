@@ -17,15 +17,15 @@ int main() {
   int level = LOG_WARNING;
 
   //master
-  Conf* conf = new Conf();
+  Conf *conf = new Conf();
   conf->loglevel = level;
   GAllocFactory::SetConf(conf);
-  Master* master = new Master(*conf);
+  Master *master = new Master(*conf);
 
   //worker1
   conf = new Conf();
   conf->loglevel = level;
-  RdmaResource* res = new RdmaResource(list[0], false);
+  RdmaResource *res = new RdmaResource(list[0], false);
   Worker *worker1, *worker2, *worker3;
   WorkerHandle *wh1, *wh2, *wh3;
   worker1 = new Worker(*conf, res);
@@ -50,7 +50,7 @@ int main() {
 
   sleep(2);
 
-  WorkRequest wr { };
+  WorkRequest wr{ };
   Size size = 10;
   GAddr gaddr;
   int i = 0;

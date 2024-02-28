@@ -31,9 +31,9 @@
 #ifndef __ZMALLOC_H
 #define __ZMALLOC_H
 
-///* Double expansion needed for stringification of macro values. */
-//#define __xstr(s) __str(s)
-//#define __str(s) #s
+ ///* Double expansion needed for stringification of macro values. */
+ //#define __xstr(s) __str(s)
+ //#define __str(s) #s
 
 #if defined(USE_TCMALLOC)
 #define ZMALLOC_LIB ("tcmalloc-" __xstr(TC_VERSION_MAJOR) "." __xstr(TC_VERSION_MINOR))

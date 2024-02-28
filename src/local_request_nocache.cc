@@ -1,13 +1,13 @@
 // Copyright (c) 2018 The GAM Authors 
 
-int Worker::ProcessLocalRead(WorkRequest* wr) {
+int Worker::ProcessLocalRead(WorkRequest *wr) {
   epicAssert(wr->addr);
   epicAssert(!(wr->flag & ASYNC));
   epicAssert(wr->size < MAX_REQUEST_SIZE);
-  if(!(wr->flag & FENCE)) {
-    Fence* fence = fences_.at(wr->fd);
+  if (!(wr->flag & FENCE)) {
+    Fence *fence = fences_.at(wr->fd);
     fence->lock();
-    if(unlikely(IsMFenced(fence, wr))) {
+    if (unlikely(IsMFenced(fence, wr))) {
       AddToFence(fence, wr);
       epicLog(LOG_DEBUG, "fenced (mfenced = %d, sfenced = %d): %d", fence->mfenced, fence->sfenced, wr->op);
       fence->unlock();
@@ -16,21 +16,21 @@ int Worker::ProcessLocalRead(WorkRequest* wr) {
     fence->unlock();
   }
 
-  if(likely(IsLocal(wr->addr))) {
+  if (likely(IsLocal(wr->addr))) {
     GAddr start = wr->addr;
     GAddr start_blk = TOBLOCK(start);
     GAddr end = GADD(start, wr->size);
-    if(TOBLOCK(end-1) != start_blk) {
+    if (TOBLOCK(end - 1) != start_blk) {
       epicLog(LOG_INFO, "read/write split to multiple blocks");
     }
-    for(GAddr i = start_blk; i < end;) {
+    for (GAddr i = start_blk; i < end;) {
       epicAssert(!(wr->flag & COPY) || ((wr->flag & COPY) && (wr->flag & ASYNC)));
       GAddr nextb = BADD(i, 1);
-      void* laddr = ToLocal(i);
+      void *laddr = ToLocal(i);
 
       directory.lock(laddr);
       GAddr gs = i > start ? i : start;
-      void* ls = (void*)((ptr_t)wr->ptr + GMINUS(gs, start));
+      void *ls = (void *)((ptr_t)wr->ptr + GMINUS(gs, start));
       int len = nextb > end ? GMINUS(end, gs) : GMINUS(nextb, gs);
       memcpy(ls, ToLocal(gs), len);
       directory.unlock(laddr);
@@ -38,19 +38,19 @@ int Worker::ProcessLocalRead(WorkRequest* wr) {
     }
 
   } else {
-    Client* cli = GetClient(wr->addr);
+    Client *cli = GetClient(wr->addr);
     SubmitRequest(cli, wr, ADD_TO_PENDING | REQUEST_SEND);
     return REMOTE_REQUEST;
   }
 #ifdef MULTITHREAD
-  if(wr->flag & TO_SERVE || wr->flag & FENCE) {
+  if (wr->flag & TO_SERVE || wr->flag & FENCE) {
 #endif
     /*
      * notify the app thread directly
      * this can only happen when the request can be fulfilled locally
      * or we don't need to wait for reply from remote node
      */
-    if(Notify(wr)) {
+    if (Notify(wr)) {
       epicLog(LOG_WARNING, "cannot wake up the app thread");
     }
 #ifdef MULTITHREAD
@@ -59,14 +59,14 @@ int Worker::ProcessLocalRead(WorkRequest* wr) {
   return SUCCESS;
 }
 
-int Worker::ProcessLocalWrite(WorkRequest* wr) {
+int Worker::ProcessLocalWrite(WorkRequest *wr) {
   epicAssert(wr->addr);
   epicAssert(wr->size < MAX_REQUEST_SIZE);
   epicAssert(wr->flag & ASYNC);
-  Fence* fence = fences_.at(wr->fd);
-  if(!(wr->flag & FENCE)) {
+  Fence *fence = fences_.at(wr->fd);
+  if (!(wr->flag & FENCE)) {
     fence->lock();
-    if(unlikely(IsFenced(fence, wr))) {
+    if (unlikely(IsFenced(fence, wr))) {
       epicLog(LOG_DEBUG, "fenced(mfenced = %d, sfenced = %d): %d", fence->mfenced, fence->sfenced, wr->op);
       AddToFence(fence, wr);
       fence->unlock();
@@ -74,26 +74,26 @@ int Worker::ProcessLocalWrite(WorkRequest* wr) {
     }
     fence->unlock();
   }
-  if((wr->flag & ASYNC) && !(wr->flag & TO_SERVE)) {
+  if ((wr->flag & ASYNC) && !(wr->flag & TO_SERVE)) {
     //fences_[wr->fd].pending_writes++;
     fence->pending_writes++;
     epicLog(LOG_DEBUG, "Local: one more pending write");
   }
-  if(likely(IsLocal(wr->addr))) {
+  if (likely(IsLocal(wr->addr))) {
     GAddr start = wr->addr;
     GAddr start_blk = TOBLOCK(start);
     GAddr end = GADD(start, wr->size);
-    if(TOBLOCK(end-1) != start_blk) {
+    if (TOBLOCK(end - 1) != start_blk) {
       epicLog(LOG_INFO, "read/write split to multiple blocks");
     }
-    for(GAddr i = start_blk; i < end;) {
+    for (GAddr i = start_blk; i < end;) {
       epicAssert(!(wr->flag & COPY) || ((wr->flag & COPY) && (wr->flag & ASYNC)));
       GAddr nextb = BADD(i, 1);
-      void* laddr = ToLocal(i);
+      void *laddr = ToLocal(i);
 
       directory.lock(laddr);
       GAddr gs = i > start ? i : start;
-      void* ls = (void*)((ptr_t)wr->ptr + GMINUS(gs, start));
+      void *ls = (void *)((ptr_t)wr->ptr + GMINUS(gs, start));
       int len = nextb > end ? GMINUS(end, gs) : GMINUS(nextb, gs);
       logWrite(gs, len, ls);
       memcpy(ToLocal(gs), len, ls);
@@ -101,9 +101,9 @@ int Worker::ProcessLocalWrite(WorkRequest* wr) {
       i = nextb;
     }
   } else {
-    Client* cli = GetClient(wr->addr);
-    if(wr->flag & ASYNC) {
-      if(!wr->IsACopy()) {
+    Client *cli = GetClient(wr->addr);
+    if (wr->flag & ASYNC) {
+      if (!wr->IsACopy()) {
         wr = wr->Copy();
       }
     }
@@ -111,14 +111,14 @@ int Worker::ProcessLocalWrite(WorkRequest* wr) {
     return REMOTE_REQUEST;
   }
 #ifdef MULTITHREAD
-  if(wr->flag & ASYNC || wr->flag & TO_SERVE || wr->flag & FENCE) {
+  if (wr->flag & ASYNC || wr->flag & TO_SERVE || wr->flag & FENCE) {
 #endif
     /*
      * notify the app thread directly
      * this can only happen when the request can be fulfilled locally
      * or we don't need to wait for reply from remote node
      */
-    if(Notify(wr)) {
+    if (Notify(wr)) {
       epicLog(LOG_WARNING, "cannot wake up the app thread");
     }
 #ifdef MULTITHREAD
@@ -127,15 +127,15 @@ int Worker::ProcessLocalWrite(WorkRequest* wr) {
   return SUCCESS;
 }
 
-int Worker::ProcessLocalRLock(WorkRequest* wr) {
+int Worker::ProcessLocalRLock(WorkRequest *wr) {
   epicAssert(wr->addr);
   epicAssert(!(wr->flag & ASYNC));
   //epicAssert(!(wr->flag & FENCE));
-  if(!(wr->flag & FENCE)) {
-    Fence* fence = fences_.at(wr->fd);
+  if (!(wr->flag & FENCE)) {
+    Fence *fence = fences_.at(wr->fd);
     //if(fence->mfenced || fence->sfenced) {
     fence->lock();
-    if(IsFenced(fence, wr)) {
+    if (IsFenced(fence, wr)) {
       AddToFence(fence, wr);
       fence->unlock();
       epicLog(LOG_DEBUG, "fenced (mfenced = %d, sfenced = %d): %d", fence->mfenced, fence->sfenced, wr->op);
@@ -149,16 +149,16 @@ int Worker::ProcessLocalRLock(WorkRequest* wr) {
     }
     fence->unlock();
   }
-  if(IsLocal(wr->addr)) {
+  if (IsLocal(wr->addr)) {
     GAddr start = wr->addr;
     GAddr start_blk = TOBLOCK(start);
-    void* laddr = ToLocal(start_blk);
+    void *laddr = ToLocal(start_blk);
 
     directory.lock(laddr);
     int ret = directory.RLock(ToLocal(wr->addr));
-    if(ret) {  //fail to lock
+    if (ret) {  //fail to lock
       epicLog(LOG_INFO, "cannot lock addr %lx, will try later", wr->addr);
-      if(wr->flag & TRY_LOCK) {
+      if (wr->flag & TRY_LOCK) {
         wr->status = LOCK_FAILED;
       } else {
         //to_serve_local_requests[start_blk].push(wr);
@@ -169,19 +169,19 @@ int Worker::ProcessLocalRLock(WorkRequest* wr) {
     }
     directory.unlock(laddr);
   } else {
-    Client* cli = GetClient(wr->addr);
+    Client *cli = GetClient(wr->addr);
     SubmitRequest(cli, wr, ADD_TO_PENDING | REQUEST_SEND);
     return REMOTE_REQUEST;
   }
 #ifdef MULTITHREAD
-  if(wr->flag & TO_SERVE || wr->flag & FENCE) {
+  if (wr->flag & TO_SERVE || wr->flag & FENCE) {
 #endif
     /*
      * notify the app thread directly
      * this can only happen when the request can be fulfilled locally
      * or we don't need to wait for reply from remote node
      */
-    if(Notify(wr)) {
+    if (Notify(wr)) {
       epicLog(LOG_WARNING, "cannot wake up the app thread");
     }
 #ifdef MULTITHREAD
@@ -190,15 +190,15 @@ int Worker::ProcessLocalRLock(WorkRequest* wr) {
   return SUCCESS;
 }
 
-int Worker::ProcessLocalWLock(WorkRequest* wr) {
+int Worker::ProcessLocalWLock(WorkRequest *wr) {
   epicAssert(wr->addr);
   epicAssert(!(wr->flag & ASYNC));
   //epicAssert(!(wr->flag & FENCE));
-  if(!(wr->flag & FENCE)) {
-    Fence* fence = fences_.at(wr->fd);
+  if (!(wr->flag & FENCE)) {
+    Fence *fence = fences_.at(wr->fd);
     //if(fence->mfenced || fence->sfenced) {
     fence->lock();
-    if(IsFenced(fence, wr)) {
+    if (IsFenced(fence, wr)) {
       //fence->pending_works.push(wr);
       AddToFence(fence, wr);
       fence->unlock();
@@ -214,16 +214,16 @@ int Worker::ProcessLocalWLock(WorkRequest* wr) {
     }
     fence->unlock();
   }
-  if(IsLocal(wr->addr)) {
+  if (IsLocal(wr->addr)) {
     GAddr start = wr->addr;
     GAddr start_blk = TOBLOCK(start);
-    void* laddr = ToLocal(start_blk);
+    void *laddr = ToLocal(start_blk);
 
     directory.lock(laddr);
     int ret = directory.WLock(ToLocal(wr->addr));
-    if(ret) {  //failed to lock
+    if (ret) {  //failed to lock
       epicLog(LOG_INFO, "cannot lock addr %lx, will try later", wr->addr);
-      if(wr->flag & TRY_LOCK) {
+      if (wr->flag & TRY_LOCK) {
         wr->status = LOCK_FAILED;
       } else {
         //to_serve_local_requests[start_blk].push(wr);
@@ -234,19 +234,19 @@ int Worker::ProcessLocalWLock(WorkRequest* wr) {
     }
     directory.unlock(laddr);
   } else {
-    Client* cli = GetClient(wr->addr);
+    Client *cli = GetClient(wr->addr);
     SubmitRequest(cli, wr, ADD_TO_PENDING | REQUEST_SEND);
     return REMOTE_REQUEST;
   }
 #ifdef MULTITHREAD
-  if(wr->flag & TO_SERVE || wr->flag & FENCE) {
+  if (wr->flag & TO_SERVE || wr->flag & FENCE) {
 #endif
     /*
      * notify the app thread directly
      * this can only happen when the request can be fulfilled locally
      * or we don't need to wait for reply from remote node
      */
-    if(Notify(wr)) {
+    if (Notify(wr)) {
       epicLog(LOG_WARNING, "cannot wake up the app thread");
     }
 #ifdef MULTITHREAD
@@ -255,11 +255,11 @@ int Worker::ProcessLocalWLock(WorkRequest* wr) {
   return SUCCESS;
 }
 
-int Worker::ProcessLocalUnLock(WorkRequest* wr) {
-  if(!(wr->flag & FENCE)) {
-    Fence* fence = fences_.at(wr->fd);
+int Worker::ProcessLocalUnLock(WorkRequest *wr) {
+  if (!(wr->flag & FENCE)) {
+    Fence *fence = fences_.at(wr->fd);
     fence->lock();
-    if(IsFenced(fence, wr)) {
+    if (IsFenced(fence, wr)) {
       AddToFence(fence, wr);
       fence->unlock();
       epicLog(LOG_DEBUG, "fenced (mfenced = %d, sfenced = %d): %d", fence->mfenced, fence->sfenced, wr->op);
@@ -274,14 +274,14 @@ int Worker::ProcessLocalUnLock(WorkRequest* wr) {
     fence->unlock();
   }
 
-  if(IsLocal(wr->addr)) {
+  if (IsLocal(wr->addr)) {
     GAddr start_blk = TOBLOCK(wr->addr);
-    void* laddr = ToLocal(start_blk);
+    void *laddr = ToLocal(start_blk);
     directory.lock(laddr);
     directory.UnLock(ToLocal(wr->addr));
     directory.unlock(laddr);
   } else {
-    Client* cli = GetClient(wr->addr);
+    Client *cli = GetClient(wr->addr);
 #ifdef ASYNC_UNLOCK
     SubmitRequest(cli, wr);  //no need for reply
 #else
@@ -292,14 +292,14 @@ int Worker::ProcessLocalUnLock(WorkRequest* wr) {
   ProcessToServeRequest(wr);
 
 #ifdef MULTITHREAD
-  if(wr->flag & TO_SERVE || wr->flag & FENCE) {
+  if (wr->flag & TO_SERVE || wr->flag & FENCE) {
 #endif
     /*
      * notify the app thread directly
      * this can only happen when the request can be fulfilled locally
      * or we don't need to wait for reply from remote node
      */
-    if(Notify(wr)) {
+    if (Notify(wr)) {
       epicLog(LOG_WARNING, "cannot wake up the app thread");
     }
 #ifdef MULTITHREAD

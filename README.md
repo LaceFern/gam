@@ -2,9 +2,9 @@
 
 GAM (Globally Addressable Memory) is a distributed memory management platform
 which provides a global, unified memory space over a cluster of nodes connected
-via RDMA (Remote Direct Memory Access).  GAM allows nodes to employ a cache to
+via RDMA (Remote Direct Memory Access). GAM allows nodes to employ a cache to
 exploit the locality in global memory accesses, and uses an RDMA-based,
-distributed cache coherency protocol to keep cached data consistent.  Unlike
+distributed cache coherency protocol to keep cached data consistent. Unlike
 existing distributed memory management systems which typically employ Release
 Consistency and require synchronization primitives to be explicitly called for
 data consistency, GAM enforces the PSO (Partial Store Order) memory model which
@@ -14,22 +14,27 @@ execution paths. For more information, please refer to our [VLDB'18
 paper](#paper).
 
 # Build & Usage
+
 ## Prerequisite
+
 1. `libverbs`
 2. `boost thread`
 3. `boost system`
 4. `gcc 4.8.4+`
 
 ## GAM Core
+
 First build `libcuckoo` in the `lib/libcuckoo` directory by following the
 `README.md` file in that directory, and then go to the `src` directory and run `make`
 therein.
+
 ```
   cd src;
   make -j;
 ```
 
 ### Test and Micro Benchmark
+
 We provide an extensive set of tools to test and benchmark GAM. These tools are
 contained in the `test` directory, and also serve the purpose of demonstrating
 the usage of the APIs provided in GAM. To build them, simply run `make -j` in
@@ -46,9 +51,11 @@ There are multiple parameters that can be varied for
 a thorough benchmarking, please refer to [our paper](#paper) for detail.
 
 ## Applications
+
 We build two distributed applications on top of GAM by using the APIs GAM
 provide, a distributed key-value store and distributed transaction processing
 engine. To build them, simply run the below commands:
+
 ```
   cd dht
   make -j
@@ -57,20 +64,23 @@ engine. To build them, simply run the below commands:
 ```
 
 ### Macro Benchmark
+
 There is a script `kv-benchmark.sh` provided in the `dht` directory to
 benchmark the key-value store. To run it, please change the variables in the
 script according to the experimental setting. There are also several parameters
 that can be varied for benchmarking, such as thread number, get ratio and
-number of nodes. Please refer to the [GAM paper](#paper) and the script for detail. 
+number of nodes. Please refer to the [GAM paper](#paper) and the script for detail.
 
 To run the TPCC benchmark, please follow the instructions of the `README` file
 in the `database` directory.
 
 ## FaRM
+
 We implement the [FaRM](#farm) system as a baseline for macro benchmark. To build
 the FaRM codebase, please run the below command:
+
 ```
-  git checkout farm 
+  git checkout farm
   cd src
   make -j
 ```
@@ -83,14 +93,16 @@ directory. Please change the variables in that script according to the
 deployment environment.
 
 # References
+
 <a name="paper"></a>
-[1] Qingchao Cai, Wentian Guo, Hao Zhang, Gang Chen, Beng Chin Ooi, Kian-Lee Tan, Yong Meng Teo, and Sheng Wang. *Efficient Distributed Memory Management with RDMA and Caching*. PVLDB, 11 (11): 1604- 1617, 2018. DOI: https://doi.org/10.14778/3236187.3236209.
+[1] Qingchao Cai, Wentian Guo, Hao Zhang, Gang Chen, Beng Chin Ooi, Kian-Lee Tan, Yong Meng Teo, and Sheng Wang. _Efficient Distributed Memory Management with RDMA and Caching_. PVLDB, 11 (11): 1604- 1617, 2018. DOI: https://doi.org/10.14778/3236187.3236209.
 
 <a name="farm"></a>
-[2] Aleksandar Dragojević, Dushyanth Narayanan, Orion Hodson, and Miguel Castro. *FaRM: Fast remote memory*. Proceedings of the 11th USENIX Conference on Networked Systems Design and Implementation. 2014.
+[2] Aleksandar Dragojević, Dushyanth Narayanan, Orion Hodson, and Miguel Castro. _FaRM: Fast remote memory_. Proceedings of the 11th USENIX Conference on Networked Systems Design and Implementation. 2014.
 
 # License
-Copyright (c) 2018 The GAM Authors 
+
+Copyright (c) 2018 The GAM Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -107,14 +119,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 # Notice
+
 The TPCC benchmark code in the `database` directory is adapted from an open
 source project Cavalia, which can be found at
+
 ```
   https://github.com/Cavalia/Cavalia
 ```
+
 In addition, this project uses the event loop implementation of Redis, which can
-be found at 
+be found at
+
 ```
   https://redis.io/
 ```
-

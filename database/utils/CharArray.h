@@ -7,8 +7,8 @@
 
 struct CharArray {
   CharArray()
-      : size_(0),
-        char_ptr_(NULL) {
+    : size_(0),
+    char_ptr_(NULL) {
   }
   size_t size_;
   char *char_ptr_;
@@ -29,12 +29,12 @@ struct CharArray {
   }
 
   void Memcpy(const size_t &offset, const char *char_ptr,
-              const size_t &size) const {
+    const size_t &size) const {
     memcpy(char_ptr_ + offset, char_ptr, size);
   }
 
   void Memset(const size_t &offset, const int &value,
-              const size_t &size) const {
+    const size_t &size) const {
     memset(char_ptr_ + offset, value, size);
   }
 

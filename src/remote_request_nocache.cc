@@ -1,22 +1,22 @@
 // Copyright (c) 2018 The GAM Authors 
 
-void Worker::ProcessRemoteRead(Client* client, WorkRequest* wr) {
+void Worker::ProcessRemoteRead(Client *client, WorkRequest *wr) {
   epicAssert(IsLocal(wr->addr));
   GAddr start = wr->addr;
   GAddr start_blk = TOBLOCK(start);
   GAddr end = GADD(start, wr->size);
-  if(TOBLOCK(end-1) != start_blk) {
+  if (TOBLOCK(end - 1) != start_blk) {
     epicLog(LOG_INFO, "read/write split to multiple blocks");
   }
   epicAssert(!(wr->flag & COPY) || ((wr->flag & COPY) && (wr->flag & ASYNC)));
 
   char buf[wr->size];
-  for(GAddr i = start_blk; i < end;) {
+  for (GAddr i = start_blk; i < end;) {
     GAddr nextb = BADD(i, 1);
-    void* laddr = ToLocal(i);
+    void *laddr = ToLocal(i);
     directory.lock(laddr);
     GAddr gs = i > start ? i : start;
-    void* ls = (void*)((ptr_t)buf + GMINUS(gs, start));
+    void *ls = (void *)((ptr_t)buf + GMINUS(gs, start));
     int len = nextb > end ? GMINUS(end, gs) : GMINUS(nextb, gs);
     memcpy(ls, ToLocal(gs), len);
     directory.unlock(laddr);
@@ -30,13 +30,13 @@ void Worker::ProcessRemoteRead(Client* client, WorkRequest* wr) {
   wr = nullptr;
 }
 
-void Worker::ProcessRemoteReadCache(Client* client, WorkRequest* wr) {
+void Worker::ProcessRemoteReadCache(Client *client, WorkRequest *wr) {
   epicLog(LOG_WARNING, "Impossible!");
 }
 
-void Worker::ProcessRemoteReadReply(Client* client, WorkRequest* wr) {
+void Worker::ProcessRemoteReadReply(Client *client, WorkRequest *wr) {
   epicAssert(!wr->status);
-  WorkRequest* pwr = GetPendingWork(wr->id);
+  WorkRequest *pwr = GetPendingWork(wr->id);
   epicAssert(pwr);
   epicAssert(pwr->id == wr->id);
   epicAssert(pwr->size == wr->size);
@@ -49,18 +49,18 @@ void Worker::ProcessRemoteReadReply(Client* client, WorkRequest* wr) {
   wr = nullptr;
 }
 
-void Worker::ProcessRemoteWrite(Client* client, WorkRequest* wr) {
+void Worker::ProcessRemoteWrite(Client *client, WorkRequest *wr) {
   Work op_orin = wr->op;
   epicAssert(IsLocal(wr->addr));  //I'm the home node
   GAddr start = wr->addr;
   GAddr start_blk = TOBLOCK(start);
   GAddr end = GADD(start, wr->size);
-  for(GAddr i = start_blk; i < end;) {
+  for (GAddr i = start_blk; i < end;) {
     GAddr nextb = BADD(i, 1);
-    void* laddr = ToLocal(i);
+    void *laddr = ToLocal(i);
     directory.lock(laddr);
     GAddr gs = i > start ? i : start;
-    void* ls = (void*)((ptr_t)wr->ptr + GMINUS(gs, start));
+    void *ls = (void *)((ptr_t)wr->ptr + GMINUS(gs, start));
     int len = nextb > end ? GMINUS(end, gs) : GMINUS(nextb, gs);
     memcpy(ToLocal(gs), ls, len);
     directory.unlock(laddr);
@@ -73,13 +73,13 @@ void Worker::ProcessRemoteWrite(Client* client, WorkRequest* wr) {
   wr = nullptr;
 }
 
-void Worker::ProcessRemoteWriteCache(Client* client, WorkRequest* wr) {
+void Worker::ProcessRemoteWriteCache(Client *client, WorkRequest *wr) {
   epicLog(LOG_WARNING, "Impossible!");
 }
 
-void Worker::ProcessRemoteWriteReply(Client* client, WorkRequest* wr) {
+void Worker::ProcessRemoteWriteReply(Client *client, WorkRequest *wr) {
   epicAssert(!wr->status);
-  WorkRequest* pwr = GetPendingWork(wr->id);
+  WorkRequest *pwr = GetPendingWork(wr->id);
   epicAssert(pwr);
   epicAssert(pwr->id == wr->id);
   pwr->status = wr->status;
@@ -90,18 +90,18 @@ void Worker::ProcessRemoteWriteReply(Client* client, WorkRequest* wr) {
   wr = nullptr;
 }
 
-void Worker::ProcessRemoteRLock(Client* client, WorkRequest* wr) {
+void Worker::ProcessRemoteRLock(Client *client, WorkRequest *wr) {
   epicAssert(wr->size == 0 && wr->ptr == nullptr);
   epicAssert(IsLocal(wr->addr));
   GAddr start = wr->addr;
   GAddr start_blk = TOBLOCK(start);
-  void* laddr = ToLocal(start_blk);
+  void *laddr = ToLocal(start_blk);
 
   directory.lock(laddr);
   int ret = directory.RLock(ToLocal(wr->addr));
-  if(ret) {  //failed to lock
+  if (ret) {  //failed to lock
     epicLog(LOG_INFO, "cannot lock addr %lx, will try later", wr->addr);
-    if(wr->flag & TRY_LOCK) {
+    if (wr->flag & TRY_LOCK) {
       wr->status = LOCK_FAILED;
     } else {
       //to_serve_local_requests[start_blk].push(wr);
@@ -119,18 +119,18 @@ void Worker::ProcessRemoteRLock(Client* client, WorkRequest* wr) {
   wr = nullptr;
 }
 
-void Worker::ProcessRemoteWLock(Client* client, WorkRequest* wr) {
+void Worker::ProcessRemoteWLock(Client *client, WorkRequest *wr) {
   epicAssert(wr->size == 0 && wr->ptr == nullptr);
   epicAssert(IsLocal(wr->addr));
   GAddr start = wr->addr;
   GAddr start_blk = TOBLOCK(start);
-  void* laddr = ToLocal(start_blk);
+  void *laddr = ToLocal(start_blk);
 
   directory.lock(laddr);
   int ret = directory.WLock(ToLocal(wr->addr));
-  if(ret) {  //failed to lock
+  if (ret) {  //failed to lock
     epicLog(LOG_INFO, "cannot lock addr %lx, will try later", wr->addr);
-    if(wr->flag & TRY_LOCK) {
+    if (wr->flag & TRY_LOCK) {
       wr->status = LOCK_FAILED;
     } else {
       //to_serve_local_requests[start_blk].push(wr);
@@ -146,11 +146,11 @@ void Worker::ProcessRemoteWLock(Client* client, WorkRequest* wr) {
   wr = nullptr;
 }
 
-void Worker::ProcessRemoteUnLock(Client* client, WorkRequest* wr) {
+void Worker::ProcessRemoteUnLock(Client *client, WorkRequest *wr) {
   epicAssert(wr->size == 0 && wr->ptr == nullptr);
   epicAssert(IsLocal(wr->addr));
   GAddr start_blk = TOBLOCK(wr->addr);
-  void* laddr = ToLocal(start_blk);
+  void *laddr = ToLocal(start_blk);
   //epicAssert(!directory.InTransitionState(laddr));
   directory.lock(laddr);
   directory.UnLock(ToLocal(wr->addr));
@@ -165,11 +165,11 @@ void Worker::ProcessRemoteUnLock(Client* client, WorkRequest* wr) {
   wr = nullptr;
 }
 
-void Worker::ProcessRemoteUnLockReply(Client* client, WorkRequest* wr) {
+void Worker::ProcessRemoteUnLockReply(Client *client, WorkRequest *wr) {
 #ifdef ASYNC_UNLOCK
   epicAssert(false);
 #endif
-  WorkRequest* pwr = GetPendingWork(wr->id);
+  WorkRequest *pwr = GetPendingWork(wr->id);
   epicAssert(pwr);
   epicAssert(pwr->id == wr->id);
   pwr->status = wr->status;
@@ -178,22 +178,22 @@ void Worker::ProcessRemoteUnLockReply(Client* client, WorkRequest* wr) {
   epicAssert(!pwr->status);
   Notify(pwr);
   delete wr;
-  wr= nullptr;
+  wr = nullptr;
 }
 
-void Worker::ProcessRemoteLockReply(Client* client, WorkRequest* wr) {
+void Worker::ProcessRemoteLockReply(Client *client, WorkRequest *wr) {
   epicAssert(wr->size == 0 && wr->ptr == nullptr);
-  WorkRequest* pwr = GetPendingWork(wr->id);
+  WorkRequest *pwr = GetPendingWork(wr->id);
   epicAssert(pwr);
   epicAssert(pwr->id == wr->id);
   pwr->status = wr->status;
   int ret = ErasePendingWork(wr->id);
   epicAssert(ret);
-  if(pwr->status) {
+  if (pwr->status) {
     epicLog(LOG_INFO, "lock remote addr %lx failed", wr->addr);
   }
   Notify(pwr);
   delete wr;
-  wr= nullptr;
+  wr = nullptr;
 }
 

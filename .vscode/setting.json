@@ -1,0 +1,19 @@
+{
+  "C_Cpp.clang_format_sortIncludes": false,
+  "C_Cpp.clang_format_style": "Google",
+  "C_Cpp.intelliSenseEngine": "default",
+  "C_Cpp.default.cppStandard": "c++17",
+  "C_Cpp.default.cStandard": "c11",
+  "C_Cpp.vcFormat.newLine.beforeOpenBrace.type": "sameLine",
+  "C_Cpp.vcFormat.newLine.beforeOpenBrace.lambda": "sameLine",
+  "C_Cpp.vcFormat.newLine.beforeOpenBrace.function": "sameLine",
+  "C_Cpp.vcFormat.space.pointerReferenceAlignment": "right",
+  "C_Cpp.vcFormat.space.beforeInheritanceColon": false,
+  "C_Cpp.intelliSenseEngineFallback": "enabled",
+  "C_Cpp.vcFormat.newLine.beforeElse": false,
+  "C_Cpp.vcFormat.newLine.beforeOpenBrace.block": "sameLine",
+  "C_Cpp.vcFormat.newLine.beforeOpenBrace.namespace": "sameLine",
+  "C_Cpp.clang_format_fallbackStyle": "Google",
+  "C_Cpp.formatting": "vcFormat",
+  "C_Cpp.vcFormat.space.beforeConstructorColon": false
+}

@@ -14,14 +14,14 @@ class DefaultHasher {
 public:
     template <class T = Key>
     typename std::enable_if<std::is_integral<T>::value, size_t>::type
-    operator()(const Key& k) const {
+        operator()(const Key &k) const {
         // This constant is found in the CityHash code
         return k * 0x9ddfea08eb382d69ULL;
     }
 
     template <class T = Key>
     typename std::enable_if<!std::is_integral<T>::value, size_t>::type
-    operator()(const Key& k) const {
+        operator()(const Key &k) const {
         return fallback(k);
     }
 };

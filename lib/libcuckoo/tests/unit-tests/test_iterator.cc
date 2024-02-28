@@ -29,9 +29,9 @@ TEST_CASE("empty table iteration", "[iterator]") {
 }
 
 template <class Iterator>
-void AssertIteratorIsReleased(Iterator& it) {
+void AssertIteratorIsReleased(Iterator &it) {
     REQUIRE_THROWS_AS(*it, std::runtime_error);
-    REQUIRE_THROWS_AS((void) it->first, std::runtime_error);
+    REQUIRE_THROWS_AS((void)it->first, std::runtime_error);
 
     REQUIRE_THROWS_AS(it++, std::runtime_error);
     REQUIRE_THROWS_AS(++it, std::runtime_error);
@@ -40,7 +40,7 @@ void AssertIteratorIsReleased(Iterator& it) {
 }
 
 template <class LockedTable>
-void AssertLockedTableIsReleased(LockedTable& lt) {
+void AssertLockedTableIsReleased(LockedTable &lt) {
     REQUIRE_THROWS_AS(lt.begin(), std::runtime_error);
     REQUIRE_THROWS_AS(lt.end(), std::runtime_error);
     REQUIRE_THROWS_AS(lt.cbegin(), std::runtime_error);
@@ -179,10 +179,10 @@ TEST_CASE("iterator modification", "[iterator]") {
 TEST_CASE("lock table blocks inserts", "[iterator]") {
     IntIntTable table;
     auto lt = table.lock_table();
-    std::thread thread([&table] () {
-            for (int i = 0; i < 10; ++i) {
-                table.insert(i, i);
-            }
+    std::thread thread([&table]() {
+        for (int i = 0; i < 10; ++i) {
+            table.insert(i, i);
+        }
         });
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     REQUIRE(table.size() == 0);

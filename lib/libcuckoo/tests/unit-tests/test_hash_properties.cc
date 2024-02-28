@@ -7,7 +7,7 @@
 // recover the old bucket when called with the alternate bucket as the index.
 template <class CuckoohashMap>
 void check_key(size_t hashpower,
-               const typename CuckoohashMap::key_type& key) {
+    const typename CuckoohashMap::key_type &key) {
     auto hashfn = typename CuckoohashMap::hasher();
     size_t hv = hashfn(key);
     auto partial = UnitTestInternalAccess::partial_key<CuckoohashMap>(hv);
@@ -39,7 +39,7 @@ TEST_CASE("string alt index works correctly", "[hash properties]") {
 }
 
 TEST_CASE("hash with larger hashpower only adds top bits",
-          "[hash properties]") {
+    "[hash properties]") {
     std::string key = "abc";
     size_t hv = StringIntTable::hasher()(key);
     auto partial = UnitTestInternalAccess::partial_key<StringIntTable>(hv);
@@ -47,7 +47,7 @@ TEST_CASE("hash with larger hashpower only adds top bits",
         size_t index_bucket1 = UnitTestInternalAccess::index_hash<
             StringIntTable>(hashpower, hv);
         size_t index_bucket2 = UnitTestInternalAccess::index_hash<
-            StringIntTable>(hashpower+1, hv);
+            StringIntTable>(hashpower + 1, hv);
         CHECK((index_bucket2 & ~(1L << hashpower)) == index_bucket1);
 
         size_t alt_bucket1 = UnitTestInternalAccess::alt_index<

@@ -73,7 +73,7 @@ bool use_strings = false;
 template <class KType>
 class AllEnvironment {
 public:
-    AllEnvironment() : table(numkeys), table2(numkeys), finished(false) {
+    AllEnvironment(): table(numkeys), table2(numkeys), finished(false) {
         // Sets up the random number generator
         if (seed == 0) {
             seed = std::chrono::system_clock::now().time_since_epoch().count();
@@ -122,7 +122,7 @@ void update_thread(AllEnvironment<KType> *env, size_t seed) {
     std::uniform_int_distribution<ValType2> val_dist2;
     std::uniform_int_distribution<size_t> third(0, 2);
     std::mt19937_64 gen(seed);
-    auto updatefn = [](ValType& v) { v += 3; };
+    auto updatefn = [](ValType &v) { v += 3; };
     while (!env->finished.load()) {
         // Run updates, update_funcs, or upserts on a random key.
         const KType k = generateKey<KType>(ind_dist(gen));
@@ -136,12 +136,12 @@ void update_thread(AllEnvironment<KType> *env, size_t seed) {
             // update_fn
             env->table.update_fn(k, updatefn);
             env->table2.update_fn(
-                k, [](ValType2& v) { v += 10; });
+                k, [](ValType2 &v) { v += 10; });
             break;
         case 2:
             env->table.upsert(k, updatefn, val_dist(gen));
             env->table2.upsert(
-                k, [](ValType2& v) { v -= 50; },
+                k, [](ValType2 &v) { v -= 50; },
                 val_dist2(gen));
         }
     }
@@ -158,7 +158,8 @@ void find_thread(AllEnvironment<KType> *env, size_t seed) {
         env->table.find(k, v);
         try {
             env->table2.find(k);
-        } catch (...) {}
+        }
+        catch (...) {}
     }
 }
 
@@ -176,7 +177,7 @@ void resize_thread(AllEnvironment<KType> *env, size_t seed) {
         env->table.rehash(hashpower + 1);
         env->table.rehash(hashpower / 2);
     } else {
-        env->table2.reserve((1U << (hashpower+1)) * DEFAULT_SLOT_PER_BUCKET);
+        env->table2.reserve((1U << (hashpower + 1)) * DEFAULT_SLOT_PER_BUCKET);
         env->table2.reserve((1U << hashpower) * DEFAULT_SLOT_PER_BUCKET);
     }
 }
@@ -191,7 +192,7 @@ void iterator_thread(AllEnvironment<KType> *env, size_t seed) {
         return;
     }
     auto lt = env->table2.lock_table();
-    for (auto& item : lt) {
+    for (auto &item : lt) {
         if (gen() & 1) {
             item.second++;
         }
@@ -231,7 +232,7 @@ void StressTest(AllEnvironment<KType> *env) {
     for (size_t i = 0; i < thread_num; i++) {
         if (!disable_inserts) {
             threads.emplace_back(stress_insert_thread<KType>, env,
-                                 env->gen_seed++);
+                env->gen_seed++);
         }
         if (!disable_deletes) {
             threads.emplace_back(delete_thread<KType>, env, env->gen_seed++);
@@ -266,24 +267,24 @@ void StressTest(AllEnvironment<KType> *env) {
     std::cout << "Final load factor:\t" << env->table.load_factor() << std::endl;
 }
 
-int main(int argc, char** argv) {
-    const char* args[] = {"--power", "--thread-num", "--time", "--seed"};
-    size_t* arg_vars[] = {&power, &thread_num, &test_len, &seed};
-    const char* arg_help[] = {
+int main(int argc, char **argv) {
+    const char *args[] = { "--power", "--thread-num", "--time", "--seed" };
+    size_t *arg_vars[] = { &power, &thread_num, &test_len, &seed };
+    const char *arg_help[] = {
         "The number of keys to size the table with, expressed as a power of 2",
         "The number of threads to spawn for each type of operation",
         "The number of seconds to run the test for",
         "The seed for the random number generator"
     };
-    const char* flags[] = {
+    const char *flags[] = {
         "--disable-inserts", "--disable-deletes", "--disable-updates",
         "--disable-finds", "--disable-resizes", "--disable-iterators",
         "--disable-misc", "--disable-clears", "--use-strings"
     };
-    bool* flag_vars[] = {&disable_inserts, &disable_deletes, &disable_updates,
+    bool *flag_vars[] = { &disable_inserts, &disable_deletes, &disable_updates,
                          &disable_finds, &disable_resizes, &disable_iterators,
-                         &disable_misc, &disable_clears, &use_strings};
-    const char* flag_help[] = {
+                         &disable_misc, &disable_clears, &use_strings };
+    const char *flag_help[] = {
         "If set, no inserts will be run",
         "If set, no deletes will be run",
         "If set, no updates will be run",
@@ -295,8 +296,8 @@ int main(int argc, char** argv) {
         "If set, the key type of the map will be std::string"
     };
     parse_flags(argc, argv, "Runs a stress test on inserts, deletes, and finds",
-                args, arg_vars, arg_help, sizeof(args)/sizeof(const char*),
-                flags, flag_vars, flag_help, sizeof(flags)/sizeof(const char*));
+        args, arg_vars, arg_help, sizeof(args) / sizeof(const char *),
+        flags, flag_vars, flag_help, sizeof(flags) / sizeof(const char *));
     numkeys = 1U << power;
 
     if (use_strings) {

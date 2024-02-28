@@ -1,16 +1,16 @@
 // Copyright (c) 2018 The GAM Authors
 
-int Worker::ProcessLocalRead(WorkRequest* wr) {
+int Worker::ProcessLocalRead(WorkRequest *wr) {
   epicAssert(wr->addr);
   epicAssert(!(wr->flag & ASYNC));
   //long init_time = get_time();
   if (!(wr->flag & FENCE)) {
-    Fence* fence = fences_.at(wr->fd);
+    Fence *fence = fences_.at(wr->fd);
     fence->lock();
     if (unlikely(IsMFenced(fence, wr))) {
       AddToFence(fence, wr);
       epicLog(LOG_DEBUG, "fenced (mfenced = %d, sfenced = %d): %d",
-              fence->mfenced, fence->sfenced, wr->op);
+        fence->mfenced, fence->sfenced, wr->op);
       fence->unlock();
       return FENCE_PENDING;
     }
@@ -33,14 +33,14 @@ int Worker::ProcessLocalRead(WorkRequest* wr) {
     }
     for (GAddr i = start_blk; i < end;) {
       GAddr nextb = BADD(i, 1);
-      void* laddr = ToLocal(i);
+      void *laddr = ToLocal(i);
 
       directory.lock(laddr);
-      DirEntry* entry = directory.GetEntry(laddr);
+      DirEntry *entry = directory.GetEntry(laddr);
       DirState s = directory.GetState(entry);
       if (unlikely(directory.InTransitionState(s))) {
         epicLog(LOG_INFO, "directory in transition state when local read %d",
-                s);
+          s);
         //we increase the counter in case
         //we false call Notify()
         wr->counter++;
@@ -52,10 +52,10 @@ int Worker::ProcessLocalRead(WorkRequest* wr) {
       }
 
       if (unlikely(s == DIR_DIRTY)) {
-        WorkRequest* lwr = new WorkRequest(*wr);
+        WorkRequest *lwr = new WorkRequest(*wr);
         lwr->counter = 0;
         GAddr rc = directory.GetSList(entry).front();  //only one worker is updating this line
-        Client* cli = GetClient(rc);
+        Client *cli = GetClient(rc);
         lwr->op = FETCH_AND_SHARED;
         lwr->addr = i;
         lwr->size = BLOCK_SIZE;
@@ -70,7 +70,7 @@ int Worker::ProcessLocalRead(WorkRequest* wr) {
         SubmitRequest(cli, lwr, ADD_TO_PENDING | REQUEST_SEND);
       } else {
         GAddr gs = i > start ? i : start;
-        void* ls = (void*) ((ptr_t) wr->ptr + GMINUS(gs, start));
+        void *ls = (void *)((ptr_t)wr->ptr + GMINUS(gs, start));
         int len = nextb > end ? GMINUS(end, gs) : GMINUS(nextb, gs);
         memcpy(ls, ToLocal(gs), len);
       }
@@ -87,51 +87,51 @@ int Worker::ProcessLocalRead(WorkRequest* wr) {
     //long time_stamp_2 = get_time();
 #ifdef PROFILE_LATENCY
     Cache_return_t new_ret = cache.ReadCollect(wr);
-    switch(new_ret.op) {
-      case CACHE_READ_HIT:
-        switch(new_ret.mode) {
-          case 1:
-            ++cache_read_hit_case1_;
-            cache_read_hit_case1_time_ += new_ret.time;
-            break;
-          case 2:
-            ++cache_read_hit_case2_;
-            cache_read_hit_case2_time_ += new_ret.time;
-            break;
-          case 3:
-            ++cache_read_hit_case3_;
-            cache_read_hit_case3_time_ += new_ret.time;
-            break;
-          case 4:
-            ++cache_read_hit_case4_;
-            cache_read_hit_case4_time_ += new_ret.time;
-            break;
-        }
+    switch (new_ret.op) {
+    case CACHE_READ_HIT:
+      switch (new_ret.mode) {
+      case 1:
+        ++cache_read_hit_case1_;
+        cache_read_hit_case1_time_ += new_ret.time;
         break;
-      case CACHE_READ_MISS:
-        ++cache_read_miss_;
-        cache_read_miss_time_ += new_ret.time;
+      case 2:
+        ++cache_read_hit_case2_;
+        cache_read_hit_case2_time_ += new_ret.time;
         break;
-      case CACHE_WRITE_MISS:
-        ++cache_write_miss_;
-        cache_write_miss_time_ += new_ret.time;
+      case 3:
+        ++cache_read_hit_case3_;
+        cache_read_hit_case3_time_ += new_ret.time;
         break;
-      case CACHE_WRITE_HIT:
-        switch(new_ret.mode) {
-          case 1:
-            ++cache_write_hit_case1_;
-            cache_write_hit_case1_time_ += new_ret.time;
-            break;
-          case 2:
-            ++cache_write_hit_case2_;
-            cache_write_hit_case2_time_ += new_ret.time;
-            break;
-          case 3:
-            ++cache_write_hit_case3_;
-            cache_write_hit_case3_time_ += new_ret.time;
-            break;
-        }
+      case 4:
+        ++cache_read_hit_case4_;
+        cache_read_hit_case4_time_ += new_ret.time;
         break;
+      }
+      break;
+    case CACHE_READ_MISS:
+      ++cache_read_miss_;
+      cache_read_miss_time_ += new_ret.time;
+      break;
+    case CACHE_WRITE_MISS:
+      ++cache_write_miss_;
+      cache_write_miss_time_ += new_ret.time;
+      break;
+    case CACHE_WRITE_HIT:
+      switch (new_ret.mode) {
+      case 1:
+        ++cache_write_hit_case1_;
+        cache_write_hit_case1_time_ += new_ret.time;
+        break;
+      case 2:
+        ++cache_write_hit_case2_;
+        cache_write_hit_case2_time_ += new_ret.time;
+        break;
+      case 3:
+        ++cache_write_hit_case3_;
+        cache_write_hit_case3_time_ += new_ret.time;
+        break;
+      }
+      break;
     }
     int ret = new_ret.original_ret;
 
@@ -166,25 +166,25 @@ int Worker::ProcessLocalRead(WorkRequest* wr) {
      */
     epicAssert(wr->is_cache_hit_);
     if (IsLocal(wr->addr)) {
-        ++no_local_reads_;
-        ++no_local_reads_hit_;
+      ++no_local_reads_;
+      ++no_local_reads_hit_;
     } else {
-        ++no_remote_reads_;
-        ++no_remote_reads_hit_;
+      ++no_remote_reads_;
+      ++no_remote_reads_hit_;
     }
   }
 #endif
   return SUCCESS;
 }
 
-int Worker::ProcessLocalWrite(WorkRequest* wr) {
+int Worker::ProcessLocalWrite(WorkRequest *wr) {
   epicAssert(wr->addr);
-  Fence* fence = fences_.at(wr->fd);
+  Fence *fence = fences_.at(wr->fd);
   if (!(wr->flag & FENCE)) {
     fence->lock();
     if (unlikely(IsFenced(fence, wr))) {
       epicLog(LOG_DEBUG, "fenced(mfenced = %d, sfenced = %d): %d",
-              fence->mfenced, fence->sfenced, wr->op);
+        fence->mfenced, fence->sfenced, wr->op);
       AddToFence(fence, wr);
       fence->unlock();
       return FENCE_PENDING;
@@ -199,7 +199,7 @@ int Worker::ProcessLocalWrite(WorkRequest* wr) {
     GAddr start = wr->addr;
     GAddr start_blk = TOBLOCK(start);
     GAddr end = GADD(start, wr->size);
-    if (TOBLOCK(end-1) != start_blk) {
+    if (TOBLOCK(end - 1) != start_blk) {
       epicLog(LOG_INFO, "read/write split to multiple blocks");
     }
     wr->lock();
@@ -212,17 +212,17 @@ int Worker::ProcessLocalWrite(WorkRequest* wr) {
     }
     for (GAddr i = start_blk; i < end;) {
       epicAssert(
-          !(wr->flag & COPY) || ((wr->flag & COPY) && (wr->flag & ASYNC)));
+        !(wr->flag & COPY) || ((wr->flag & COPY) && (wr->flag & ASYNC)));
 
       GAddr nextb = BADD(i, 1);
-      void* laddr = ToLocal(i);
+      void *laddr = ToLocal(i);
 
       directory.lock(laddr);
-      DirEntry* entry = directory.GetEntry(laddr);
+      DirEntry *entry = directory.GetEntry(laddr);
       DirState state = directory.GetState(entry);
       if (unlikely(directory.InTransitionState(state))) {
         epicLog(LOG_INFO, "directory in transition state when local write %d",
-                state);
+          state);
         //we increase the counter in case
         //we false call Notify()
         wr->counter++;
@@ -248,8 +248,8 @@ int Worker::ProcessLocalWrite(WorkRequest* wr) {
        * instead of direct WRITE or CAS to invalidate the corresponding cache line in remote node
        */
       if (state == DIR_DIRTY || state == DIR_SHARED) {
-        list<GAddr>& shared = directory.GetSList(entry);
-        WorkRequest* lwr = new WorkRequest(*wr);
+        list<GAddr> &shared = directory.GetSList(entry);
+        WorkRequest *lwr = new WorkRequest(*wr);
         lwr->counter = 0;
         lwr->op = state == DIR_DIRTY ? FETCH_AND_INVALIDATE : INVALIDATE;
         lwr->addr = i;
@@ -269,17 +269,17 @@ int Worker::ProcessLocalWrite(WorkRequest* wr) {
         wr->counter++;
         epicAssert(state != DIR_TO_UNSHARED);
         epicAssert(
-            (state == DIR_DIRTY && !directory.IsBlockLocked(entry))
-                || (state == DIR_SHARED && !directory.IsBlockWLocked(entry)));
+          (state == DIR_DIRTY && !directory.IsBlockLocked(entry))
+          || (state == DIR_SHARED && !directory.IsBlockWLocked(entry)));
         directory.ToToUnShared(entry);
         //we move AddToPending before submit request
         //since it is possible that the reply comes back before we add to the pending list
         //if we AddToPending at last
         AddToPending(lwr->id, lwr);
         for (auto it = shared.begin(); it != shared.end(); it++) {
-          Client* cli = GetClient(*it);
+          Client *cli = GetClient(*it);
           epicLog(LOG_DEBUG, "invalidate (%d) cache from worker %d (lwr = %lx)",
-                  lwr->op, cli->GetWorkerId(), lwr);
+            lwr->op, cli->GetWorkerId(), lwr);
           SubmitRequest(cli, lwr);
           //lwr->counter++;
         }
@@ -287,14 +287,14 @@ int Worker::ProcessLocalWrite(WorkRequest* wr) {
 #ifdef GFUNC_SUPPORT
         if (wr->flag & GFUNC) {
           epicAssert(wr->gfunc);
-          epicAssert(TOBLOCK(wr->addr) == TOBLOCK(GADD(wr->addr, wr->size-1)));
+          epicAssert(TOBLOCK(wr->addr) == TOBLOCK(GADD(wr->addr, wr->size - 1)));
           epicAssert(i == start_blk);
-          void* laddr = ToLocal(wr->addr);
+          void *laddr = ToLocal(wr->addr);
           wr->gfunc(laddr, wr->arg);
         } else {
 #endif
           GAddr gs = i > start ? i : start;
-          void* ls = (void*) ((ptr_t) wr->ptr + GMINUS(gs, start));
+          void *ls = (void *)((ptr_t)wr->ptr + GMINUS(gs, start));
           int len = nextb > end ? GMINUS(end, gs) : GMINUS(nextb, gs);
           memcpy(ToLocal(gs), ls, len);
           epicLog(LOG_DEBUG, "copy dirty data in advance");
@@ -314,51 +314,51 @@ int Worker::ProcessLocalWrite(WorkRequest* wr) {
   } else {
 #ifdef PROFILE_LATENCY
     Cache_return_t new_ret = cache.WriteCollect(wr);
-    switch(new_ret.op) {
-      case CACHE_READ_HIT:
-        switch(new_ret.mode) {
-          case 1:
-            ++cache_read_hit_case1_;
-            cache_read_hit_case1_time_ += new_ret.time;
-            break;
-          case 2:
-            ++cache_read_hit_case2_;
-            cache_read_hit_case2_time_ += new_ret.time;
-            break;
-          case 3:
-            ++cache_read_hit_case3_;
-            cache_read_hit_case3_time_ += new_ret.time;
-            break;
-          case 4:
-            ++cache_read_hit_case4_;
-            cache_read_hit_case4_time_ += new_ret.time;
-            break;
-        }
+    switch (new_ret.op) {
+    case CACHE_READ_HIT:
+      switch (new_ret.mode) {
+      case 1:
+        ++cache_read_hit_case1_;
+        cache_read_hit_case1_time_ += new_ret.time;
         break;
-      case CACHE_READ_MISS:
-        ++cache_read_miss_;
-        cache_read_miss_time_ += new_ret.time;
+      case 2:
+        ++cache_read_hit_case2_;
+        cache_read_hit_case2_time_ += new_ret.time;
         break;
-      case CACHE_WRITE_MISS:
-        ++cache_write_miss_;
-        cache_write_miss_time_ += new_ret.time;
+      case 3:
+        ++cache_read_hit_case3_;
+        cache_read_hit_case3_time_ += new_ret.time;
         break;
-      case CACHE_WRITE_HIT:
-        switch(new_ret.mode) {
-          case 1:
-            ++cache_write_hit_case1_;
-            cache_write_hit_case1_time_ += new_ret.time;
-            break;
-          case 2:
-            ++cache_write_hit_case2_;
-            cache_write_hit_case2_time_ += new_ret.time;
-            break;
-          case 3:
-            ++cache_write_hit_case3_;
-            cache_write_hit_case3_time_ += new_ret.time;
-            break;
-        }
+      case 4:
+        ++cache_read_hit_case4_;
+        cache_read_hit_case4_time_ += new_ret.time;
         break;
+      }
+      break;
+    case CACHE_READ_MISS:
+      ++cache_read_miss_;
+      cache_read_miss_time_ += new_ret.time;
+      break;
+    case CACHE_WRITE_MISS:
+      ++cache_write_miss_;
+      cache_write_miss_time_ += new_ret.time;
+      break;
+    case CACHE_WRITE_HIT:
+      switch (new_ret.mode) {
+      case 1:
+        ++cache_write_hit_case1_;
+        cache_write_hit_case1_time_ += new_ret.time;
+        break;
+      case 2:
+        ++cache_write_hit_case2_;
+        cache_write_hit_case2_time_ += new_ret.time;
+        break;
+      case 3:
+        ++cache_write_hit_case3_;
+        cache_write_hit_case3_time_ += new_ret.time;
+        break;
+      }
+      break;
     }
     int ret = new_ret.original_ret;
 #else
@@ -387,18 +387,18 @@ int Worker::ProcessLocalWrite(WorkRequest* wr) {
   return SUCCESS;
 }
 
-int Worker::ProcessLocalRLock(WorkRequest* wr) {
+int Worker::ProcessLocalRLock(WorkRequest *wr) {
   epicAssert(wr->addr);
   epicAssert(!(wr->flag & ASYNC));
   //epicAssert(!(wr->flag & FENCE));
   if (!(wr->flag & FENCE)) {
-    Fence* fence = fences_.at(wr->fd);
+    Fence *fence = fences_.at(wr->fd);
     fence->lock();
     if (IsFenced(fence, wr)) {
       AddToFence(fence, wr);
       fence->unlock();
       epicLog(LOG_DEBUG, "fenced (mfenced = %d, sfenced = %d): %d",
-              fence->mfenced, fence->sfenced, wr->op);
+        fence->mfenced, fence->sfenced, wr->op);
       return FENCE_PENDING;
     } else if (fence->pending_writes) {  //we only mark fenced when there are pending writes
       fence->mfenced = true;
@@ -412,25 +412,25 @@ int Worker::ProcessLocalRLock(WorkRequest* wr) {
   if (IsLocal(wr->addr)) {
     GAddr start = wr->addr;
     GAddr start_blk = TOBLOCK(start);
-    void* laddr = ToLocal(start_blk);
+    void *laddr = ToLocal(start_blk);
 
     wr->lock();
     directory.lock(laddr);
-    DirEntry* entry = directory.GetEntry(laddr);
+    DirEntry *entry = directory.GetEntry(laddr);
     DirState state = directory.GetState(entry);
     if (directory.InTransitionState(state)) {
       epicLog(LOG_INFO, "directory in transition state when local read %d",
-              state);
+        state);
       AddToServeLocalRequest(start_blk, wr);
       directory.unlock(laddr);
       wr->unlock();
       return IN_TRANSITION;
     }
     if (state == DIR_DIRTY) {
-      WorkRequest* lwr = new WorkRequest(*wr);
+      WorkRequest *lwr = new WorkRequest(*wr);
       lwr->counter = 0;
       GAddr rc = directory.GetSList(entry).front();  //only one worker is updating this line
-      Client* cli = GetClient(rc);
+      Client *cli = GetClient(rc);
       lwr->op = FETCH_AND_SHARED;
       lwr->addr = start_blk;
       lwr->size = BLOCK_SIZE;
@@ -492,28 +492,28 @@ int Worker::ProcessLocalRLock(WorkRequest* wr) {
   } else {
     epicAssert(wr->is_cache_hit_);
     if (IsLocal(wr->addr)) {
-        ++no_local_reads_;
-        ++no_local_reads_hit_;
+      ++no_local_reads_;
+      ++no_local_reads_hit_;
     } else {
-        ++no_remote_reads_;
-        ++no_remote_reads_hit_;
+      ++no_remote_reads_;
+      ++no_remote_reads_hit_;
     }
   }
 #endif
   return SUCCESS;
 }
 
-int Worker::ProcessLocalWLock(WorkRequest* wr) {
+int Worker::ProcessLocalWLock(WorkRequest *wr) {
   epicAssert(wr->addr);
   epicAssert(!(wr->flag & ASYNC));
   if (!(wr->flag & FENCE)) {
-    Fence* fence = fences_.at(wr->fd);
+    Fence *fence = fences_.at(wr->fd);
     fence->lock();
     if (IsFenced(fence, wr)) {
       AddToFence(fence, wr);
       fence->unlock();
       epicLog(LOG_DEBUG, "fenced (mfenced = %d, sfenced = %d): %d",
-              fence->mfenced, fence->sfenced, wr->op);
+        fence->mfenced, fence->sfenced, wr->op);
       return FENCE_PENDING;
     } else if (fence->pending_writes) {  //we only mark fenced when there are pending writes
       fence->mfenced = true;
@@ -527,23 +527,23 @@ int Worker::ProcessLocalWLock(WorkRequest* wr) {
   if (IsLocal(wr->addr)) {
     GAddr start = wr->addr;
     GAddr start_blk = TOBLOCK(start);
-    void* laddr = ToLocal(start_blk);
+    void *laddr = ToLocal(start_blk);
 
     wr->lock();
     directory.lock(laddr);
-    DirEntry* entry = directory.GetEntry(laddr);
+    DirEntry *entry = directory.GetEntry(laddr);
     DirState state = directory.GetState(entry);
     if (directory.InTransitionState(state)) {
       epicLog(LOG_INFO, "directory in transition state when local write %d",
-              state);
+        state);
       AddToServeLocalRequest(start_blk, wr);
       directory.unlock(laddr);
       wr->unlock();
       return IN_TRANSITION;
     }
     if (DIR_DIRTY == state || DIR_SHARED == state) {
-      list<GAddr>& shared = directory.GetSList(entry);
-      WorkRequest* lwr = new WorkRequest(*wr);
+      list<GAddr> &shared = directory.GetSList(entry);
+      WorkRequest *lwr = new WorkRequest(*wr);
       lwr->counter = 0;
       lwr->op = state == DIR_DIRTY ? FETCH_AND_INVALIDATE : INVALIDATE;
       lwr->addr = start_blk;
@@ -556,16 +556,16 @@ int Worker::ProcessLocalWLock(WorkRequest* wr) {
       wr->counter++;
       epicAssert(state != DIR_TO_UNSHARED);
       epicAssert(
-          (state == DIR_DIRTY && !directory.IsBlockLocked(entry))
-              || (state == DIR_SHARED && !directory.IsBlockWLocked(entry)));
+        (state == DIR_DIRTY && !directory.IsBlockLocked(entry))
+        || (state == DIR_SHARED && !directory.IsBlockWLocked(entry)));
       directory.ToToUnShared(entry);
       AddToPending(lwr->id, lwr);
       for (auto it = shared.begin(); it != shared.end(); it++) {
-        Client* cli = GetClient(*it);
+        Client *cli = GetClient(*it);
         epicLog(
-            LOG_DEBUG,
-            "invalidate (%d) cache from worker %d, state = %d, lwr->counter = %d",
-            lwr->op, cli->GetWorkerId(), state, lwr->counter.load());
+          LOG_DEBUG,
+          "invalidate (%d) cache from worker %d, state = %d, lwr->counter = %d",
+          lwr->op, cli->GetWorkerId(), state, lwr->counter.load());
         SubmitRequest(cli, lwr);
         //lwr->counter++;
       }
@@ -617,26 +617,26 @@ int Worker::ProcessLocalWLock(WorkRequest* wr) {
   } else {
     epicAssert(wr->is_cache_hit_);
     if (IsLocal(wr->addr)) {
-        ++no_local_writes_;
-        ++no_local_writes_hit_;
+      ++no_local_writes_;
+      ++no_local_writes_hit_;
     } else {
-        ++no_remote_writes_;
-        ++no_remote_writes_hit_;
+      ++no_remote_writes_;
+      ++no_remote_writes_hit_;
     }
   }
 #endif
   return SUCCESS;
 }
 
-int Worker::ProcessLocalUnLock(WorkRequest* wr) {
+int Worker::ProcessLocalUnLock(WorkRequest *wr) {
   if (!(wr->flag & FENCE)) {
-    Fence* fence = fences_.at(wr->fd);
+    Fence *fence = fences_.at(wr->fd);
     fence->lock();
     if (IsFenced(fence, wr)) {
       AddToFence(fence, wr);
       fence->unlock();
       epicLog(LOG_DEBUG, "fenced (mfenced = %d, sfenced = %d): %d",
-              fence->mfenced, fence->sfenced, wr->op);
+        fence->mfenced, fence->sfenced, wr->op);
       return FENCE_PENDING;
     } else if (fence->pending_writes) {  //we only mark fenced when there are pending writes
       fence->mfenced = true;
@@ -650,7 +650,7 @@ int Worker::ProcessLocalUnLock(WorkRequest* wr) {
 
   if (IsLocal(wr->addr)) {
     GAddr start_blk = TOBLOCK(wr->addr);
-    void* laddr = ToLocal(start_blk);
+    void *laddr = ToLocal(start_blk);
     directory.lock(laddr);
     directory.UnLock(ToLocal(wr->addr));
     directory.unlock(laddr);

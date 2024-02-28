@@ -13,12 +13,12 @@
 #include "tcp.h"
 #include "settings.h"
 
-Master* MasterFactory::server = nullptr;
+Master *MasterFactory::server = nullptr;
 
-Master::Master(const Conf& conf)
-    : st(nullptr),
-      workers(),
-      unsynced_workers() {
+Master::Master(const Conf &conf)
+  : st(nullptr),
+  workers(),
+  unsynced_workers() {
 
   this->conf = &conf;
 
@@ -27,23 +27,23 @@ Master::Master(const Conf& conf)
 
   //create the event loop
   el = aeCreateEventLoop(
-      conf.maxthreads + conf.maxclients + EVENTLOOP_FDSET_INCR);
+    conf.maxthreads + conf.maxclients + EVENTLOOP_FDSET_INCR);
 
   //open the socket for listening to the connections from workers to exch rdma resouces
   char neterr[ANET_ERR_LEN];
-  char* bind_addr =
-      conf.master_bindaddr.length() == 0 ?
-          nullptr : const_cast<char*>(conf.master_bindaddr.c_str());
+  char *bind_addr =
+    conf.master_bindaddr.length() == 0 ?
+    nullptr : const_cast<char *>(conf.master_bindaddr.c_str());
   sockfd = anetTcpServer(neterr, conf.master_port, bind_addr, conf.backlog);
   if (sockfd < 0) {
     epicLog(LOG_WARNING, "Opening port %s:%d (%s)",
-            conf.master_bindaddr.c_str(), conf.master_port, neterr);
+      conf.master_bindaddr.c_str(), conf.master_port, neterr);
     exit(1);
   }
 
   //register tcp event for rdma parameter exchange
   if (sockfd
-      > 0&& aeCreateFileEvent(el, sockfd, AE_READABLE, AcceptTcpClientHandle, this) == AE_ERR) {
+  > 0 && aeCreateFileEvent(el, sockfd, AE_READABLE, AcceptTcpClientHandle, this) == AE_ERR) {
     epicPanic("Unrecoverable error creating sockfd file event.");
   }
 
@@ -58,7 +58,7 @@ Master::Master(const Conf& conf)
   this->st = new thread(startEventLoop, el);
 }
 
-int Master::PostAcceptWorker(int fd, void* data) {
+int Master::PostAcceptWorker(int fd, void *data) {
   if (worker_ips.length() == 0) {
     if (1 != write(fd, " ", 1)) {
       epicLog(LOG_WARNING, "Unable to send worker ip list\n");
@@ -66,7 +66,7 @@ int Master::PostAcceptWorker(int fd, void* data) {
     }
   } else {
     if (worker_ips.length()
-        != write(fd, worker_ips.c_str(), worker_ips.length())) {
+      != write(fd, worker_ips.c_str(), worker_ips.length())) {
       epicLog(LOG_WARNING, "Unable to send worker ip list\n");
       return -1;
     }
@@ -85,7 +85,7 @@ int Master::PostAcceptWorker(int fd, void* data) {
   msg[n] = '\0';
 
   epicLog(LOG_DEBUG, "received: %s, now worker list is %s (len=%d)\n", msg,
-          worker_ips.c_str(), worker_ips.length());
+    worker_ips.c_str(), worker_ips.length());
   return 0;
 }
 
@@ -95,72 +95,119 @@ Master::~Master() {
   st = nullptr;
 }
 
-void Master::ProcessRequest(Client* client, WorkRequest* wr) {
+void Master::ProcessRequest(Client *client, WorkRequest *wr) {
   epicAssert(wr->wid == client->GetWorkerId());
   switch (wr->op) {
-    case UPDATE_MEM_STATS: {
-      epicAssert(wr->size);
-      Size curr_free = client->GetFreeMem();
-      client->SetMemStat(wr->size, wr->free);
-      unsynced_workers.push(client);
+  case UPDATE_MEM_STATS: {
+    epicAssert(wr->size);
+    Size curr_free = client->GetFreeMem();
+    client->SetMemStat(wr->size, wr->free);
+    unsynced_workers.push(client);
 
-      widCliMapWorker[client->GetWorkerId()] = client;
-      epicLog(LOG_DEBUG, "Client has been add with id: %d, size and free: %lld:%lld", client->GetWorkerId(), client->GetFreeMem(), client->GetTotalMem());
+    widCliMapWorker[client->GetWorkerId()] = client;
+    epicLog(LOG_DEBUG, "Client has been add with id: %d, size and free: %lld:%lld", client->GetWorkerId(), client->GetFreeMem(), client->GetTotalMem());
 
-      if (unsynced_workers.size() == conf->unsynced_th) {
-        WorkRequest lwr { };
-        lwr.op = BROADCAST_MEM_STATS;
-        char buf[conf->unsynced_th * MAX_MEM_STATS_SIZE + 1];  //op + list + \0
-        char send_buf[MAX_REQUEST_SIZE];
+    if (unsynced_workers.size() == conf->unsynced_th) {
+      WorkRequest lwr{ };
+      lwr.op = BROADCAST_MEM_STATS;
+      char buf[conf->unsynced_th * MAX_MEM_STATS_SIZE + 1];  //op + list + \0
+      char send_buf[MAX_REQUEST_SIZE];
 
-        int n = 0;
-        while (!unsynced_workers.empty()) {
-          Client* lc = unsynced_workers.front();
-          n += sprintf(buf + n, "%u:%d:%ld:%ld", lc->GetQP(), lc->GetWorkerId(),
-                       lc->GetTotalMem(), lc->GetFreeMem());
-          unsynced_workers.pop();
-        }
-        lwr.size = conf->unsynced_th;
-        lwr.ptr = buf;
-        int len = 0;
-        lwr.Ser(send_buf, len);
-        Broadcast(send_buf, len);
+      int n = 0;
+      while (!unsynced_workers.empty()) {
+        Client *lc = unsynced_workers.front();
+        n += sprintf(buf + n, "%u:%d:%ld:%ld", lc->GetQP(), lc->GetWorkerId(),
+          lc->GetTotalMem(), lc->GetFreeMem());
+        unsynced_workers.pop();
       }
-      delete wr;
-      wr = nullptr;
-      break;
+      lwr.size = conf->unsynced_th;
+      lwr.ptr = buf;
+      int len = 0;
+      lwr.Ser(send_buf, len);
+      Broadcast(send_buf, len);
     }
-    case FETCH_MEM_STATS: {
-      //UpdateWidMap();
-      epicAssert(widCliMap.size() == qpCliMap.size());
-//		if(widCliMapWorker.size() == 1) { //only have the info of the worker, who sends the request
-//			break;
-//		}
-      WorkRequest lwr { };
-      lwr.op = FETCH_MEM_STATS_REPLY;
-      char buf[(widCliMapWorker.size()) * MAX_MEM_STATS_SIZE + 1];  //op + list + \0
-      char* send_buf = client->GetFreeSlot();
+    delete wr;
+    wr = nullptr;
+    break;
+  }
+  case FETCH_MEM_STATS: {
+    //UpdateWidMap();
+    epicAssert(widCliMap.size() == qpCliMap.size());
+    //		if(widCliMapWorker.size() == 1) { //only have the info of the worker, who sends the request
+    //			break;
+    //		}
+    WorkRequest lwr{ };
+    lwr.op = FETCH_MEM_STATS_REPLY;
+    char buf[(widCliMapWorker.size()) * MAX_MEM_STATS_SIZE + 1];  //op + list + \0
+    char *send_buf = client->GetFreeSlot();
+    bool busy = false;
+    if (send_buf == nullptr) {
+      busy = true;
+      send_buf = (char *)zmalloc(MAX_REQUEST_SIZE);
+      epicLog(LOG_INFO,
+        "We don't have enough slot buf, we use local buf instead");
+    }
+
+    int n = 0, i = 0;
+    for (auto entry : widCliMapWorker) {
+      //if(entry.first == client->GetWorkerId()) continue;
+      Client *lc = entry.second;
+      n += sprintf(buf + n, "%u:%d:%ld:%ld:", lc->GetQP(), lc->GetWorkerId(),
+        lc->GetTotalMem(), lc->GetFreeMem());
+      i++;
+    }
+    lwr.size = i;  //widCliMapWorker.size()-1;
+    epicAssert(widCliMapWorker.size() == i);
+    lwr.ptr = buf;
+    int len = 0, ret;
+    lwr.Ser(send_buf, len);
+    if ((ret = client->Send(send_buf, len)) != len) {
+      epicAssert(ret == -1);
+      epicLog(LOG_INFO, "slots are busy");
+    }
+    epicAssert((busy && ret == -1) || !busy);
+    delete wr;
+    wr = nullptr;
+    break;
+  }
+  case PUT: {
+    void *ptr = zmalloc(wr->size);
+    memcpy(ptr, wr->ptr, wr->size);
+    kvs[wr->key] = pair<void *, Size>(ptr, wr->size);
+    if (to_serve_kv_request.count(wr->key)) {
+      int size = to_serve_kv_request[wr->key].size();
+      for (int i = 0; i < size; i++) {
+        auto &to_serve = to_serve_kv_request[wr->key].front();
+        epicAssert(to_serve.second->op == GET);
+        epicLog(LOG_DEBUG, "processed to-serve remote kv request for key %ld",
+          to_serve.second->key);
+        to_serve.second->flag |= TO_SERVE;
+        to_serve_kv_request[wr->key].pop();
+        ProcessRequest(to_serve.first, to_serve.second);
+      }
+      epicAssert(to_serve_kv_request[wr->key].size() == 0);
+      to_serve_kv_request.erase(wr->key);
+    }
+    delete wr;
+    wr = nullptr;
+    break;
+  }
+  case GET: {
+    if (kvs.count(wr->key)) {
+      wr->ptr = kvs.at(wr->key).first;
+      wr->size = kvs.at(wr->key).second;
+      wr->op = GET_REPLY;
+      char *send_buf = client->GetFreeSlot();
       bool busy = false;
       if (send_buf == nullptr) {
         busy = true;
-        send_buf = (char *) zmalloc(MAX_REQUEST_SIZE);
+        send_buf = (char *)zmalloc(MAX_REQUEST_SIZE);
         epicLog(LOG_INFO,
-                "We don't have enough slot buf, we use local buf instead");
+          "We don't have enough slot buf, we use local buf instead");
       }
 
-      int n = 0, i = 0;
-      for (auto entry : widCliMapWorker) {
-        //if(entry.first == client->GetWorkerId()) continue;
-        Client* lc = entry.second;
-        n += sprintf(buf + n, "%u:%d:%ld:%ld:", lc->GetQP(), lc->GetWorkerId(),
-                     lc->GetTotalMem(), lc->GetFreeMem());
-        i++;
-      }
-      lwr.size = i;  //widCliMapWorker.size()-1;
-      epicAssert(widCliMapWorker.size() == i);
-      lwr.ptr = buf;
       int len = 0, ret;
-      lwr.Ser(send_buf, len);
+      wr->Ser(send_buf, len);
       if ((ret = client->Send(send_buf, len)) != len) {
         epicAssert(ret == -1);
         epicLog(LOG_INFO, "slots are busy");
@@ -168,76 +215,29 @@ void Master::ProcessRequest(Client* client, WorkRequest* wr) {
       epicAssert((busy && ret == -1) || !busy);
       delete wr;
       wr = nullptr;
-      break;
+    } else {
+      to_serve_kv_request[wr->key].push(
+        pair<Client *, WorkRequest *>(client, wr));
     }
-    case PUT: {
-      void* ptr = zmalloc(wr->size);
-      memcpy(ptr, wr->ptr, wr->size);
-      kvs[wr->key] = pair<void*, Size>(ptr, wr->size);
-      if (to_serve_kv_request.count(wr->key)) {
-        int size = to_serve_kv_request[wr->key].size();
-        for (int i = 0; i < size; i++) {
-          auto& to_serve = to_serve_kv_request[wr->key].front();
-          epicAssert(to_serve.second->op == GET);
-          epicLog(LOG_DEBUG, "processed to-serve remote kv request for key %ld",
-                  to_serve.second->key);
-          to_serve.second->flag |= TO_SERVE;
-          to_serve_kv_request[wr->key].pop();
-          ProcessRequest(to_serve.first, to_serve.second);
-        }
-        epicAssert(to_serve_kv_request[wr->key].size() == 0);
-        to_serve_kv_request.erase(wr->key);
-      }
-      delete wr;
-      wr = nullptr;
-      break;
-    }
-    case GET: {
-      if (kvs.count(wr->key)) {
-        wr->ptr = kvs.at(wr->key).first;
-        wr->size = kvs.at(wr->key).second;
-        wr->op = GET_REPLY;
-        char* send_buf = client->GetFreeSlot();
-        bool busy = false;
-        if (send_buf == nullptr) {
-          busy = true;
-          send_buf = (char *) zmalloc(MAX_REQUEST_SIZE);
-          epicLog(LOG_INFO,
-                  "We don't have enough slot buf, we use local buf instead");
-        }
 
-        int len = 0, ret;
-        wr->Ser(send_buf, len);
-        if ((ret = client->Send(send_buf, len)) != len) {
-          epicAssert(ret == -1);
-          epicLog(LOG_INFO, "slots are busy");
-        }
-        epicAssert((busy && ret == -1) || !busy);
-        delete wr;
-        wr = nullptr;
-      } else {
-        to_serve_kv_request[wr->key].push(
-            pair<Client*, WorkRequest*>(client, wr));
-      }
-
-      break;
-    }
-    default:
-      epicLog(LOG_WARNING, "unrecognized work request %d", wr->op);
-      break;
+    break;
+  }
+  default:
+    epicLog(LOG_WARNING, "unrecognized work request %d", wr->op);
+    break;
   }
 }
 
-void Master::Broadcast(const char* buf, size_t len) {
+void Master::Broadcast(const char *buf, size_t len) {
   auto lt = qpCliMap.lock_table();
   for (auto entry : lt) {
-    char* send_buf = entry.second->GetFreeSlot();
+    char *send_buf = entry.second->GetFreeSlot();
     bool busy = false;
     if (send_buf == nullptr) {
       busy = true;
-      send_buf = (char *) zmalloc(MAX_REQUEST_SIZE);
+      send_buf = (char *)zmalloc(MAX_REQUEST_SIZE);
       epicLog(LOG_INFO,
-              "We don't have enough slot buf, we use local buf instead");
+        "We don't have enough slot buf, we use local buf instead");
     }
     memcpy(send_buf, buf, len);
 
@@ -246,7 +246,7 @@ void Master::Broadcast(const char* buf, size_t len) {
     if (len != sent) {
       epicAssert(sent == -1);
       epicLog(LOG_INFO, "broadcast to %d failed (expected %d, but %d)\n", len,
-              sent);
+        sent);
     }
   }
 }

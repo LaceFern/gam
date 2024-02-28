@@ -1,19 +1,19 @@
 // Copyright (c) 2018 The GAM Authors 
 
-void Worker::ProcessRemoteRead(Client* client, WorkRequest* wr) {
+void Worker::ProcessRemoteRead(Client *client, WorkRequest *wr) {
   epicAssert(IsLocal(wr->addr));
 #ifdef SELECTIVE_CACHING
-  void* laddr = ToLocal(TOBLOCK(wr->addr));
+  void *laddr = ToLocal(TOBLOCK(wr->addr));
 #else
-  void* laddr = ToLocal(wr->addr);
+  void *laddr = ToLocal(wr->addr);
 #endif
   directory.lock(laddr);
-  DirEntry* entry = directory.GetEntry(laddr);
+  DirEntry *entry = directory.GetEntry(laddr);
   if (directory.InTransitionState(entry)) {
     //to_serve_requests[wr->addr].push(pair<Client*, WorkRequest*>(client, wr));
     AddToServeRemoteRequest(wr->addr, client, wr);
     epicLog(LOG_INFO, "directory in Transition State %d",
-        directory.GetState(entry));
+      directory.GetState(entry));
     directory.unlock(laddr);
     return;
   }
@@ -34,7 +34,7 @@ void Worker::ProcessRemoteRead(Client* client, WorkRequest* wr) {
         directory.unlock(laddr);
       }
       epicLog(LOG_INFO, "addr %lx is exclusively locked by %d", ToGlobal(laddr),
-          GetWorkerId());
+        GetWorkerId());
       return;
     }
 
@@ -42,12 +42,12 @@ void Worker::ProcessRemoteRead(Client* client, WorkRequest* wr) {
     epicAssert(BLOCK_ALIGNED(wr->addr) || wr->size < BLOCK_SIZE);
     client->WriteWithImm(wr->ptr, ToLocal(wr->addr), wr->size, wr->id);
 #ifdef SELECTIVE_CACHING
-    if(!(wr->flag & NOT_CACHE)) {
+    if (!(wr->flag & NOT_CACHE)) {
 #endif
       if (entry) {
         epicAssert(
-            directory.GetState(entry) == DIR_UNSHARED
-            || directory.GetState(entry) == DIR_SHARED);
+          directory.GetState(entry) == DIR_UNSHARED
+          || directory.GetState(entry) == DIR_SHARED);
         directory.ToShared(entry, client->ToGlobal(wr->ptr));
       } else {
         epicAssert(directory.GetState(entry) == DIR_UNSHARED);
@@ -60,7 +60,7 @@ void Worker::ProcessRemoteRead(Client* client, WorkRequest* wr) {
     wr = nullptr;
   } else {
     epicAssert(!directory.IsBlockLocked(entry));
-    WorkRequest* lwr = new WorkRequest(*wr);
+    WorkRequest *lwr = new WorkRequest(*wr);
     lwr->counter = 0;
     lwr->op = READ_FORWARD;
     lwr->parent = wr;
@@ -68,9 +68,9 @@ void Worker::ProcessRemoteRead(Client* client, WorkRequest* wr) {
     lwr->pwid = client->GetWorkerId();
 
     GAddr rc = directory.GetSList(entry).front();  //only one worker is updating this line
-    Client* cli = GetClient(rc);
+    Client *cli = GetClient(rc);
 #ifdef SELECTIVE_CACHING
-    if(!(wr->flag & NOT_CACHE)) {
+    if (!(wr->flag & NOT_CACHE)) {
       //intermediate state
       directory.ToToShared(entry);
       SubmitRequest(cli, lwr, ADD_TO_PENDING | REQUEST_SEND);
@@ -86,7 +86,7 @@ void Worker::ProcessRemoteRead(Client* client, WorkRequest* wr) {
   directory.unlock(laddr);
 }
 
-void Worker::ProcessRemoteReadCache(Client* client, WorkRequest* wr) {
+void Worker::ProcessRemoteReadCache(Client *client, WorkRequest *wr) {
   Work op_orin = wr->op;
   bool deadlock = false;
 #ifndef SELECTIVE_CACHING
@@ -94,7 +94,7 @@ void Worker::ProcessRemoteReadCache(Client* client, WorkRequest* wr) {
 #endif
   GAddr blk = TOBLOCK(wr->addr);
   cache.lock(blk);
-  CacheLine* cline = cache.GetCLine(blk);
+  CacheLine *cline = cache.GetCLine(blk);
   if (!cline) {
     epicLog(LOG_FATAL, "Unexpected: cannot find an updated copy");
     wr->op = READ_REPLY;  //change op to the corresponding reply type
@@ -103,7 +103,7 @@ void Worker::ProcessRemoteReadCache(Client* client, WorkRequest* wr) {
       SubmitRequest(client, wr);
     } else {  //READ_FORWARD
       SubmitRequest(client, wr);  //reply to the home node
-      Client* cli = FindClientWid(wr->pwid);
+      Client *cli = FindClientWid(wr->pwid);
       wr->id = wr->pid;
       SubmitRequest(cli, wr);  //reply to the local node
     }
@@ -134,7 +134,7 @@ void Worker::ProcessRemoteReadCache(Client* client, WorkRequest* wr) {
           SubmitRequest(client, wr);
         } else {  //READ_FORWARD
           SubmitRequest(client, wr);  //reply to the home node
-          Client* cli = FindClientWid(wr->pwid);
+          Client *cli = FindClientWid(wr->pwid);
           wr->id = wr->pid;
           SubmitRequest(cli, wr);  //reply to the local node
         }
@@ -152,7 +152,7 @@ void Worker::ProcessRemoteReadCache(Client* client, WorkRequest* wr) {
         cache.unlock(blk);
       }
       epicLog(LOG_INFO, "addr %lx is exclusively locked by %d", blk,
-          GetWorkerId());
+        GetWorkerId());
       return;
     }
 
@@ -165,16 +165,16 @@ void Worker::ProcessRemoteReadCache(Client* client, WorkRequest* wr) {
       epicAssert(BLOCK_ALIGNED(wr->addr) || wr->size < BLOCK_SIZE);
       client->WriteWithImm(wr->ptr, cline->line, wr->size, wr->id);  //reply to the local home node
     } else {  //READ_FORWARD
-      Client* cli = FindClientWid(wr->pwid);
+      Client *cli = FindClientWid(wr->pwid);
 
 #ifdef SELECTIVE_CACHING
-      void* cs = (void*)((ptr_t)cline->line + GMINUS(wr->addr, blk));
-      if(!(wr->flag & NOT_CACHE)) {
+      void *cs = (void *)((ptr_t)cline->line + GMINUS(wr->addr, blk));
+      if (!(wr->flag & NOT_CACHE)) {
         epicAssert(wr->size == BLOCK_SIZE && wr->addr == blk && cs == cline->line);
       }
       epicAssert(BLOCK_ALIGNED(wr->addr) || wr->size < BLOCK_SIZE);
       cli->WriteWithImm(wr->ptr, cs, wr->size, wr->pid);  //reply to the local node
-      if(!(wr->flag & NOT_CACHE)) {
+      if (!(wr->flag & NOT_CACHE)) {
         epicAssert(BLOCK_ALIGNED(wr->addr) || wr->size < BLOCK_SIZE);
         client->WriteWithImm(client->ToLocal(blk), cline->line, BLOCK_SIZE, wr->id);  //writeback to home node
       }
@@ -182,12 +182,12 @@ void Worker::ProcessRemoteReadCache(Client* client, WorkRequest* wr) {
       epicAssert(BLOCK_ALIGNED(wr->addr) || wr->size < BLOCK_SIZE);
       cli->WriteWithImm(wr->ptr, cline->line, wr->size, wr->pid);  //reply to the local node
       client->WriteWithImm(client->ToLocal(blk), cline->line, BLOCK_SIZE,
-          wr->id);  //writeback to home node
+        wr->id);  //writeback to home node
 #endif
     }
 
 #ifdef SELECTIVE_CACHING
-    if(!(wr->flag & NOT_CACHE)) {
+    if (!(wr->flag & NOT_CACHE)) {
 #endif
       //TOOD: add below to the callback function
       if (!deadlock)
@@ -201,71 +201,71 @@ void Worker::ProcessRemoteReadCache(Client* client, WorkRequest* wr) {
   wr = nullptr;
 }
 
-void Worker::ProcessRemoteReadReply(Client* client, WorkRequest* wr) {
+void Worker::ProcessRemoteReadReply(Client *client, WorkRequest *wr) {
   /*
    * READ/RLock failed case,
    * as normal successful case is through write_with_imm
    * which will call ProcessRequest(Client*, unsigned int)
    */
   epicAssert(READ_ERROR == wr->status || LOCK_FAILED == wr->status);
-  WorkRequest* pwr = GetPendingWork(wr->id);
+  WorkRequest *pwr = GetPendingWork(wr->id);
   epicAssert(pwr);
   epicAssert(pwr->id == wr->id);
   epicAssert((pwr->flag & LOCKED) && (pwr->flag & TRY_LOCK));
   switch (pwr->op) {
-    case READ:  //local node
-    case FETCH_AND_SHARED:  //local and home node
-      {
-        //For read, it's ok to undo the change and clear pending work now
-        //as there should be only one responder
-        epicAssert(pwr->parent);
-        pwr->parent->lock();
+  case READ:  //local node
+  case FETCH_AND_SHARED:  //local and home node
+  {
+    //For read, it's ok to undo the change and clear pending work now
+    //as there should be only one responder
+    epicAssert(pwr->parent);
+    pwr->parent->lock();
 
-        //undo the directory/cache changes
-        if (READ == pwr->op) {
-          epicAssert(pwr->flag & CACHED);
-          cache.lock(pwr->addr);
-          cache.ToInvalid(pwr->addr);
-          cache.unlock(pwr->addr);
-        } else {  //FETCH_AND_SHARED
-          epicAssert(IsLocal(pwr->addr));
-          epicAssert(pwr->ptr == ToLocal(pwr->addr));
-          directory.lock(pwr->ptr);
-          directory.UndoDirty(pwr->ptr);
-          directory.unlock(pwr->ptr);
-        }
+    //undo the directory/cache changes
+    if (READ == pwr->op) {
+      epicAssert(pwr->flag & CACHED);
+      cache.lock(pwr->addr);
+      cache.ToInvalid(pwr->addr);
+      cache.unlock(pwr->addr);
+    } else {  //FETCH_AND_SHARED
+      epicAssert(IsLocal(pwr->addr));
+      epicAssert(pwr->ptr == ToLocal(pwr->addr));
+      directory.lock(pwr->ptr);
+      directory.UndoDirty(pwr->ptr);
+      directory.unlock(pwr->ptr);
+    }
 
-        pwr->parent->status = wr->status;
-        int ret = ErasePendingWork(wr->id);
-        epicAssert(ret);
-        pwr->parent->unlock();
-        Notify(pwr->parent);
-        break;
-      }
-    case READ_FORWARD:  //home node
-      {
-        epicAssert(pwr->parent);
-        epicAssert(IsLocal(pwr->addr));  //I'm the home node
-        //parent request is from local node
-        WorkRequest* parent = pwr->parent;
-        void* laddr = ToLocal(pwr->addr);
+    pwr->parent->status = wr->status;
+    int ret = ErasePendingWork(wr->id);
+    epicAssert(ret);
+    pwr->parent->unlock();
+    Notify(pwr->parent);
+    break;
+  }
+  case READ_FORWARD:  //home node
+  {
+    epicAssert(pwr->parent);
+    epicAssert(IsLocal(pwr->addr));  //I'm the home node
+    //parent request is from local node
+    WorkRequest *parent = pwr->parent;
+    void *laddr = ToLocal(pwr->addr);
 
-        //For read, it's ok to undo the change and clear pending work now
-        //as there should be only one responder
-        directory.lock(laddr);
-        directory.UndoDirty(laddr);
-        directory.unlock(laddr);
-        int ret = ErasePendingWork(wr->id);
-        epicAssert(ret);
-        delete parent;
-        parent = nullptr;
-        break;
-      }
-    default:
-      epicLog(LOG_WARNING,
-          "Unrecognized pending work request %d for WRITE_REPLY", pwr->op);
-      exit(-1);
-      break;
+    //For read, it's ok to undo the change and clear pending work now
+    //as there should be only one responder
+    directory.lock(laddr);
+    directory.UndoDirty(laddr);
+    directory.unlock(laddr);
+    int ret = ErasePendingWork(wr->id);
+    epicAssert(ret);
+    delete parent;
+    parent = nullptr;
+    break;
+  }
+  default:
+    epicLog(LOG_WARNING,
+      "Unrecognized pending work request %d for WRITE_REPLY", pwr->op);
+    exit(-1);
+    break;
   }
 
   ProcessToServeRequest(pwr);
@@ -275,7 +275,7 @@ void Worker::ProcessRemoteReadReply(Client* client, WorkRequest* wr) {
   wr = nullptr;
 }
 
-void Worker::ProcessRemoteWrite(Client* client, WorkRequest* wr) {
+void Worker::ProcessRemoteWrite(Client *client, WorkRequest *wr) {
   Work op_orin = wr->op;
 #ifndef SELECTIVE_CACHING
   epicAssert(wr->size == BLOCK_SIZE);
@@ -283,13 +283,13 @@ void Worker::ProcessRemoteWrite(Client* client, WorkRequest* wr) {
 #endif
   epicAssert(IsLocal(wr->addr));  //I'm the home node
 #ifdef SELECTIVE_CACHING
-  void* laddr = ToLocal(TOBLOCK(wr->addr));
+  void *laddr = ToLocal(TOBLOCK(wr->addr));
 #else
-  void* laddr = ToLocal(wr->addr);
+  void *laddr = ToLocal(wr->addr);
 #endif
   epicAssert(BLOCK_ALIGNED((uint64_t)laddr));
   directory.lock(laddr);
-  DirEntry* entry = directory.GetEntry(laddr);
+  DirEntry *entry = directory.GetEntry(laddr);
   DirState state = directory.GetState(entry);
   if (directory.InTransitionState(state)) {
     AddToServeRemoteRequest(wr->addr, client, wr);
@@ -301,7 +301,7 @@ void Worker::ProcessRemoteWrite(Client* client, WorkRequest* wr) {
     //add the lock support
     if (directory.IsBlockLocked(entry)) {
       epicAssert((directory.IsBlockWLocked(entry) && state == DIR_UNSHARED)
-          || !directory.IsBlockWLocked(entry));
+        || !directory.IsBlockWLocked(entry));
       if (wr->flag & TRY_LOCK) {  //reply directly with lock failed
         epicAssert(wr->flag & LOCKED);
         wr->status = LOCK_FAILED;
@@ -316,21 +316,21 @@ void Worker::ProcessRemoteWrite(Client* client, WorkRequest* wr) {
         directory.unlock(laddr);
       }
       epicLog(LOG_INFO, "addr %lx is locked by %d", ToGlobal(laddr),
-          GetWorkerId());
+        GetWorkerId());
       return;
     }
 
     if (state == DIR_SHARED) {
       //change the invalidate strategy (home node accepts invalidation responses)
       //in order to simply the try_lock failed case
-      list<GAddr>& shared = directory.GetSList(entry);
-      WorkRequest* lwr = new WorkRequest(*wr);
+      list<GAddr> &shared = directory.GetSList(entry);
+      WorkRequest *lwr = new WorkRequest(*wr);
 #ifdef SELECTIVE_CACHING
-      if(wr->flag & NOT_CACHE) {
+      if (wr->flag & NOT_CACHE) {
         epicAssert(wr->size <= BLOCK_SIZE);
         lwr->addr = TOBLOCK(wr->addr);
         lwr->size = BLOCK_SIZE;
-        lwr->ptr = (void*)((ptr_t)lwr->ptr - GMINUS(wr->addr, lwr->addr)); //not necessary
+        lwr->ptr = (void *)((ptr_t)lwr->ptr - GMINUS(wr->addr, lwr->addr)); //not necessary
       }
 #endif
 
@@ -343,14 +343,14 @@ void Worker::ProcessRemoteWrite(Client* client, WorkRequest* wr) {
       lwr->counter = shared.size();
       bool first = true;
       for (auto it = shared.begin(); it != shared.end(); it++) {
-        Client* cli = GetClient(*it);
+        Client *cli = GetClient(*it);
         if (cli == client) {
           epicAssert(op_orin == WRITE_PERMISSION_ONLY);
           lwr->counter--;
           continue;
         }
         epicLog(LOG_DEBUG, "invalidate forward (%d) cache from worker %d",
-            lwr->op, cli->GetWorkerId());
+          lwr->op, cli->GetWorkerId());
         if (first) {
           AddToPending(lwr->id, lwr);
           first = false;
@@ -372,12 +372,12 @@ void Worker::ProcessRemoteWrite(Client* client, WorkRequest* wr) {
       }
     } else {  //DIR_UNSHARED
 #ifdef SELECTIVE_CACHING
-      if(wr->flag & NOT_CACHE) {
+      if (wr->flag & NOT_CACHE) {
 #ifdef GFUNC_SUPPORT
-        if(wr->flag & GFUNC) {
+        if (wr->flag & GFUNC) {
           epicAssert(wr->gfunc);
-          epicAssert(TOBLOCK(wr->addr) == TOBLOCK(GADD(wr->addr, wr->size-1)));
-          void* laddr = ToLocal(wr->addr);
+          epicAssert(TOBLOCK(wr->addr) == TOBLOCK(GADD(wr->addr, wr->size - 1)));
+          void *laddr = ToLocal(wr->addr);
           wr->gfunc(laddr, wr->arg);
         } else {
 #endif
@@ -389,7 +389,7 @@ void Worker::ProcessRemoteWrite(Client* client, WorkRequest* wr) {
 #endif
         if (WRITE == op_orin) {
           epicLog(LOG_DEBUG, "write the data (size = %ld) to destination",
-              wr->size);
+            wr->size);
           epicAssert(BLOCK_ALIGNED(wr->addr) || wr->size < BLOCK_SIZE);
           client->Write(wr->ptr, laddr, wr->size);
         } else {  //WRITE_PERMISSION_ONLY
@@ -415,7 +415,7 @@ void Worker::ProcessRemoteWrite(Client* client, WorkRequest* wr) {
     SubmitRequest(client, wr);
 
 #ifdef SELECTIVE_CACHING
-    if(!(wr->flag & NOT_CACHE)) {
+    if (!(wr->flag & NOT_CACHE)) {
 #endif
 
       //we can safely change the directory as we've already transfered the data to the local node
@@ -434,13 +434,13 @@ void Worker::ProcessRemoteWrite(Client* client, WorkRequest* wr) {
     wr = nullptr;
   } else {  //Case 4
     epicAssert(!directory.IsBlockLocked(entry));
-    WorkRequest* lwr = new WorkRequest(*wr);
+    WorkRequest *lwr = new WorkRequest(*wr);
 #ifdef SELECTIVE_CACHING
     if (wr->flag & NOT_CACHE) {
       epicAssert(wr->size <= BLOCK_SIZE);
       lwr->addr = TOBLOCK(wr->addr);
       lwr->size = BLOCK_SIZE;
-      lwr->ptr = (void*)((ptr_t)lwr->ptr - GMINUS(wr->addr, lwr->addr)); //not necessary
+      lwr->ptr = (void *)((ptr_t)lwr->ptr - GMINUS(wr->addr, lwr->addr)); //not necessary
     }
 #endif
     lwr->counter = 0;
@@ -459,7 +459,7 @@ void Worker::ProcessRemoteWrite(Client* client, WorkRequest* wr) {
     lwr->pwid = client->GetWorkerId();
 
     GAddr rc = directory.GetSList(entry).front();  //only one worker is updating this line
-    Client* cli = GetClient(rc);
+    Client *cli = GetClient(rc);
 
     //intermediate state
     directory.ToToDirty(entry);
@@ -468,7 +468,7 @@ void Worker::ProcessRemoteWrite(Client* client, WorkRequest* wr) {
   directory.unlock(laddr);
 }
 
-void Worker::ProcessRemoteWriteCache(Client* client, WorkRequest* wr) {
+void Worker::ProcessRemoteWriteCache(Client *client, WorkRequest *wr) {
   epicAssert(wr->op != WRITE_PERMISSION_ONLY_FORWARD);  //this cannot happen
   Work op_orin = wr->op;
   bool deadlock = false;
@@ -478,7 +478,7 @@ void Worker::ProcessRemoteWriteCache(Client* client, WorkRequest* wr) {
   //we hold an updated copy of the line (WRITE_FORWARD: Case 4)
   GAddr to_lock = wr->addr;
   cache.lock(to_lock);
-  CacheLine* cline = cache.GetCLine(wr->addr);
+  CacheLine *cline = cache.GetCLine(wr->addr);
   if (!cline) {
     if (INVALIDATE == op_orin || INVALIDATE_FORWARD == op_orin) {
       //this should because of cache line eviction from shared to invalid
@@ -496,7 +496,7 @@ void Worker::ProcessRemoteWriteCache(Client* client, WorkRequest* wr) {
         //      after change the invalidate_forward strategy
         client->WriteWithImm(nullptr, nullptr, 0, wr->id);
         epicLog(LOG_DEBUG, "send to %d with id %d", client->GetWorkerId(),
-            wr->id);
+          wr->id);
       }
     } else {
       epicLog(LOG_FATAL, "Unexpected: cannot find an updated copy");
@@ -511,7 +511,7 @@ void Worker::ProcessRemoteWriteCache(Client* client, WorkRequest* wr) {
         SubmitRequest(client, wr);
       } else {  //WRITE_FORWARD or WRITE_PERMISSION_ONLY_FORWARD
         SubmitRequest(client, wr);
-        Client* cli = FindClientWid(wr->pwid);
+        Client *cli = FindClientWid(wr->pwid);
         wr->id = wr->pid;
         SubmitRequest(cli, wr);
       }
@@ -529,7 +529,7 @@ void Worker::ProcessRemoteWriteCache(Client* client, WorkRequest* wr) {
        * cache from dirty to invalid (ToInvalid state)
        */
       if ((INVALIDATE == wr->op || INVALIDATE_FORWARD == wr->op)
-          && cline->state == CACHE_TO_DIRTY) {
+        && cline->state == CACHE_TO_DIRTY) {
         //deadlock case 1
         epicLog(LOG_INFO, "!!!deadlock detected!!!");
         deadlock = true;
@@ -562,7 +562,7 @@ void Worker::ProcessRemoteWriteCache(Client* client, WorkRequest* wr) {
           SubmitRequest(client, wr);
         } else {  //WRITE_FORWARD or WRITE_PERMISSION_ONLY_FORWARD
           SubmitRequest(client, wr);
-          Client* cli = FindClientWid(wr->pwid);
+          Client *cli = FindClientWid(wr->pwid);
           wr->id = wr->pid;
           SubmitRequest(cli, wr);
         }
@@ -580,7 +580,7 @@ void Worker::ProcessRemoteWriteCache(Client* client, WorkRequest* wr) {
         if (!deadlock) {
           AddToServeRemoteRequest(wr->addr, client, wr);
           epicLog(LOG_INFO, "addr %lx is locked by %d", wr->addr,
-              GetWorkerId());
+            GetWorkerId());
           cache.unlock(to_lock);
           return;
         } else {
@@ -608,10 +608,10 @@ void Worker::ProcessRemoteWriteCache(Client* client, WorkRequest* wr) {
         wr->op = PENDING_INVALIDATE;
         AddToPending(wr->id, wr);
         cache.ToToInvalid(cline);
-    	epicLog(LOG_DEBUG, "FETCH AND INVALID");
+        epicLog(LOG_DEBUG, "FETCH AND INVALID");
         epicAssert(BLOCK_ALIGNED(wr->addr) || wr->size < BLOCK_SIZE);
         client->WriteWithImm(wr->ptr, cline->line, wr->size, orig_id, wr->id,
-            true);
+          true);
       }
 
     } else if (wr->op == INVALIDATE) {  //INVALIDATE
@@ -633,16 +633,16 @@ void Worker::ProcessRemoteWriteCache(Client* client, WorkRequest* wr) {
       //		epicLog(LOG_DEBUG, "send to %d with pid %d", wr->pwid, wr->pid);
       client->WriteWithImm(nullptr, nullptr, 0, wr->id);
       epicLog(LOG_DEBUG, "send to %d with id %d", client->GetWorkerId(),
-          wr->id);
+        wr->id);
       if (!deadlock)
         cache.ToInvalid(cline);
       delete wr;
       wr = nullptr;
     } else {  //WRITE_FORWARD
-      Client* cli = FindClientWid(wr->pwid);
+      Client *cli = FindClientWid(wr->pwid);
       if (deadlock) {
 #ifdef SELECTIVE_CACHING
-        if(wr->flag & NOT_CACHE) {
+        if (wr->flag & NOT_CACHE) {
           //client->WriteWithImm(wr->ptr, cline->line, wr->size, wr->id);  //transfer ownership
           //fix bug here (wr->ptr is not the same as ToLocal(wr->addr)
           //and here we write the dirty data back to the home node rather than
@@ -673,9 +673,9 @@ void Worker::ProcessRemoteWriteCache(Client* client, WorkRequest* wr) {
         wr->op = PENDING_INVALIDATE;
         AddToPending(wr->id, wr);
         cache.ToToInvalid(cline);
-    	epicLog(LOG_DEBUG, "WRITE FORWARD");
+        epicLog(LOG_DEBUG, "WRITE FORWARD");
 #ifdef SELECTIVE_CACHING
-        if(wr->flag & NOT_CACHE) {
+        if (wr->flag & NOT_CACHE) {
           epicAssert(BLOCK_ALIGNED(wr->addr));
           epicAssert(BLOCK_ALIGNED(wr->addr) || wr->size < BLOCK_SIZE);
           client->WriteWithImm(client->ToLocal(wr->addr), cline->line, wr->size, orig_id, wr->id, true);  //transfer ownership
@@ -683,7 +683,7 @@ void Worker::ProcessRemoteWriteCache(Client* client, WorkRequest* wr) {
 #endif
           epicAssert(BLOCK_ALIGNED(wr->addr) || wr->size < BLOCK_SIZE);
           cli->WriteWithImm(wr->ptr, cline->line, wr->size, wr->pid, wr->id,
-              true);  //reply the new owner
+            true);  //reply the new owner
           client->WriteWithImm(nullptr, nullptr, 0, orig_id);  //transfer ownership
 #ifdef SELECTIVE_CACHING
         }
@@ -694,8 +694,8 @@ void Worker::ProcessRemoteWriteCache(Client* client, WorkRequest* wr) {
   cache.unlock(to_lock);
 }
 
-void Worker::ProcessRemoteWriteReply(Client* client, WorkRequest* wr) {
-  WorkRequest* pwr = GetPendingWork(wr->id);
+void Worker::ProcessRemoteWriteReply(Client *client, WorkRequest *wr) {
+  WorkRequest *pwr = GetPendingWork(wr->id);
   epicAssert(pwr);
   epicAssert(pwr->id == wr->id);
   if (wr->status) {
@@ -704,7 +704,7 @@ void Worker::ProcessRemoteWriteReply(Client* client, WorkRequest* wr) {
     Flag flag = pwr->flag;
     GAddr addr = pwr->addr;
 
-    WorkRequest* parent = pwr->parent;
+    WorkRequest *parent = pwr->parent;
     epicAssert(parent);
     parent->lock();
 
@@ -721,175 +721,175 @@ void Worker::ProcessRemoteWriteReply(Client* client, WorkRequest* wr) {
     epicLog(LOG_INFO, "write to %lx failed", pwr->addr);
 
     switch (pwr->op) {
-      case WRITE:  //local node (invalid)
-      case WRITE_PERMISSION_ONLY:  //local node (shared)
-      case FETCH_AND_INVALIDATE:  //local and home node (dirty)
-      case INVALIDATE:  //local and home node (shared)
-        {
-          if (WID(pwr->addr) == client->GetWorkerId()) {  //from home node, Case 4
-            epicAssert(!wr->counter);  //must be 0 since the home node has broadcast forward/invalidate req to other remote nodes
-            epicAssert(WRITE == pwr->op || WRITE_PERMISSION_ONLY == pwr->op);
-            pwr->counter = 0;
-          } else {
-            pwr->counter--;
-          }
+    case WRITE:  //local node (invalid)
+    case WRITE_PERMISSION_ONLY:  //local node (shared)
+    case FETCH_AND_INVALIDATE:  //local and home node (dirty)
+    case INVALIDATE:  //local and home node (shared)
+    {
+      if (WID(pwr->addr) == client->GetWorkerId()) {  //from home node, Case 4
+        epicAssert(!wr->counter);  //must be 0 since the home node has broadcast forward/invalidate req to other remote nodes
+        epicAssert(WRITE == pwr->op || WRITE_PERMISSION_ONLY == pwr->op);
+        pwr->counter = 0;
+      } else {
+        pwr->counter--;
+      }
 
-          /*
-           * we cannot blindly erase the pending request for write
-           * as there may be valid responses later
-           */
-          epicAssert(pwr->parent);
-          epicAssert(pwr->parent->op == WLOCK);
-          pwr->status = wr->status;
-          pwr->parent->status = wr->status;  //put the error status
+      /*
+       * we cannot blindly erase the pending request for write
+       * as there may be valid responses later
+       */
+      epicAssert(pwr->parent);
+      epicAssert(pwr->parent->op == WLOCK);
+      pwr->status = wr->status;
+      pwr->parent->status = wr->status;  //put the error status
 
-          if (pwr->counter == 0) {
-            //undo the directory/cache changes
-            if (WRITE == pwr->op) {
-              epicAssert(pwr->flag & CACHED);
-              //cache.lock(pwr->addr);
-              cache.ToInvalid(pwr->addr);
-              //cache.unlock(pwr->addr);
-            } else if (WRITE_PERMISSION_ONLY == pwr->op) {
-              epicAssert(pwr->flag & CACHED);
-              //cache.lock(pwr->addr);
-              cache.UndoShared(pwr->addr);
-              //cache.unlock(pwr->addr);
-            } else if (FETCH_AND_INVALIDATE == pwr->op) {
-              epicAssert(pwr->ptr == ToLocal(pwr->addr));
-              //directory.lock(pwr->ptr);
-              directory.UndoDirty(pwr->ptr);
-              //directory.unlock(pwr->ptr);
-            } else {  //INVALIDATE
-              epicAssert(pwr->ptr == ToLocal(pwr->addr));
-              //directory.lock(pwr->ptr);
-              directory.UndoShared(pwr->ptr);
-              //directory.unlock(pwr->ptr);
-            }
-
-            pwr->unlock();
-            //don't need to lock parent
-            if (IsLocal(addr)) {
-              directory.unlock(ToLocal(addr));
-            } else {
-              cache.unlock(addr);
-            }
-
-            --pwr->parent->counter;
-            epicAssert(pwr->parent->counter == 0);  //lock is guaranteed to be only one block
-            parent->unlock(); // unlock earlier
-            // Notify() should be called in the very last after all usage of parent,
-            // since the app thread may exit the function and release the memory of parent
-            Notify(pwr->parent);
-            pwr->parent = nullptr;
-
-            ProcessToServeRequest(pwr);
-            int ret = ErasePendingWork(wr->id);
-            epicAssert(ret);
-            delete pwr;
-            pwr = nullptr;
-          } else {
-            pwr->unlock();
-            parent->unlock(); // unlock earlier
-            //don't need to lock parent
-            if (IsLocal(addr)) {
-              directory.unlock(ToLocal(addr));
-            } else {
-              cache.unlock(addr);
-            }
-          }
-          // parent->unlock(); // @wentian: originally here
-          break;
+      if (pwr->counter == 0) {
+        //undo the directory/cache changes
+        if (WRITE == pwr->op) {
+          epicAssert(pwr->flag & CACHED);
+          //cache.lock(pwr->addr);
+          cache.ToInvalid(pwr->addr);
+          //cache.unlock(pwr->addr);
+        } else if (WRITE_PERMISSION_ONLY == pwr->op) {
+          epicAssert(pwr->flag & CACHED);
+          //cache.lock(pwr->addr);
+          cache.UndoShared(pwr->addr);
+          //cache.unlock(pwr->addr);
+        } else if (FETCH_AND_INVALIDATE == pwr->op) {
+          epicAssert(pwr->ptr == ToLocal(pwr->addr));
+          //directory.lock(pwr->ptr);
+          directory.UndoDirty(pwr->ptr);
+          //directory.unlock(pwr->ptr);
+        } else {  //INVALIDATE
+          epicAssert(pwr->ptr == ToLocal(pwr->addr));
+          //directory.lock(pwr->ptr);
+          directory.UndoShared(pwr->ptr);
+          //directory.unlock(pwr->ptr);
         }
-      case WRITE_FORWARD:  //home node
-      case WRITE_PERMISSION_ONLY_FORWARD:  //home node (shouldn't happen)
-        {
-          void* laddr = ToLocal(pwr->addr);  //ToLocal(pwr->addr) != pwr->ptr as it is a forward msg
-          //directory.lock(laddr);
-          epicAssert(pwr->op == WRITE_FORWARD);
-          epicAssert(IsLocal(pwr->addr));
-          epicAssert(pwr->parent);
-          epicAssert(pwr->pid == pwr->parent->id);
-          DirEntry* entry = directory.GetEntry(ToLocal(pwr->addr));
-          epicAssert(entry);
-          epicAssert(directory.GetState(entry) == DIR_TO_DIRTY);
-          directory.UndoDirty(entry);
-          //directory.unlock(laddr);
 
-          Client* lcli = FindClientWid(pwr->pwid);
-          lcli->WriteWithImm(nullptr, nullptr, 0, pwr->pid);  //ack the ownership change
-
-          pwr->unlock();
-          epicAssert(IsLocal(addr));
-          directory.unlock(laddr);
-          epicAssert(!pwr->status);
-          parent->unlock();
-          delete pwr->parent;
-          pwr->parent = nullptr;
-          ProcessToServeRequest(pwr);
-          //TODO: verify this
-          //we blindly erase the pending wr whose counter may be non-zero
-          //following replies will be ignored since it cannot find pending wr in the pending list
-          //ANSWER: it's ok here, since we are sure that we only have one response for these two ops
-          int ret = ErasePendingWork(wr->id);
-          epicAssert(ret);
-          delete pwr;
-          pwr = nullptr;
-          break;
+        pwr->unlock();
+        //don't need to lock parent
+        if (IsLocal(addr)) {
+          directory.unlock(ToLocal(addr));
+        } else {
+          cache.unlock(addr);
         }
-      case INVALIDATE_FORWARD: 
-        {
-          epicLog(LOG_INFO, "invalidate_forward failed");
-          epicAssert(IsLocal(pwr->addr));
-          pwr->counter--;
 
-          /*
-           * we cannot blindly erase the pending request for write
-           * as there may be valid responses later
-           */
-          WorkRequest* parent = pwr->parent;
-          epicAssert(parent);
-          epicAssert((parent->flag & LOCKED) && (parent->flag & TRY_LOCK));
-          pwr->status = wr->status;
+        --pwr->parent->counter;
+        epicAssert(pwr->parent->counter == 0);  //lock is guaranteed to be only one block
+        parent->unlock(); // unlock earlier
+        // Notify() should be called in the very last after all usage of parent,
+        // since the app thread may exit the function and release the memory of parent
+        Notify(pwr->parent);
+        pwr->parent = nullptr;
 
-          if (pwr->counter == 0) {
-            void* laddr = ToLocal(pwr->addr);
-            directory.UndoShared(laddr);
-
-            pwr->unlock();
-            epicAssert(IsLocal(addr));
-            directory.unlock(ToLocal(addr));
-
-            Client* pcli = FindClientWid(pwr->pwid);
-            parent->status = wr->status;  //put the error status
-            parent->op = WRITE_REPLY;
-            parent->counter = 0;
-            epicAssert(parent->counter == 0);
-            SubmitRequest(pcli, parent);
-            parent->unlock();
-            delete parent;
-            parent = nullptr;
-            pwr->parent = nullptr;
-
-            ProcessToServeRequest(pwr);
-            int ret = ErasePendingWork(wr->id);
-            epicAssert(ret);
-            delete pwr;
-            pwr = nullptr;
-          } else {
-            pwr->unlock();
-            parent->unlock();
-            epicAssert(IsLocal(addr));
-            directory.unlock(ToLocal(addr));
-          }
-          break;
+        ProcessToServeRequest(pwr);
+        int ret = ErasePendingWork(wr->id);
+        epicAssert(ret);
+        delete pwr;
+        pwr = nullptr;
+      } else {
+        pwr->unlock();
+        parent->unlock(); // unlock earlier
+        //don't need to lock parent
+        if (IsLocal(addr)) {
+          directory.unlock(ToLocal(addr));
+        } else {
+          cache.unlock(addr);
         }
-      default:
-        epicLog(LOG_WARNING,
-            "Unrecognized pending work request %d for WRITE_REPLY",
-            pwr->op);
-        exit(-1);
-        break;
+      }
+      // parent->unlock(); // @wentian: originally here
+      break;
+    }
+    case WRITE_FORWARD:  //home node
+    case WRITE_PERMISSION_ONLY_FORWARD:  //home node (shouldn't happen)
+    {
+      void *laddr = ToLocal(pwr->addr);  //ToLocal(pwr->addr) != pwr->ptr as it is a forward msg
+      //directory.lock(laddr);
+      epicAssert(pwr->op == WRITE_FORWARD);
+      epicAssert(IsLocal(pwr->addr));
+      epicAssert(pwr->parent);
+      epicAssert(pwr->pid == pwr->parent->id);
+      DirEntry *entry = directory.GetEntry(ToLocal(pwr->addr));
+      epicAssert(entry);
+      epicAssert(directory.GetState(entry) == DIR_TO_DIRTY);
+      directory.UndoDirty(entry);
+      //directory.unlock(laddr);
+
+      Client *lcli = FindClientWid(pwr->pwid);
+      lcli->WriteWithImm(nullptr, nullptr, 0, pwr->pid);  //ack the ownership change
+
+      pwr->unlock();
+      epicAssert(IsLocal(addr));
+      directory.unlock(laddr);
+      epicAssert(!pwr->status);
+      parent->unlock();
+      delete pwr->parent;
+      pwr->parent = nullptr;
+      ProcessToServeRequest(pwr);
+      //TODO: verify this
+      //we blindly erase the pending wr whose counter may be non-zero
+      //following replies will be ignored since it cannot find pending wr in the pending list
+      //ANSWER: it's ok here, since we are sure that we only have one response for these two ops
+      int ret = ErasePendingWork(wr->id);
+      epicAssert(ret);
+      delete pwr;
+      pwr = nullptr;
+      break;
+    }
+    case INVALIDATE_FORWARD:
+    {
+      epicLog(LOG_INFO, "invalidate_forward failed");
+      epicAssert(IsLocal(pwr->addr));
+      pwr->counter--;
+
+      /*
+       * we cannot blindly erase the pending request for write
+       * as there may be valid responses later
+       */
+      WorkRequest *parent = pwr->parent;
+      epicAssert(parent);
+      epicAssert((parent->flag & LOCKED) && (parent->flag & TRY_LOCK));
+      pwr->status = wr->status;
+
+      if (pwr->counter == 0) {
+        void *laddr = ToLocal(pwr->addr);
+        directory.UndoShared(laddr);
+
+        pwr->unlock();
+        epicAssert(IsLocal(addr));
+        directory.unlock(ToLocal(addr));
+
+        Client *pcli = FindClientWid(pwr->pwid);
+        parent->status = wr->status;  //put the error status
+        parent->op = WRITE_REPLY;
+        parent->counter = 0;
+        epicAssert(parent->counter == 0);
+        SubmitRequest(pcli, parent);
+        parent->unlock();
+        delete parent;
+        parent = nullptr;
+        pwr->parent = nullptr;
+
+        ProcessToServeRequest(pwr);
+        int ret = ErasePendingWork(wr->id);
+        epicAssert(ret);
+        delete pwr;
+        pwr = nullptr;
+      } else {
+        pwr->unlock();
+        parent->unlock();
+        epicAssert(IsLocal(addr));
+        directory.unlock(ToLocal(addr));
+      }
+      break;
+    }
+    default:
+      epicLog(LOG_WARNING,
+        "Unrecognized pending work request %d for WRITE_REPLY",
+        pwr->op);
+      exit(-1);
+      break;
     }
   } else {  //if not failed
     pwr->lock();

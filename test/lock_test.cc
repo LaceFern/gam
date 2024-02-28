@@ -25,10 +25,10 @@ int ng1 = 1000, ng2 = 2000, ng3 = 1000, ng4 = 1000;
 //using wh1_1
 void thread1_1() {
   epicLog(LOG_WARNING,
-          "*****************start thread1_1**********************");
+    "*****************start thread1_1**********************");
   char buf[size], wbuf[size];
   int i;
-  WorkRequest* wr = new WorkRequest();
+  WorkRequest *wr = new WorkRequest();
   //init the data to be written
 
   for (int j = 0; j < ng1; j++) {
@@ -105,7 +105,7 @@ void thread1_1() {
     }
 
     for (i = 0; i < size; i++) {
-      wbuf[i] = (char) (buf[i] + 1);
+      wbuf[i] = (char)(buf[i] + 1);
     }
 
     //local write
@@ -131,14 +131,14 @@ void thread1_1() {
     for (i = 0; i < size; i++) {
       if (buf[i] != wbuf[i]) {
         epicLog(LOG_WARNING, "local read failed at buf[%d] (%d) != %d\n", i,
-                buf[i], wbuf[i]);
+          buf[i], wbuf[i]);
         break;
       }
     }
     if (i == size) {
       epicLog(LOG_INFO,
-              "*****local write (thread1_1 %d) succeed buf[0] = %d!*****", j,
-              buf[0]);
+        "*****local write (thread1_1 %d) succeed buf[0] = %d!*****", j,
+        buf[0]);
     } else {
       epicLog(LOG_WARNING, "local write (thread1_1 %d) failed!", j);
       exit(1);
@@ -165,9 +165,9 @@ void thread1_1() {
 //using wh1_2
 void thread1_2() {
   epicLog(LOG_WARNING,
-          "*****************start thread1_2**********************");
+    "*****************start thread1_2**********************");
   char buf[size], wbuf[size];
-  WorkRequest* wr = new WorkRequest();
+  WorkRequest *wr = new WorkRequest();
   int i;
 
   for (int j = 0; j < ng2; j++) {
@@ -244,7 +244,7 @@ void thread1_2() {
     }
 
     for (i = 0; i < size; i++) {
-      wbuf[i] = (char) (buf[i] + 1);
+      wbuf[i] = (char)(buf[i] + 1);
     }
 
     //local write
@@ -270,14 +270,14 @@ void thread1_2() {
     for (i = 0; i < size; i++) {
       if (buf[i] != wbuf[i]) {
         epicLog(LOG_WARNING, "local read failed at buf[%d] (%d) != %d\n", i,
-                buf[i], wbuf[i]);
+          buf[i], wbuf[i]);
         break;
       }
     }
     if (i == size) {
       epicLog(LOG_INFO,
-              "*****local write (thread1_2 %d) succeed, buf[0] = %d!*****", j,
-              buf[0]);
+        "*****local write (thread1_2 %d) succeed, buf[0] = %d!*****", j,
+        buf[0]);
     } else {
       epicLog(LOG_WARNING, "local write (thread1_2 %d) failed!", j);
       exit(1);
@@ -305,9 +305,9 @@ void thread1_2() {
 //using wh2_1
 void thread2_1() {
   epicLog(LOG_WARNING,
-          "*****************start thread2_1**********************");
+    "*****************start thread2_1**********************");
   char buf[size], wbuf[size];
-  WorkRequest* wr = new WorkRequest();
+  WorkRequest *wr = new WorkRequest();
   int i;
 
   for (int j = 0; j < ng3; j++) {
@@ -384,7 +384,7 @@ void thread2_1() {
     }
 
     for (i = 0; i < size; i++) {
-      wbuf[i] = (char) (buf[i] + 1);
+      wbuf[i] = (char)(buf[i] + 1);
     }
 
     //local write
@@ -410,14 +410,14 @@ void thread2_1() {
     for (i = 0; i < size; i++) {
       if (buf[i] != wbuf[i]) {
         epicLog(LOG_WARNING, "remote read failed at buf[%d] (%d) != %d\n", i,
-                buf[i], wbuf[i]);
+          buf[i], wbuf[i]);
         break;
       }
     }
     if (i == size) {
       epicLog(LOG_INFO,
-              "*****remote write succeed (thread2_1 %d), buf[0] =  %d!*****", j,
-              buf[0]);
+        "*****remote write succeed (thread2_1 %d), buf[0] =  %d!*****", j,
+        buf[0]);
     } else {
       epicLog(LOG_WARNING, "remote write failed (thread2_1 %d)!", j);
       exit(1);
@@ -445,9 +445,9 @@ void thread2_1() {
 //using wh2_2
 void thread2_2() {
   epicLog(LOG_WARNING,
-          "*****************start thread2_2**********************");
+    "*****************start thread2_2**********************");
   char buf[size], wbuf[size];
-  WorkRequest* wr = new WorkRequest();
+  WorkRequest *wr = new WorkRequest();
   int i;
 
   for (int j = 0; j < ng3; j++) {
@@ -489,7 +489,7 @@ void thread2_2() {
     }
 
     for (i = 0; i < size; i++) {
-      wbuf[i] = (char) (buf[i] + 1);
+      wbuf[i] = (char)(buf[i] + 1);
     }
 
     //local write
@@ -515,14 +515,14 @@ void thread2_2() {
     for (i = 0; i < size; i++) {
       if (buf[i] != wbuf[i]) {
         epicLog(LOG_WARNING, "remote read failed at buf[%d] (%d) != %d\n", i,
-                buf[i], wbuf[i]);
+          buf[i], wbuf[i]);
         break;
       }
     }
     if (i == size) {
       epicLog(LOG_INFO,
-              "*****remote write succeed (thread2_1 %d), buf[0] =  %d!*****", j,
-              buf[0]);
+        "*****remote write succeed (thread2_1 %d), buf[0] =  %d!*****", j,
+        buf[0]);
     } else {
       epicLog(LOG_WARNING, "remote write failed (thread2_1 %d)!", j);
       exit(1);
@@ -550,10 +550,10 @@ void thread2_2() {
 //using wh3_1
 void thread3_1() {
   epicLog(LOG_WARNING,
-          "*****************start thread3_1**********************");
+    "*****************start thread3_1**********************");
   char buf[size], wbuf[size];
   int i;
-  WorkRequest* wr = new WorkRequest();
+  WorkRequest *wr = new WorkRequest();
   //init the data to be written
 
   for (int j = 0; j < ng4; j++) {
@@ -630,7 +630,7 @@ void thread3_1() {
     }
 
     for (i = 0; i < size; i++) {
-      wbuf[i] = (char) (buf[i] + 1);
+      wbuf[i] = (char)(buf[i] + 1);
     }
 
     //local write
@@ -656,14 +656,14 @@ void thread3_1() {
     for (i = 0; i < size; i++) {
       if (buf[i] != wbuf[i]) {
         epicLog(LOG_WARNING, "local read failed at buf[%d] (%d) != %d\n", i,
-                buf[i], wbuf[i]);
+          buf[i], wbuf[i]);
         break;
       }
     }
     if (i == size) {
       epicLog(LOG_INFO,
-              "*****local write (thread1_1 %d) succeed buf[0] = %d!*****", j,
-              buf[0]);
+        "*****local write (thread1_1 %d) succeed buf[0] = %d!*****", j,
+        buf[0]);
     } else {
       epicLog(LOG_WARNING, "local write (thread1_1 %d) failed!", j);
       exit(1);
@@ -689,10 +689,10 @@ void thread3_1() {
 //using wh3_2
 void thread3_2() {
   epicLog(LOG_WARNING,
-          "*****************start thread3_2**********************");
+    "*****************start thread3_2**********************");
   char buf[size], wbuf[size];
   int i;
-  WorkRequest* wr = new WorkRequest();
+  WorkRequest *wr = new WorkRequest();
   //init the data to be written
 
   for (int j = 0; j < ng4; j++) {
@@ -733,7 +733,7 @@ void thread3_2() {
     }
 
     for (i = 0; i < size; i++) {
-      wbuf[i] = (char) (buf[i] + 1);
+      wbuf[i] = (char)(buf[i] + 1);
     }
 
     //local write
@@ -759,14 +759,14 @@ void thread3_2() {
     for (i = 0; i < size; i++) {
       if (buf[i] != wbuf[i]) {
         epicLog(LOG_WARNING, "local read failed at buf[%d] (%d) != %d\n", i,
-                buf[i], wbuf[i]);
+          buf[i], wbuf[i]);
         break;
       }
     }
     if (i == size) {
       epicLog(LOG_INFO,
-              "*****local write (thread1_1 %d) succeed buf[0] = %d!*****", j,
-              buf[0]);
+        "*****local write (thread1_1 %d) succeed buf[0] = %d!*****", j,
+        buf[0]);
     } else {
       epicLog(LOG_WARNING, "local write (thread1_1 %d) failed!", j);
       exit(1);
@@ -794,15 +794,15 @@ int main() {
   int i;
 
   //master
-  Conf* conf = new Conf();
+  Conf *conf = new Conf();
   conf->loglevel = LOG_WARNING;
   //conf->loglevel = LOG_DEBUG;
   GAllocFactory::SetConf(conf);
-  Master* master = new Master(*conf);
+  Master *master = new Master(*conf);
 
   //worker1
   conf = new Conf();
-  RdmaResource* res = new RdmaResource(list[0], false);
+  RdmaResource *res = new RdmaResource(list[0], false);
   Worker *worker1, *worker2, *worker3;
   worker1 = new Worker(*conf, res);
   wh1_1 = new WorkerHandle(worker1);
@@ -828,11 +828,11 @@ int main() {
 
   char buf[size];
   char wbuf[size];
-  WorkRequest wr { };
+  WorkRequest wr{ };
 
   //init the data to be written
   for (i = 0; i < size; i++) {
-    wbuf[i] = (char) i;
+    wbuf[i] = (char)i;
   }
 
   //w1 allocate
@@ -914,26 +914,26 @@ int main() {
   }
   epicLog(LOG_WARNING, "locally unlock g1+1 succeed\n");
 
-//	//w2 allocate
-//	wr.addr = 0;
-//	if(wh2_1->SendRequest(&wr)) {
-//		epicLog(LOG_WARNING, "send request failed");
-//	}
-//	g2 = wr.addr;
-//	epicLog(LOG_WARNING, "\n****allocated g2 %ld at %lx*****\n", size, g2);
-//
-//
-//	//w3 allocate
-//	wr.addr = 0;
-//	if(wh3_1->SendRequest(&wr)) {
-//		epicLog(LOG_WARNING, "send request failed");
-//	}
-//	g3 = wr.addr;
-//	epicLog(LOG_WARNING, "\n****allocated g3 %ld at %lx*****\n", size, g3);
+  //	//w2 allocate
+  //	wr.addr = 0;
+  //	if(wh2_1->SendRequest(&wr)) {
+  //		epicLog(LOG_WARNING, "send request failed");
+  //	}
+  //	g2 = wr.addr;
+  //	epicLog(LOG_WARNING, "\n****allocated g2 %ld at %lx*****\n", size, g2);
+  //
+  //
+  //	//w3 allocate
+  //	wr.addr = 0;
+  //	if(wh3_1->SendRequest(&wr)) {
+  //		epicLog(LOG_WARNING, "send request failed");
+  //	}
+  //	g3 = wr.addr;
+  //	epicLog(LOG_WARNING, "\n****allocated g3 %ld at %lx*****\n", size, g3);
 
-  //init the data to be written
+    //init the data to be written
   for (i = 0; i < size; i++) {
-    wbuf[i] = (char) i;
+    wbuf[i] = (char)i;
   }
   wr.Reset();
   wr.op = WRITE;
@@ -955,7 +955,7 @@ int main() {
   for (i = 0; i < size; i++) {
     if (buf[i] != wbuf[i]) {
       epicLog(LOG_WARNING, "local read failed at buf[%d] (%d) != %d\n", i,
-              buf[i], wbuf[i]);
+        buf[i], wbuf[i]);
       break;
     }
   }
@@ -968,12 +968,12 @@ int main() {
 
   sleep(1);
 
-  thread* t1_1 = new thread(thread1_1);
-  thread* t1_2 = new thread(thread1_2);
-  thread* t2_1 = new thread(thread2_1);
-  thread* t2_2 = new thread(thread2_2);
-  thread* t3_1 = new thread(thread3_1);
-  thread* t3_2 = new thread(thread3_2);
+  thread *t1_1 = new thread(thread1_1);
+  thread *t1_2 = new thread(thread1_2);
+  thread *t2_1 = new thread(thread2_1);
+  thread *t2_2 = new thread(thread2_2);
+  thread *t3_1 = new thread(thread3_1);
+  thread *t3_2 = new thread(thread3_2);
 
   t1_1->join();
   t1_2->join();
@@ -1000,10 +1000,10 @@ int main() {
     epicLog(LOG_WARNING, "send request failed");
   }
   for (i = 0; i < size; i++) {
-    if (buf[i] != (char) (wbuf[i] + ng1 + ng2 + ng3 * 2 + ng4 * 2)) {
+    if (buf[i] != (char)(wbuf[i] + ng1 + ng2 + ng3 * 2 + ng4 * 2)) {
       //if(buf[i] != (char)(wbuf[i]+ng1+ng3)) {
       epicLog(LOG_WARNING, "local read failed at buf[%d] (%d) != %d\n", i,
-              buf[i], (char )(wbuf[i] + ng1 + ng2 + ng3 * 2 + ng4 * 2));
+        buf[i], (char)(wbuf[i] + ng1 + ng2 + ng3 * 2 + ng4 * 2));
       break;
     }
   }

@@ -10,7 +10,7 @@ using std::chrono::microseconds;
 using std::chrono::nanoseconds;
 
 class TimeMeasurer {
- public:
+public:
   TimeMeasurer() {
   }
   ~TimeMeasurer() {
@@ -26,17 +26,17 @@ class TimeMeasurer {
 
   long long GetElapsedMilliSeconds() {
     return std::chrono::duration_cast<milliseconds>(end_time_ - start_time_)
-        .count();
+      .count();
   }
 
   long long GetElapsedMicroSeconds() {
     return std::chrono::duration_cast<microseconds>(end_time_ - start_time_)
-        .count();
+      .count();
   }
 
   long long GetElapsedNanoSeconds() {
     return std::chrono::duration_cast<nanoseconds>(end_time_ - start_time_)
-        .count();
+      .count();
   }
 
   static system_clock::time_point GetTimePoint() {
@@ -44,15 +44,15 @@ class TimeMeasurer {
   }
 
   static long long CalcMilliSecondDiff(system_clock::time_point &start,
-                                       system_clock::time_point &end) {
+    system_clock::time_point &end) {
     return std::chrono::duration_cast<milliseconds>(end - start).count();
   }
 
- private:
-  TimeMeasurer(const TimeMeasurer&);
-  TimeMeasurer& operator=(const TimeMeasurer&);
+private:
+  TimeMeasurer(const TimeMeasurer &);
+  TimeMeasurer &operator=(const TimeMeasurer &);
 
- private:
+private:
   system_clock::time_point start_time_;
   system_clock::time_point end_time_;
 };

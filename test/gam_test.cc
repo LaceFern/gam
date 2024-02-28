@@ -172,7 +172,7 @@ inline void interval_between_access(long delta_time_usec) {
 
 void do_log(void *arg) {
   //printf("Show the start of do_log\n");
-  struct trace_t *trace = (struct trace_t *) arg;
+  struct trace_t *trace = (struct trace_t *)arg;
   int ratio = 1;
   int remote_step = trace->benchmark_size / BLOCK_SIZE / ratio;
 
@@ -183,8 +183,8 @@ void do_log(void *arg) {
   //printf("Finish creating the Allocator in node: %d, in thread: %d\n", trace->node_idx, trace->tid);
 
   GAddr *remote;
-  if(trace->is_compute) {
-    remote = (GAddr *) malloc(sizeof(GAddr) * remote_step);
+  if (trace->is_compute) {
+    remote = (GAddr *)malloc(sizeof(GAddr) * remote_step);
     if (trace->is_master && trace->tid == 0 && trace->pass == 0) {
       //printf("Master malloc the remote memory in slices: %d, node: %d, in thread: %d\n",
              //remote_step,
@@ -235,7 +235,7 @@ void do_log(void *arg) {
       volatile char op = trace->logs[i * sizeof(RWlog)];
       cur = &(trace->logs[i * sizeof(RWlog)]);
       if (op == 'R') {
-        struct RWlog *log = (struct RWlog *) cur;
+        struct RWlog *log = (struct RWlog *)cur;
         interval_between_access(log->usec - old_ts);
         char buf;
         size_t cache_line_block = (log->addr & MMAP_ADDR_MASK) / (BLOCK_SIZE * ratio);
@@ -245,7 +245,7 @@ void do_log(void *arg) {
         old_ts = log->usec;
 
       } else if (op == 'W') {
-        struct RWlog *log = (struct RWlog *) cur;
+        struct RWlog *log = (struct RWlog *)cur;
         interval_between_access(log->usec - old_ts);
         char buf = '0';
         unsigned long addr = log->addr & MMAP_ADDR_MASK;
@@ -256,18 +256,18 @@ void do_log(void *arg) {
         old_ts = log->usec;
 
       } else if (op == 'M') {
-        struct Mlog *log = (struct Mlog *) cur;
+        struct Mlog *log = (struct Mlog *)cur;
         interval_between_access(log->hdr.usec);
         unsigned int len = log->len;
         //GAddr ret_addr = alloc->Malloc(len, REMOTE);
         //len2addr.insert(pair<unsigned int, GAddr>(len, ret_addr));
         old_ts += log->hdr.usec;
       } else if (op == 'B') {
-        struct Blog *log = (struct Blog *) cur;
+        struct Blog *log = (struct Blog *)cur;
         interval_between_access(log->usec - old_ts);
         old_ts = log->usec;
       } else if (op == 'U') {
-        struct Ulog *log = (struct Ulog *) cur;
+        struct Ulog *log = (struct Ulog *)cur;
         interval_between_access(log->hdr.usec);
         //auto itr = len2addr.find(log->len);
         //if (itr == len2addr.end()) {
@@ -295,7 +295,7 @@ void do_log(void *arg) {
 
   //FIXME warm up here?
   //make sure all the requests are complete
-  if(trace->is_compute) {
+  if (trace->is_compute) {
     alloc->MFence();
     alloc->WLock(remote[0], BLOCK_SIZE * ratio);
     alloc->UnLock(remote[0], BLOCK_SIZE * ratio);
@@ -319,7 +319,7 @@ void do_log(void *arg) {
 
 void standalone(void *arg) {
   //printf("Show the start of standalone\n");
-  struct memory_config_t *trace = (struct memory_config_t *) arg;
+  struct memory_config_t *trace = (struct memory_config_t *)arg;
   GAlloc *alloc = GAllocFactory::CreateAllocator();
   for (int i = 1; i <= trace->num_comp_nodes; i++) {
     //printf("Getting %lld\n", SYNC_KEY + i + 10);
@@ -335,21 +335,21 @@ int load_trace(int fd, struct trace_t *arg, unsigned long ts_limit) {
   assert(sizeof(RWlog) == sizeof(Mlog));
   assert(sizeof(RWlog) == sizeof(Blog));
   assert(sizeof(RWlog) == sizeof(Ulog));
-/*
-	char *chunk = (char *)malloc(LOG_NUM_TOTAL * sizeof(RWlog));
-	char *buf;
-	if (!chunk) {
-		printf("fail to alloc buf to hold logs\n");
-		return -1;
-	} else {
-		arg->logs = chunk;
-	}
-	int fd = open(trace_name, O_RDONLY);
-	if (fd < 0) {
-		printf("fail to open log file\n");
-		return fd;
-	}
-*/
+  /*
+    char *chunk = (char *)malloc(LOG_NUM_TOTAL * sizeof(RWlog));
+    char *buf;
+    if (!chunk) {
+      printf("fail to alloc buf to hold logs\n");
+      return -1;
+    } else {
+      arg->logs = chunk;
+    }
+    int fd = open(trace_name, O_RDONLY);
+    if (fd < 0) {
+      printf("fail to open log file\n");
+      return fd;
+    }
+  */
   char *chunk = arg->logs;
   memset(chunk, 0, LOG_NUM_TOTAL * sizeof(RWlog));
   size_t size = 0;
@@ -365,7 +365,7 @@ int load_trace(int fd, struct trace_t *arg, unsigned long ts_limit) {
     unsigned long last_ts = 0;
     while (tail - buf >= 0) {
       if (*tail == 'R' || *tail == 'W' || *tail == 'B')
-        last_ts = ((struct RWlog *) tail)->usec;
+        last_ts = ((struct RWlog *)tail)->usec;
       else if (*tail == 'M' || *tail == 'U') {
         tail -= sizeof(RWlog);
         continue;
@@ -411,8 +411,8 @@ int main(int argc, char **argv) {
   num_nodes = atoi(argv[arg_node_cnt]);
   num_threads = atoi(argv[arg_num_threads]);
 #ifdef single_thread_test
-    num_threads = 1;
-    num_comp_nodes = 1;
+  num_threads = 1;
+  num_comp_nodes = 1;
 #endif
   string ip_master = string(argv[arg_ip_master]);
   string ip_worker = string(argv[arg_ip_worker]);
@@ -459,9 +459,9 @@ int main(int argc, char **argv) {
 
   printf("Currently configuration is: ");
   printf(
-      "master: %s:%d, worker: %s:%d, is_master: %s, size to allocate: %ld\n",
-      ip_master.c_str(), port_master, ip_worker.c_str(), port_worker,
-      is_master == 1 ? "true" : "false", benchmark_size / num_nodes);
+    "master: %s:%d, worker: %s:%d, is_master: %s, size to allocate: %ld\n",
+    ip_master.c_str(), port_master, ip_worker.c_str(), port_worker,
+    is_master == 1 ? "true" : "false", benchmark_size / num_nodes);
 
   Conf conf;
   conf.loglevel = DEBUG_LEVEL;
@@ -471,7 +471,7 @@ int main(int argc, char **argv) {
   conf.worker_ip = ip_worker;
   conf.worker_port = port_worker;
 
-  if(is_compute) {
+  if (is_compute) {
     conf.cache_th = 1.0;
     long size = (int)((double)benchmark_size / (double)num_comp_nodes * (double)remote_ratio);
     conf.size = size < conf.size ? conf.size : size;
@@ -507,7 +507,7 @@ int main(int argc, char **argv) {
   }
 
   //open files
-  if(is_compute) {
+  if (is_compute) {
     int *fd = new int[num_threads];
     for (int i = 0; i < num_threads; ++i) {
       fd[i] = open(argv[arg_log1 + i], O_RDONLY);
@@ -535,7 +535,7 @@ int main(int argc, char **argv) {
       args[i].is_master = is_master;
       args[i].is_compute = is_compute;
       args[i].tid = i;
-      args[i].logs = (char *) malloc(LOG_NUM_TOTAL * sizeof(RWlog)); // This should be allocated locally
+      args[i].logs = (char *)malloc(LOG_NUM_TOTAL * sizeof(RWlog)); // This should be allocated locally
       args[i].benchmark_size = benchmark_size;
       args[i].remote_ratio = remote_ratio;
       args[i].test_size = conf.size;

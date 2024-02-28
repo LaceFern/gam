@@ -36,7 +36,7 @@ typedef struct {
 #define GTOBLOCK(x) TOBLOCK(x)
 
 #define CACHE_LINE_PREFIX 0 //dirty/invalid
-typedef void* caddr;
+typedef void *caddr;
 
 enum CacheState {
   CACHE_NOT_EXIST = -1,
@@ -47,12 +47,12 @@ enum CacheState {
   CACHE_TO_SHARED,
   CACHE_TO_DIRTY,
 #ifdef SELECTIVE_CACHING
-CACHE_NOT_CACHE
+  CACHE_NOT_CACHE
 #endif
 };
 
 struct CacheLine {
-  void* line = nullptr;
+  void *line = nullptr;
   GAddr addr = 0;
   CacheState state = CACHE_INVALID;
   unordered_map<GAddr, int> locks;
@@ -60,8 +60,8 @@ struct CacheLine {
 #ifdef USE_APPR_LRU
   long lruclock;
 #else
-  struct CacheLine* next = nullptr;
-  struct CacheLine* prev = nullptr;
+  struct CacheLine *next = nullptr;
+  struct CacheLine *prev = nullptr;
   int pos = -1;
 #endif
 #ifdef SELECTIVE_CACHING
@@ -73,16 +73,16 @@ struct CacheLine {
 };
 
 class Cache {
-/*
- * BLOCK-ALIGNED GAddr to local pointer
- */
-//unordered_map<GAddr, CacheLine> caches;
+  /*
+   * BLOCK-ALIGNED GAddr to local pointer
+   */
+   //unordered_map<GAddr, CacheLine> caches;
 #ifdef USE_SIMPLE_MAP
-  Map<GAddr, CacheLine*> caches { "cache" };
+  Map<GAddr, CacheLine *> caches{ "cache" };
 #else
-  HashTable<GAddr, CacheLine*> caches {"cache"};
+  HashTable<GAddr, CacheLine *> caches{ "cache" };
 #endif
-  Worker* worker;
+  Worker *worker;
 
   //following are performance statistics
   atomic<long> read_miss;
@@ -94,15 +94,15 @@ class Cache {
 
 #ifdef USE_LRU
   //LRU list
-  CacheLine* heads[LRU_NUM];
-  CacheLine* tails[LRU_NUM];
+  CacheLine *heads[LRU_NUM];
+  CacheLine *tails[LRU_NUM];
   LockWrapper lru_locks_[LRU_NUM];
   int sample_num = LRU_NUM;
 #endif
 
 #ifdef USE_LRU
   int Evict(int n);
-  void Evict(CacheLine* cline);
+  void Evict(CacheLine *cline);
 #endif
 
 #ifdef SELECTIVE_CACHING
@@ -112,7 +112,7 @@ class Cache {
   atomic<int> ntoshared;
   atomic<int> ntoinvalid;
 
-  inline bool IsCachable(CacheLine* cline, WorkRequest* wr) {
+  inline bool IsCachable(CacheLine *cline, WorkRequest *wr) {
     epicAssert(wr->op == READ || wr->op == WRITE);
     double lambda = 0.5;
     double th = 0.2;
@@ -138,7 +138,7 @@ class Cache {
     //int cnum = 0;
     //worker->GetClusterSize();
 
-    if(wr->flag & NOT_CACHE) {
+    if (wr->flag & NOT_CACHE) {
       return false;
     } else {
       //totalWR = nread + nwrite == 0 ? 1 : nread + nwrite;
@@ -154,11 +154,11 @@ class Cache {
       curTotalInvalid = totalInvalid % limTotalInvalid;
       curClineInvalid = clineInvalid % limClineInvalid;
 
-      if(curTotalWR <= lim && totalWR <= lim) {
+      if (curTotalWR <= lim && totalWR <= lim) {
         return true;
       } else {
-        idc = double(curClineWR)/curTotalWR + 1 - double(curClineInvalid)/curTotalInvalid;
-        if(idc >= thld) {
+        idc = double(curClineWR) / curTotalWR + 1 - double(curClineInvalid) / curTotalInvalid;
+        if (idc >= thld) {
           return true;
         } else {
           return false;
@@ -168,21 +168,21 @@ class Cache {
     }
   }
 
-  void InitCacheCLine(CacheLine* cline, bool write=false);
-  void InitCacheCLineIfNeeded(CacheLine* cline);
+  void InitCacheCLine(CacheLine *cline, bool write = false);
+  void InitCacheCLineIfNeeded(CacheLine *cline);
 #endif
 
-  public:
+public:
   atomic<unsigned long> cdf_cnt_evict[CDF_BUCKET_NUM];
   atomic<long> to_evicted;
-  Cache(Worker* w);
-  Cache() {} ;
-  void SetWorker(Worker* w);
-  void* GetLine(GAddr addr);
-  inline CacheLine* GetCLine(GAddr addr) {
+  Cache(Worker *w);
+  Cache() {};
+  void SetWorker(Worker *w);
+  void *GetLine(GAddr addr);
+  inline CacheLine *GetCLine(GAddr addr) {
     GAddr block = GTOBLOCK(addr);
     if (caches.count(block)) {
-      CacheLine* cline = caches.at(block);
+      CacheLine *cline = caches.at(block);
 #ifndef SELECTIVE_CACHING
       epicAssert(GetState(cline) != CACHE_INVALID);
 #endif
@@ -191,19 +191,19 @@ class Cache {
     return nullptr;
   }
 
-  void* SetLine(GAddr addr, void* line = nullptr);
-  CacheLine* SetCLine(GAddr addr, void* line = nullptr);
+  void *SetLine(GAddr addr, void *line = nullptr);
+  CacheLine *SetCLine(GAddr addr, void *line = nullptr);
   CacheState GetState(GAddr addr);
-  inline CacheState GetState(CacheLine* cline) {
+  inline CacheState GetState(CacheLine *cline) {
     return cline->state;
   }
   void ToInvalid(GAddr addr);
-  void ToInvalid(CacheLine* cline);
+  void ToInvalid(CacheLine *cline);
   void ToShared(GAddr addr);
-  inline void ToShared(CacheLine* cline) {
+  inline void ToShared(CacheLine *cline) {
     epicAssert(cline->state == CACHE_TO_SHARED || cline->state == CACHE_DIRTY);
 #ifdef SELECTIVE_CACHING
-    if(cline->state == CACHE_DIRTY) {  //dirty to shared (someone wants to read the data)
+    if (cline->state == CACHE_DIRTY) {  //dirty to shared (someone wants to read the data)
       cline->ntoshared++;
       ntoshared++;
     }
@@ -217,7 +217,7 @@ class Cache {
   }
 
   void ToDirty(GAddr addr);
-  inline void ToDirty(CacheLine* cline) {
+  inline void ToDirty(CacheLine *cline) {
     epicAssert(cline->state == CACHE_TO_DIRTY);
     cline->state = CACHE_DIRTY;
 #ifdef USE_LRU
@@ -226,7 +226,7 @@ class Cache {
   }
 
   void ToToInvalid(GAddr addr);
-  inline void ToToInvalid(CacheLine* cline) {
+  inline void ToToInvalid(CacheLine *cline) {
     epicAssert(cline->state == CACHE_SHARED || cline->state == CACHE_DIRTY);
     cline->state = CACHE_TO_INVALID;
     //epicLog(LOG_WARNING, "to_evicted should increase");
@@ -234,7 +234,7 @@ class Cache {
   }
 
   void ToToShared(GAddr addr);
-  inline void ToToShared(CacheLine* cline) {
+  inline void ToToShared(CacheLine *cline) {
 #ifndef SELECTIVE_CACHING
     epicAssert(cline->state == CACHE_INVALID);
 #endif
@@ -242,7 +242,7 @@ class Cache {
   }
 
   void ToToDirty(GAddr addr);
-  inline void ToToDirty(CacheLine* cline) {
+  inline void ToToDirty(CacheLine *cline) {
 #ifndef SELECTIVE_CACHING
     epicAssert(cline->state == CACHE_INVALID || cline->state == CACHE_SHARED);
 #endif
@@ -253,12 +253,12 @@ class Cache {
     return GetState(addr) == CACHE_DIRTY;
   }
 
-  inline bool IsDirty(CacheLine* cline) {
+  inline bool IsDirty(CacheLine *cline) {
     return cline->state == CACHE_DIRTY;
   }
 
   bool InTransitionState(GAddr addr);
-  inline bool InTransitionState(CacheLine* cline) {
+  inline bool InTransitionState(CacheLine *cline) {
     return InTransitionState(cline->state);
   }
 
@@ -267,7 +267,7 @@ class Cache {
   }
 
   int RLock(GAddr addr);
-  inline int RLock(CacheLine* cline, GAddr addr) {
+  inline int RLock(CacheLine *cline, GAddr addr) {
     if (IsWLocked(cline, addr))
       return -1;
     if (cline->locks.count(addr)) {
@@ -278,26 +278,26 @@ class Cache {
     epicAssert(cline->locks[addr] <= MAX_SHARED_LOCK);
     return 0;
   }
-  int RLock(CacheLine* cline) = delete;
+  int RLock(CacheLine *cline) = delete;
 
   int WLock(GAddr addr);
-  inline int WLock(CacheLine* cline, GAddr addr) {
+  inline int WLock(CacheLine *cline, GAddr addr) {
     if (IsWLocked(cline, addr) || IsRLocked(cline, addr))
       return -1;
     cline->locks[addr] = EXCLUSIVE_LOCK_TAG;
     return 0;
   }
-  int WLock(CacheLine* cline) = delete;
+  int WLock(CacheLine *cline) = delete;
 
   bool IsWLocked(GAddr addr);
-  inline bool IsWLocked(CacheLine* cline, GAddr addr) {
+  inline bool IsWLocked(CacheLine *cline, GAddr addr) {
     return cline->locks.count(addr) && cline->locks.at(addr) == EXCLUSIVE_LOCK_TAG;
   }
 
   bool IsRLocked(GAddr addr);
-  inline bool IsRLocked(CacheLine* cline, GAddr addr) {
+  inline bool IsRLocked(CacheLine *cline, GAddr addr) {
     if (cline->locks.count(addr)
-        == 0|| cline->locks.at(addr) == EXCLUSIVE_LOCK_TAG) {
+      == 0 || cline->locks.at(addr) == EXCLUSIVE_LOCK_TAG) {
       return false;
     } else {
       epicAssert(cline->state != CACHE_INVALID);
@@ -307,14 +307,14 @@ class Cache {
   }
 
   bool IsBlockLocked(GAddr block);
-  inline bool IsBlockLocked(CacheLine* cline) {
+  inline bool IsBlockLocked(CacheLine *cline) {
     return cline->locks.size() > 0 ? true : false;
   }
 
   bool IsBlockWLocked(GAddr block);
-  inline bool IsBlockWLocked(CacheLine* cline) {
+  inline bool IsBlockWLocked(CacheLine *cline) {
     bool wlocked = false;
-    for (auto& entry : cline->locks) {
+    for (auto &entry : cline->locks) {
       if (entry.second == EXCLUSIVE_LOCK_TAG) {
         wlocked = true;
         break;
@@ -325,7 +325,7 @@ class Cache {
 
   void UnLock(GAddr addr);
   void UndoShared(GAddr addr);
-  inline void UndoShared(CacheLine* cline) {
+  inline void UndoShared(CacheLine *cline) {
     cline->state = CACHE_SHARED;
   }
   inline size_t GetUsedBytes() {
@@ -333,9 +333,9 @@ class Cache {
   }
 
 #ifdef USE_LRU
-  void LinkLRU(CacheLine* cline);
-  void UnLinkLRU(CacheLine* cline);
-  void UnLinkLRU(CacheLine* cline, int pos);
+  void LinkLRU(CacheLine *cline);
+  void UnLinkLRU(CacheLine *cline);
+  void UnLinkLRU(CacheLine *cline, int pos);
   void Evict();
 #endif
   /*
@@ -346,18 +346,18 @@ class Cache {
    * NOTE: a read may be divided into multiple sub-reads,
    * so the data consistency must be ensured by upper-layer app
    */
-  int Lock(WorkRequest* wr);
-  int RLock(WorkRequest* wr);
-  int WLock(WorkRequest* wr);
-  int Read(WorkRequest* wr);
-  int Write(WorkRequest* wr);
-  int ReadWrite(WorkRequest* wr);
+  int Lock(WorkRequest *wr);
+  int RLock(WorkRequest *wr);
+  int WLock(WorkRequest *wr);
+  int Read(WorkRequest *wr);
+  int Write(WorkRequest *wr);
+  int ReadWrite(WorkRequest *wr);
 
-  Cache_return_t ReadCollect(WorkRequest* wr);
-  Cache_return_t WriteCollect(WorkRequest* wr);
-  Cache_return_t ReadWriteCollect(WorkRequest* wr);
+  Cache_return_t ReadCollect(WorkRequest *wr);
+  Cache_return_t WriteCollect(WorkRequest *wr);
+  Cache_return_t ReadWriteCollect(WorkRequest *wr);
 
-  ~Cache() { };  //it is only used when program exits
+  ~Cache() {};  //it is only used when program exits
 
   //below are used for multithread programming
   inline void lock(GAddr addr) {
@@ -372,11 +372,11 @@ class Cache {
     epicAssert(BLOCK_ALIGNED(addr));
     UNLOCK_MICRO(caches, addr);
   }
-  void lock(CacheLine* cline) = delete;
-  void unlock(CacheLine* cline) = delete;
+  void lock(CacheLine *cline) = delete;
+  void unlock(CacheLine *cline) = delete;
 
 #ifdef SELECTIVE_CACHING
-  void ToNotCache(CacheLine* cline, bool write = false);
+  void ToNotCache(CacheLine *cline, bool write = false);
 #endif
   long get_evict() {
     return num_evict.load();

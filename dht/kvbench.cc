@@ -21,8 +21,8 @@ constexpr uint32_t KEY_SIZE = 100;
 constexpr uint32_t REPORT = 100000;
 
 int is_master = 0;
-const char* ip_master = "10.10.10.119"; //get_local_ip("eth0").c_str();
-const char* ip_worker = "localhost"; // get_local_ip("eth0").c_str();
+const char *ip_master = "10.10.10.119"; //get_local_ip("eth0").c_str();
+const char *ip_worker = "localhost"; // get_local_ip("eth0").c_str();
 int port_master = 9991;
 int port_worker = 9992;
 int no_thread = 1;
@@ -35,11 +35,11 @@ int iter = 40000;
 const char *ycsb_dir = "/data/caiqc/zipf";
 
 pthread_t *threads;
-pthread_mutex_t cnt_mutex = PTHREAD_MUTEX_INITIALIZER;    
+pthread_mutex_t cnt_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t cv = PTHREAD_COND_INITIALIZER;
 int ccount = 0;
 
-char* value;
+char *value;
 
 Conf conf;
 GAlloc *alloactors;
@@ -57,46 +57,46 @@ static uint64_t nstime(void) {
 
   clock_gettime(CLOCK_MONOTONIC, &time);
 
-  ust = ((uint64_t)time.tv_sec)*1000000000;
+  ust = ((uint64_t)time.tv_sec) * 1000000000;
   ust += time.tv_nsec;
   return ust;
 }
 
 static uint64_t mstime(void) {
-  return nstime()/1000000;
+  return nstime() / 1000000;
 }
 
-void populate(FILE * fp, kvClient* cli) {
+void populate(FILE *fp, kvClient *cli) {
   char key[KEY_SIZE];
   uint64_t start = mstime();
   uint64_t last_report = start, current;
   fprintf(stdout, "start to populate\n");
   int cnt = 0;
-  while(cnt++ < iter && fgets(key, KEY_SIZE, fp)) {
+  while (cnt++ < iter && fgets(key, KEY_SIZE, fp)) {
     key[strlen(key) - 1] = 0;
     cli->put(key, value);
     if (finished.fetch_add(1, std::memory_order_relaxed) % REPORT == 0) {
       current = mstime();
-      printf("%.2f\n", (1000.0 * REPORT)/(current - last_report));
+      printf("%.2f\n", (1000.0 * REPORT) / (current - last_report));
       last_report = current;
     }
   }
 
   double duration = mstime() - start;
-  printf("%lu, %.2f\n", 
-      finished.load(), 
-      (finished-1) * 1000/duration); 
+  printf("%lu, %.2f\n",
+    finished.load(),
+    (finished - 1) * 1000 / duration);
 }
 
-void benchmark(FILE* fp, kvClient* cli) {
+void benchmark(FILE *fp, kvClient *cli) {
   uint64_t start = mstime();
   char key[KEY_SIZE];
-  kv* kv;
+  kv *kv;
   unsigned int seed = rand();
   uint64_t t1, t2;
   uint64_t last_report = start, current;
   int cnt = 0;
-  while(cnt++ < iter && fgets(key, KEY_SIZE, fp)) {
+  while (cnt++ < iter && fgets(key, KEY_SIZE, fp)) {
     key[strlen(key) - 1] = 0;
     if (GetRandom(0, 100, &seed) < get_ratio) {
       t1 = nstime();
@@ -115,7 +115,7 @@ void benchmark(FILE* fp, kvClient* cli) {
 
     if (finished.fetch_add(1, std::memory_order_relaxed) % REPORT == 0) {
       current = mstime();
-      printf("%.2f\n", (1000.0 * REPORT)/(current - last_report));
+      printf("%.2f\n", (1000.0 * REPORT) / (current - last_report));
       last_report = current;
     }
   }
@@ -123,29 +123,29 @@ void benchmark(FILE* fp, kvClient* cli) {
   double duration = mstime() - start;
   double gets = get_finished.load(), sets = set_finished.load();
   double glat = get_latency.load(), slat = set_latency.load();
-  printf("%lu, %.2f", finished - 1, (finished-1) * 1000/duration); 
-  if (gets > 0) printf(", %.2f", glat/gets);
+  printf("%lu, %.2f", finished - 1, (finished - 1) * 1000 / duration);
+  if (gets > 0) printf(", %.2f", glat / gets);
   else printf(", -");
-  if (sets > 0) printf(", %.2f", slat/sets);
+  if (sets > 0) printf(", %.2f", slat / sets);
   else printf(", -");
   printf("\n");
 }
 
-void* do_work(void* fname) {
-  FILE *fp = fopen((char*)fname, "r");
+void *do_work(void *fname) {
+  FILE *fp = fopen((char *)fname, "r");
   if (!fp) {
     perror("fopen:");
     exit(1);
   }
 
-  GAlloc* alloc = GAllocFactory::CreateAllocator(&conf);
-  kvClient* cli = new kvClient(alloc);
+  GAlloc *alloc = GAllocFactory::CreateAllocator(&conf);
+  kvClient *cli = new kvClient(alloc);
 
   rewind(fp);
   populate(fp, cli);
 
   char v = 1;
-  char* vs = new char[no_client];
+  char *vs = new char[no_client];
   int i = 0;
 
   // synchronize among population threads
@@ -158,7 +158,7 @@ void* do_work(void* fname) {
     }
     pthread_cond_broadcast(&cv);
   } else {
-    while(ccount % no_thread != 0) {
+    while (ccount % no_thread != 0) {
       pthread_cond_wait(&cv, &cnt_mutex);
     }
   }
@@ -180,7 +180,7 @@ void* do_work(void* fname) {
     }
     pthread_cond_broadcast(&cv);
   } else {
-    while(ccount % no_thread != 0) {
+    while (ccount % no_thread != 0) {
       pthread_cond_wait(&cv, &cnt_mutex);
     }
   }
@@ -201,7 +201,7 @@ void* do_work(void* fname) {
     }
     pthread_cond_broadcast(&cv);
   } else {
-    while(ccount % no_thread != 0) {
+    while (ccount % no_thread != 0) {
       pthread_cond_wait(&cv, &cnt_mutex);
     }
   }
@@ -209,12 +209,12 @@ void* do_work(void* fname) {
 
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
 
-  for(int i = 1; i < argc; i++) {
-    if(strcmp(argv[i], "--ip_master") == 0) {
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "--ip_master") == 0) {
       ip_master = argv[++i];
-    } else if(strcmp(argv[i], "--ip_worker") == 0) {
+    } else if (strcmp(argv[i], "--ip_worker") == 0) {
       ip_worker = argv[++i];
     } else if (strcmp(argv[i], "--port_master") == 0) {
       port_master = atoi(argv[++i]);
@@ -248,9 +248,9 @@ int main(int argc, char* argv[]) {
   conf.worker_ip = ip_worker;
   conf.worker_port = port_worker;
   conf.size = (1UL << 34); // 16GB
-  conf.cache_th = (double)cache_th/100;
+  conf.cache_th = (double)cache_th / 100;
 
-  GAlloc* alloc = GAllocFactory::CreateAllocator(&conf);
+  GAlloc *alloc = GAllocFactory::CreateAllocator(&conf);
 
   if (cache_th <= 100) {
     value = new char[val_size];
@@ -258,16 +258,15 @@ int main(int argc, char* argv[]) {
       value[i] = 'x';
     value[val_size - 1] = 0;
     threads = new pthread_t[no_thread];
-    struct dirent * ent = NULL;
-    DIR* dir = opendir(ycsb_dir);
+    struct dirent *ent = NULL;
+    DIR *dir = opendir(ycsb_dir);
     if (!dir) {
       perror("opendir:");
       exit(1);
     }
 
     int i = 0;
-    for (i = 0; i < no_thread; ++i)
-    {
+    for (i = 0; i < no_thread; ++i) {
       do {
         ent = readdir(dir);
       } while (ent && ent->d_type != DT_REG);

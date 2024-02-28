@@ -11,12 +11,12 @@
 using namespace std;
 
 int main() {
-  const Conf* conf = GAllocFactory::InitConf();
-  SlabAllocator sb { };
-  void* base = sb.slabs_init(conf->size, conf->factor, true);
+  const Conf *conf = GAllocFactory::InitConf();
+  SlabAllocator sb{ };
+  void *base = sb.slabs_init(conf->size, conf->factor, true);
   int max = 1024 * 1024;
   int step = 5;
-  char* buf = (char*) sb.sb_aligned_malloc(1);
+  char *buf = (char *)sb.sb_aligned_malloc(1);
   epicAssert((uint64_t)buf % BLOCK_SIZE == 0);
 
   size_t avail = sb.get_avail();
@@ -31,7 +31,7 @@ int main() {
       printf("error %dth time avail = %ld\n", i, sb.get_avail());
       break;
     }
-    void* buf = sb.sb_malloc(i);
+    void *buf = sb.sb_malloc(i);
     if (!buf) {
       cout << "malloc error for size = " << i << endl;
       break;
@@ -60,7 +60,7 @@ int main() {
       cout << sb.get_avail() << endl;
       break;
     }
-    void* buf = sb.sb_malloc(i);
+    void *buf = sb.sb_malloc(i);
     if (!buf) {
       cout << "malloc error for size = " << i << endl;
       break;

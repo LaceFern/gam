@@ -15,7 +15,7 @@
 
 // Returns a statically allocated value used to keep track of how many unfreed
 // bytes have been allocated. This value is shared across all threads.
-std::atomic<int64_t>& get_unfreed_bytes();
+std::atomic<int64_t> &get_unfreed_bytes();
 
 // We define a a allocator class that keeps track of how many unfreed bytes have
 // been allocated. Users can specify an optional bound for how many bytes can be
@@ -26,10 +26,10 @@ template <class T, int64_t BOUND = -1>
 class TrackingAllocator {
 public:
     typedef T value_type;
-    typedef T* pointer;
-    typedef T& reference;
-    typedef const T* const_pointer;
-    typedef const T& const_reference;
+    typedef T *pointer;
+    typedef T &reference;
+    typedef const T *const_pointer;
+    typedef const T &const_reference;
     typedef size_t size_type;
     typedef ptrdiff_t difference_type;
 
@@ -39,9 +39,10 @@ public:
     };
 
     TrackingAllocator() {}
-    TrackingAllocator(const TrackingAllocator&) {}
+    TrackingAllocator(const TrackingAllocator &) {}
     template <class U> TrackingAllocator(
-        const TrackingAllocator<U, BOUND>&) {}
+        const TrackingAllocator<U, BOUND> &) {
+    }
 
     ~TrackingAllocator() {}
 
@@ -52,7 +53,7 @@ public:
         return allocator_().address(x);
     }
 
-    pointer allocate(size_type n, std::allocator<void>::const_pointer hint=0) {
+    pointer allocate(size_type n, std::allocator<void>::const_pointer hint = 0) {
         const size_type bytes_to_allocate = sizeof(T) * n;
         if (BOUND >= 0 && get_unfreed_bytes() + bytes_to_allocate > BOUND) {
             throw std::bad_alloc();
@@ -75,7 +76,7 @@ public:
     }
 
     template <class U, class... Args>
-    void construct(U* p, Args&&... args) {
+    void construct(U *p, Args&&... args) {
         allocator_().construct(p, std::forward<Args>(args)...);
     }
 
@@ -84,7 +85,7 @@ public:
     }
 
     template <class U>
-    void destroy(U* p) {
+    void destroy(U *p) {
         allocator_().destroy(p);
     }
 
@@ -121,7 +122,7 @@ using StringIntTable = cuckoohash_map<
 
 // Returns the number of slots the table has to store key-value pairs.
 template <class CuckoohashMap>
-size_t table_capacity(const CuckoohashMap& table) {
+size_t table_capacity(const CuckoohashMap &table) {
     return CuckoohashMap::slot_per_bucket * (1U << table.hashpower());
 }
 
@@ -132,14 +133,14 @@ public:
     static const size_t IntIntBucketSize = sizeof(IntIntTable::Bucket);
 
     template <class CuckoohashMap>
-    static size_t old_table_info_size(const CuckoohashMap& table) {
+    static size_t old_table_info_size(const CuckoohashMap &table) {
         // This is not thread-safe
         return table.old_table_infos.size();
     }
 
     template <class CuckoohashMap>
     static typename CuckoohashMap::SnapshotNoLockResults snapshot_table_nolock(
-        const CuckoohashMap& table) {
+        const CuckoohashMap &table) {
         return table.snapshot_table_nolock();
     }
 
@@ -155,8 +156,8 @@ public:
 
     template <class CuckoohashMap>
     static size_t alt_index(const size_t hashpower,
-                            const typename CuckoohashMap::partial_t partial,
-                            const size_t index) {
+        const typename CuckoohashMap::partial_t partial,
+        const size_t index) {
         return CuckoohashMap::alt_index(hashpower, partial, index);
     }
 };

@@ -1,5 +1,5 @@
 // Copyright (c) 2018 The GAM Authors 
- 
+
 #ifndef KV_H_
 #define KV_H_
 
@@ -7,10 +7,10 @@
 #include "chars.h"
 #include "../include/log.h"
 
-namespace dht{
+namespace dht {
 
-using hash_t = uint64_t;
-using hkey_t = char*;
+  using hash_t = uint64_t;
+  using hkey_t = char *;
 
 #define HASH_TABLE_NOT_EXIST 1
 
@@ -37,38 +37,38 @@ using hkey_t = char*;
 #define MAX_VAL_SIZE 16384
 #define MAX_KV_SIZE (8 + MAX_KEY_SIZE + MAX_VAL_SIZE)
 
-static void parseEntry(char* entry, uint32_t& tag, uint32_t& size, GAddr& addr) {
-  readInteger(entry, tag, addr);
-  tag &= ((1UL << 31) - 1);
-  size = (tag & SZ_MASK);
-  tag = (tag >> SZ_BITS);
-}
+  static void parseEntry(char *entry, uint32_t &tag, uint32_t &size, GAddr &addr) {
+    readInteger(entry, tag, addr);
+    tag &= ((1UL << 31) - 1);
+    size = (tag & SZ_MASK);
+    tag = (tag >> SZ_BITS);
+  }
 
-static void updateEntry(char* entry, uint32_t tag, uint32_t size, GAddr addr) {
-  uint32_t etag = (1UL << 31) | (tag << SZ_BITS) | (size & SZ_MASK);
-  appendInteger(entry, etag, addr);
-}
+  static void updateEntry(char *entry, uint32_t tag, uint32_t size, GAddr addr) {
+    uint32_t etag = (1UL << 31) | (tag << SZ_BITS) | (size & SZ_MASK);
+    appendInteger(entry, etag, addr);
+  }
 
-//static int getTag(char* entry, uint32_t& tag) {
-//    readInteger(entry, tag);
-//    tag &= ((1UL << 31 ) - 1);
-//    return (tag & (1UL<<31));
-//}
+  //static int getTag(char* entry, uint32_t& tag) {
+  //    readInteger(entry, tag);
+  //    tag &= ((1UL << 31 ) - 1);
+  //    return (tag & (1UL<<31));
+  //}
 
-static bool matchTag(char* entry, uint32_t tag) {
-  uint32_t etag;
-  readInteger(entry, etag);
-  if (etag == 0) return false;
-  etag &= ((1UL<<31)-1);
-  etag = (etag >> SZ_BITS);
-  return tag == etag; 
-}
+  static bool matchTag(char *entry, uint32_t tag) {
+    uint32_t etag;
+    readInteger(entry, etag);
+    if (etag == 0) return false;
+    etag &= ((1UL << 31) - 1);
+    etag = (etag >> SZ_BITS);
+    return tag == etag;
+  }
 
-static bool containTag(char* entry) {
-  uint32_t tag;
-  readInteger(entry, tag);
-  return tag != 0;
-}
+  static bool containTag(char *entry) {
+    uint32_t tag;
+    readInteger(entry, tag);
+    return tag != 0;
+  }
 
 };
 

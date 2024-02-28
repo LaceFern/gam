@@ -8,17 +8,17 @@
 #include <cstring>
 #include "../include/lockwrapper.h"
 
-const Conf* GAllocFactory::conf = nullptr;
-Worker* GAllocFactory::worker;
-Master* GAllocFactory::master;
+const Conf *GAllocFactory::conf = nullptr;
+Worker *GAllocFactory::worker;
+Master *GAllocFactory::master;
 LockWrapper GAllocFactory::lock;
 #ifdef GFUNC_SUPPORT
-GFunc* GAllocFactory::gfuncs[] = { Incr, IncrDouble, GatherPagerank,
+GFunc *GAllocFactory::gfuncs[] = { Incr, IncrDouble, GatherPagerank,
     ApplyPagerank, ScatterPagerank };
 #endif
 
-GAlloc::GAlloc(Worker* worker)
-    : wh(new WorkerHandle(worker)) {
+GAlloc::GAlloc(Worker *worker)
+  : wh(new WorkerHandle(worker)) {
 }
 
 GAddr GAlloc::Malloc(const Size size, Flag flag) {
@@ -26,7 +26,7 @@ GAddr GAlloc::Malloc(const Size size, Flag flag) {
 }
 GAddr GAlloc::Malloc(const Size size, GAddr base, Flag flag) {
 #ifdef LOCAL_MEMORY_HOOK
-  void* laddr = zmalloc(size);
+  void *laddr = zmalloc(size);
   return (GAddr)laddr;
 #else
   WorkRequest wr = { };
@@ -53,7 +53,7 @@ GAddr GAlloc::AlignedMalloc(const Size size, Flag flag) {
 }
 GAddr GAlloc::AlignedMalloc(const Size size, GAddr base, Flag flag) {
 #ifdef LOCAL_MEMORY_HOOK
-  void* ret;
+  void *ret;
   int rret = posix_memalign(&ret, BLOCK_SIZE, size);
   epicAssert(!rret && (GAddr)ret % BLOCK_SIZE == 0);
   return (GAddr)ret;
@@ -101,17 +101,17 @@ void GAlloc::Free(const GAddr addr) {
   }
 }
 
-int GAlloc::Read(const GAddr addr, void* buf, const Size count, Flag flag) {
+int GAlloc::Read(const GAddr addr, void *buf, const Size count, Flag flag) {
   return Read(addr, 0, buf, count, flag);
 }
-int GAlloc::Read(const GAddr addr, const Size offset, void* buf,
-                 const Size count, Flag flag) {
+int GAlloc::Read(const GAddr addr, const Size offset, void *buf,
+  const Size count, Flag flag) {
 #ifdef LOCAL_MEMORY_HOOK
-  char* laddr = (char*)addr;
-  memcpy(buf, laddr+offset, count);
+  char *laddr = (char *)addr;
+  memcpy(buf, laddr + offset, count);
   return count;
 #else
-  WorkRequest wr { };
+  WorkRequest wr{ };
   wr.op = READ;
   wr.flag = flag;
   wr.size = count;
@@ -128,29 +128,29 @@ int GAlloc::Read(const GAddr addr, const Size offset, void* buf,
 }
 
 #ifdef GFUNC_SUPPORT
-int GAlloc::Write(const GAddr addr, void* buf, const Size count, GFunc* func,
-                  uint64_t arg, Flag flag) {
+int GAlloc::Write(const GAddr addr, void *buf, const Size count, GFunc *func,
+  uint64_t arg, Flag flag) {
   return Write(addr, 0, buf, count, flag, func, arg);
 }
 #endif
 
-int GAlloc::Write(const GAddr addr, void* buf, const Size count, Flag flag) {
+int GAlloc::Write(const GAddr addr, void *buf, const Size count, Flag flag) {
   return Write(addr, 0, buf, count, flag);
 }
 
 #ifdef GFUNC_SUPPORT
-int GAlloc::Write(const GAddr addr, const Size offset, void* buf,
-                  const Size count, Flag flag, GFunc* func, uint64_t arg) {
+int GAlloc::Write(const GAddr addr, const Size offset, void *buf,
+  const Size count, Flag flag, GFunc *func, uint64_t arg) {
 #else
-  int GAlloc::Write(const GAddr addr, const Size offset, void* buf, const Size count, Flag flag) {
+int GAlloc::Write(const GAddr addr, const Size offset, void *buf, const Size count, Flag flag) {
 #endif
 #ifdef LOCAL_MEMORY_HOOK
-  char* laddr = (char*)addr;
-  memcpy(laddr+offset, buf, count);
+  char *laddr = (char *)addr;
+  memcpy(laddr + offset, buf, count);
   return count;
 #else
   //for asynchronous request, we must ensure the WorkRequest is valid after this function returns
-  WorkRequest wr { };
+  WorkRequest wr{ };
   wr.op = WRITE;
   wr.flag = flag | ASYNC;
   //wr.flag = flag;
@@ -176,7 +176,7 @@ int GAlloc::Write(const GAddr addr, const Size offset, void* buf,
 
 void GAlloc::MFence() {
 #ifndef LOCAL_MEMORY_HOOK
-  WorkRequest wr { };
+  WorkRequest wr{ };
   wr.op = MFENCE;
   wr.flag = ASYNC;
   if (wh->SendRequest(&wr)) {
@@ -187,7 +187,7 @@ void GAlloc::MFence() {
 
 void GAlloc::SFence() {
 #ifndef LOCAL_MEMORY_HOOK
-  WorkRequest wr { };
+  WorkRequest wr{ };
   wr.op = SFENCE;
   wr.flag = ASYNC;
   if (wh->SendRequest(&wr)) {
@@ -200,7 +200,7 @@ int GAlloc::Lock(Work op, const GAddr addr, const Size count, Flag flag) {
 #ifdef LOCAL_MEMORY_HOOK
   return 0;
 #else
-  WorkRequest wr { };
+  WorkRequest wr{ };
   wr.op = op;
   wr.addr = addr;
 #ifdef ASYNC_UNLOCK
@@ -214,7 +214,7 @@ int GAlloc::Lock(Work op, const GAddr addr, const Size count, Flag flag) {
   GAddr end_blk = TOBLOCK(end);
   while (!wh->SendRequest(&wr)) {
     i++;
-    GAddr next = GADD(start_blk, i*BLOCK_SIZE);
+    GAddr next = GADD(start_blk, i * BLOCK_SIZE);
     if (next > end_blk)
       break;
 
@@ -242,7 +242,7 @@ int GAlloc::Lock(Work op, const GAddr addr, const Size count, Flag flag) {
       }
       for (j = 1; j < i; j++) {
         wr.Reset();
-        wr.addr = GADD(start_blk, j*BLOCK_SIZE);
+        wr.addr = GADD(start_blk, j * BLOCK_SIZE);
         epicAssert(wr.addr % BLOCK_SIZE == 0);
         epicAssert(wr.addr <= end_blk);
         wr.op = UNLOCK;
@@ -282,12 +282,12 @@ void GAlloc::UnLock(const GAddr addr, const Size count) {
   Lock(UNLOCK, addr, count);
 }
 
-Size GAlloc::Put(uint64_t key, const void* value, Size count) {
-  WorkRequest wr { };
+Size GAlloc::Put(uint64_t key, const void *value, Size count) {
+  WorkRequest wr{ };
   wr.op = PUT;
   wr.size = count;
   wr.key = key;
-  wr.ptr = const_cast<void*>(value);
+  wr.ptr = const_cast<void *>(value);
 
   if (wh->SendRequest(&wr)) {
     epicLog(LOG_WARNING, "Put failed");
@@ -297,8 +297,8 @@ Size GAlloc::Put(uint64_t key, const void* value, Size count) {
   }
 }
 
-Size GAlloc::Get(uint64_t key, void* value) {
-  WorkRequest wr { };
+Size GAlloc::Get(uint64_t key, void *value) {
+  WorkRequest wr{ };
   wr.op = GET;
   wr.key = key;
   wr.ptr = value;
@@ -312,7 +312,7 @@ Size GAlloc::Get(uint64_t key, void* value) {
 }
 
 #ifdef DHT
-int GAlloc::HTable(void* addr) {
+int GAlloc::HTable(void *addr) {
   WorkRequest wr{};
   wr.op = GET_HTABLE;
   wr.addr = (GAddr)addr;

@@ -17,10 +17,10 @@ class GArray {
   const int header_size = 32;  //GAddr+size_t+size_t+int*2
   const int items_per_bucket = BUCKET_SIZE / sizeof(T);
   const int gaddrs_per_bucket = BUCKET_SIZE / sizeof(GAddr);
-  GAlloc* galloc_;
+  GAlloc *galloc_;
   GAddr header_ = Gnullptr;  //the global address storing this class information
 
-  GAddr Locate(size_t off, GAlloc* galloc) {
+  GAddr Locate(size_t off, GAlloc *galloc) {
     epicAssert(root_addr_);
     //epicAssert(off < size_);
     int offs[layer_];
@@ -35,7 +35,7 @@ class GArray {
     GAddr curr_addr = root_addr_;
     for (int i = 0; i < layer_ - 1; i++) {
       galloc->Read(curr_addr, sizeof(GAddr) * offs[i], &curr_addr,
-                   sizeof(GAddr));
+        sizeof(GAddr));
     }
     return GADD(curr_addr, offs[layer_ - 1] * sizeof(T));
   }
@@ -44,7 +44,7 @@ class GArray {
    * locate the pointer address in layer "layer" that points to the "idx"th block in layer "layer+1"
    */
   GAddr LocateInternal(GAddr root_addr, int total_layer, int layer, size_t idx,
-                       GAlloc* galloc) {
+    GAlloc *galloc) {
     epicAssert(root_addr);
     int offs[layer];
     size_t bks = 0;
@@ -68,19 +68,19 @@ class GArray {
     GAddr curr_addr = root_addr;
     for (int i = 0; i < layer - 1; i++) {
       galloc->Read(curr_addr, sizeof(GAddr) * offs[i], &curr_addr,
-                   sizeof(GAddr));
+        sizeof(GAddr));
     }
     return GADD(curr_addr, offs[layer - 1] * item_size);
   }
 
-  void SyncFrom(GAlloc* galloc) {
+  void SyncFrom(GAlloc *galloc) {
     //TODO: change to optimistic strategy
     if (header_) {  //update the header in case others resize the array (pessimistic)
       galloc->Read(header_, this, header_size);
     }
   }
 
-  void SyncTo(GAlloc* galloc) {
+  void SyncTo(GAlloc *galloc) {
     if (header_) {  //update the header in case others resize the array (pessimistic)
       galloc->Write(header_, this, header_size);
     }
@@ -88,8 +88,8 @@ class GArray {
 
   int Layers(size_t size) {
     return ceil(
-        log((double) size / items_per_bucket) / log((double) gaddrs_per_bucket))
-        + 1;
+      log((double)size / items_per_bucket) / log((double)gaddrs_per_bucket))
+      + 1;
   }
 
   size_t Capacity(size_t size) {
@@ -110,42 +110,42 @@ class GArray {
    * insert a new block indexed at idx in layer l+1 to corresponding layer l
    */
   inline void InsertBlock(GAddr root_addr, int total_layer, int l, size_t idx,
-                          GAddr newbk, GAlloc* galloc) {
+    GAddr newbk, GAlloc *galloc) {
     GAddr addr = LocateInternal(root_addr, total_layer, l, idx, galloc);  //parent layer storing the pointer to next layer
     galloc->Write(addr, &newbk, sizeof(GAddr));
   }
 
-  void LockHeader(GAlloc* galloc) {
+  void LockHeader(GAlloc *galloc) {
     epicAssert(header_);
     galloc->WLock(header_, header_size);
   }
 
-  void UnLockHeader(GAlloc* galloc) {
+  void UnLockHeader(GAlloc *galloc) {
     epicAssert(header_);
     galloc->UnLock(header_, header_size);
   }
 
-  GAddr Globalize(GAlloc* galloc) {
+  GAddr Globalize(GAlloc *galloc) {
     epicAssert(!header_);
     header_ = galloc->AlignedMalloc(header_size, flag_);
     galloc->Write(header_, this, header_size);
     return header_;
   }
 
- public:
-  GArray(GAlloc* galloc, Flag flag = 0)
-      : galloc_(galloc),
-        flag_(flag) {
+public:
+  GArray(GAlloc *galloc, Flag flag = 0)
+    : galloc_(galloc),
+    flag_(flag) {
   }
   ;
-  GArray(const GArray& clone, GAlloc* galloc)
-      : galloc_(galloc) {
+  GArray(const GArray &clone, GAlloc *galloc)
+    : galloc_(galloc) {
     Clone(clone.Header(), galloc);
   }
-  GArray(size_t size, GAlloc* galloc, Flag flag = 0)
-      : size_(size),
-        galloc_(galloc),
-        flag_(flag) {
+  GArray(size_t size, GAlloc *galloc, Flag flag = 0)
+    : size_(size),
+    galloc_(galloc),
+    flag_(flag) {
     if (size <= items_per_bucket) {
       root_addr_ = galloc->AlignedMalloc(BUCKET_SIZE, flag_);
       layer_ = 1;
@@ -154,7 +154,7 @@ class GArray {
       layer_ = Layers(size);
       if (layer_ >= 2) {
         epicLog(LOG_WARNING, "array layer larger than 2 (array layer = %d)",
-                layer_);
+          layer_);
       }
       long layers_no[layer_];
       capacity_ = CalLayers(size, layers_no, layer_);
@@ -173,7 +173,7 @@ class GArray {
   /*
    * Must be called after Globalize cos we have to lock in case there are multiple resize operations
    */
-  void Resize(size_t n, GAlloc* galloc = nullptr) {
+  void Resize(size_t n, GAlloc *galloc = nullptr) {
     if (!galloc)
       galloc = galloc_;
     epicAssert(galloc);
@@ -193,7 +193,7 @@ class GArray {
           layer_ = layer;
           root_addr_ = galloc->AlignedMalloc(BUCKET_SIZE, flag_);
           epicLog(LOG_WARNING, "increased layer from %d to %d", old_layer,
-                  layer);
+            layer);
 
           //1. generate the new layers higher than previous layers
           int i = 1;
@@ -215,7 +215,7 @@ class GArray {
           //extend the old layers below old root layer
           for (; i < layer; i++) {
             for (long j = old_layers[i - (layer - old_layer)];
-                j < new_layers[i]; j++) {
+              j < new_layers[i]; j++) {
               GAddr newbk = galloc->AlignedMalloc(BUCKET_SIZE, flag_);
               InsertBlock(root_addr_, layer_, i, j, newbk, galloc);
             }
@@ -279,15 +279,15 @@ class GArray {
       }
     } else {
       epicLog(
-          LOG_WARNING,
-          "There may be a race here, since the targeted resize size (%lu) equals the original size (%lu)",
-          n, size_);
+        LOG_WARNING,
+        "There may be a race here, since the targeted resize size (%lu) equals the original size (%lu)",
+        n, size_);
     }
     epicLog(LOG_WARNING, "end resize");
     UnLockHeader(galloc);
   }
 
-  inline void Clone(GAddr header, GAlloc* galloc = nullptr) {
+  inline void Clone(GAddr header, GAlloc *galloc = nullptr) {
     if (!galloc)
       galloc = galloc_;
     epicAssert(galloc);
@@ -300,7 +300,7 @@ class GArray {
     return header_ ? true : false;
   }
 
-  inline int Read(size_t idx, T* val, GAlloc* galloc = nullptr) {
+  inline int Read(size_t idx, T *val, GAlloc *galloc = nullptr) {
     if (!galloc)
       galloc = galloc_;
     epicAssert(galloc);
@@ -310,7 +310,7 @@ class GArray {
     return galloc->Read(addr, val, sizeof(T));
   }
 
-  inline int Write(size_t idx, T* val, GAlloc* galloc = nullptr) {
+  inline int Write(size_t idx, T *val, GAlloc *galloc = nullptr) {
     if (!galloc)
       galloc = galloc_;
     epicAssert(galloc);
@@ -335,11 +335,11 @@ class GArray {
     return header_;
   }
 
-  bool operator ==(GArray<T, BUCKET_SIZE>& ga) {
+  bool operator ==(GArray<T, BUCKET_SIZE> &ga) {
     return Equal(ga);
   }
 
-  bool Equal(GArray<T, BUCKET_SIZE>& ga, GAlloc* galloc = nullptr) {
+  bool Equal(GArray<T, BUCKET_SIZE> &ga, GAlloc *galloc = nullptr) {
     if (!galloc)
       galloc = galloc_;
     epicAssert(galloc);

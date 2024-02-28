@@ -12,11 +12,11 @@ TEST_CASE("caps any expansion", "[maximum hash power]") {
     }
 
     REQUIRE(tbl.hashpower() == 1);
-    REQUIRE_THROWS_AS(tbl.insert(2*tbl.slot_per_bucket, 0),
-                      libcuckoo_maximum_hashpower_exceeded);
+    REQUIRE_THROWS_AS(tbl.insert(2 * tbl.slot_per_bucket, 0),
+        libcuckoo_maximum_hashpower_exceeded);
     REQUIRE_THROWS_AS(tbl.rehash(2), libcuckoo_maximum_hashpower_exceeded);
-    REQUIRE_THROWS_AS(tbl.reserve(4*tbl.slot_per_bucket),
-                      libcuckoo_maximum_hashpower_exceeded);
+    REQUIRE_THROWS_AS(tbl.reserve(4 * tbl.slot_per_bucket),
+        libcuckoo_maximum_hashpower_exceeded);
 
 }
 

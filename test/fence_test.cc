@@ -26,7 +26,7 @@ int iteration = 1 << 10;
 void thread1() {
   epicLog(LOG_WARNING, "*****************start thread1**********************");
   int buf, wbuf = 0x01010101;
-  WorkRequest* wr = new WorkRequest();
+  WorkRequest *wr = new WorkRequest();
 
   for (int i = 0; i < iteration; i++) {
     {
@@ -63,7 +63,7 @@ void thread1() {
         epicLog(LOG_INFO, "remote read g2 succeed");
       } else {
         epicLog(LOG_WARNING, "remote read g2 failed expect %d, but %d", wbuf,
-                buf);
+          buf);
         exit(1);
       }
     }
@@ -156,7 +156,7 @@ void thread1() {
         epicLog(LOG_INFO, "remote read g3 succeed");
       } else {
         epicLog(LOG_WARNING, "remote read g3 failed expect %d, but %d", wbuf,
-                buf);
+          buf);
         exit(1);
       }
     }
@@ -212,7 +212,7 @@ void thread1() {
 void thread2() {
   epicLog(LOG_WARNING, "*****************start thread2**********************");
   int rg1, rg2, rg3, wbuf = 0x01010101;
-  WorkRequest* wr = new WorkRequest();
+  WorkRequest *wr = new WorkRequest();
 
   for (int i = 0; i < iteration; i++) {
     {
@@ -264,8 +264,8 @@ void thread2() {
     }
 
     epicAssert(
-        (rg2 >= rg1 && rg1 >= rg3) || rg1 == wbuf || rg2 == wbuf
-            || rg3 == wbuf);
+      (rg2 >= rg1 && rg1 >= rg3) || rg1 == wbuf || rg2 == wbuf
+      || rg3 == wbuf);
   }
   epicLog(LOG_WARNING, "end iteration thread2");
   delete wr;
@@ -275,7 +275,7 @@ void thread2() {
 void thread3() {
   epicLog(LOG_WARNING, "*****************start thread3**********************");
   int rg1, rg2, wbuf = 0x01010101;
-  WorkRequest* wr = new WorkRequest();
+  WorkRequest *wr = new WorkRequest();
 
   for (int i = 0; i < iteration; i++) {
     {
@@ -320,14 +320,14 @@ int main() {
   ibv_device **list = ibv_get_device_list(NULL);
 
   //master
-  Conf* conf = new Conf();
+  Conf *conf = new Conf();
   conf->loglevel = LOG_WARNING;
   GAllocFactory::SetConf(conf);
-  Master* master = new Master(*conf);
+  Master *master = new Master(*conf);
 
   //worker1
   conf = new Conf();
-  RdmaResource* res = new RdmaResource(list[0], false);
+  RdmaResource *res = new RdmaResource(list[0], false);
   Worker *worker1, *worker2, *worker3;
   worker1 = new Worker(*conf, res);
   wh1 = new WorkerHandle(worker1);
@@ -348,11 +348,11 @@ int main() {
 
   char buf[size];
   char wbuf[size];
-  WorkRequest wr { };
+  WorkRequest wr{ };
 
   //init the data to be written
   for (int i = 0; i < size; i++) {
-    wbuf[i] = (char) i;
+    wbuf[i] = (char)i;
   }
 
   //w1 allocate
@@ -380,37 +380,37 @@ int main() {
   g3 = wr.addr;
   epicLog(LOG_WARNING, "\n****allocated g3 %ld at %lx*****\n", size, g3);
 
-//	//local write
-//	wr.op = WRITE;
-//	wr.addr = g1;
-//	wr.size = size;
-//	wr.ptr = wbuf;
-//	if(wh1->SendRequest(&wr)) {
-//		epicLog(LOG_WARNING, "send request failed");
-//	}
-//	wr.op = READ;
-//	wr.ptr = buf;
-//	if(wh1->SendRequest(&wr)) {
-//		epicLog(LOG_WARNING, "send request failed");
-//	}
-//	for(i = 0; i < size; i++) {
-//		if(buf[i] != wbuf[i]) {
-//			epicLog(LOG_WARNING, "local read failed at buf[%d] (%d) != %d\n", i, buf[i], wbuf[i]);
-//			break;
-//		}
-//	}
-//	if(i == size) {
-//		epicLog(LOG_WARNING, "local read succeed!");
-//	} else {
-//		epicLog(LOG_WARNING, "local read failed!");
-//		exit(1);
-//	}
+  //	//local write
+  //	wr.op = WRITE;
+  //	wr.addr = g1;
+  //	wr.size = size;
+  //	wr.ptr = wbuf;
+  //	if(wh1->SendRequest(&wr)) {
+  //		epicLog(LOG_WARNING, "send request failed");
+  //	}
+  //	wr.op = READ;
+  //	wr.ptr = buf;
+  //	if(wh1->SendRequest(&wr)) {
+  //		epicLog(LOG_WARNING, "send request failed");
+  //	}
+  //	for(i = 0; i < size; i++) {
+  //		if(buf[i] != wbuf[i]) {
+  //			epicLog(LOG_WARNING, "local read failed at buf[%d] (%d) != %d\n", i, buf[i], wbuf[i]);
+  //			break;
+  //		}
+  //	}
+  //	if(i == size) {
+  //		epicLog(LOG_WARNING, "local read succeed!");
+  //	} else {
+  //		epicLog(LOG_WARNING, "local read failed!");
+  //		exit(1);
+  //	}
 
   sleep(1);
 
-  thread* t1 = new thread(thread1);
-  thread* t2 = new thread(thread2);
-  thread* t3 = new thread(thread3);
+  thread *t1 = new thread(thread1);
+  thread *t2 = new thread(thread2);
+  thread *t3 = new thread(thread3);
 
   t1->join();
   t2->join();

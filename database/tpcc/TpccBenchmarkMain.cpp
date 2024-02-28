@@ -13,10 +13,10 @@
 using namespace Database::TpccBenchmark;
 using namespace Database;
 
-void ExchPerfStatistics(ClusterConfig* config, 
-    ClusterSync* synchronizer, PerfStatistics* s);
+void ExchPerfStatistics(ClusterConfig *config,
+  ClusterSync *synchronizer, PerfStatistics *s);
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
   ArgumentsParser(argc, argv);
 
   std::string my_host_name = ClusterHelper::GetLocalHostName();
@@ -31,7 +31,7 @@ int main(int argc, char* argv[]) {
   synchronizer.Fence();
   // initialize benchmark data
   GAddr storage_addr = initiator.InitStorage();
-  synchronizer.MasterBroadcast<GAddr>(&storage_addr); 
+  synchronizer.MasterBroadcast<GAddr>(&storage_addr);
   std::cout << "storage_addr=" << storage_addr << std::endl;
   StorageManager storage_manager;
   storage_manager.Deserialize(storage_addr, default_gallocator);
@@ -48,8 +48,8 @@ int main(int argc, char* argv[]) {
   IORedirector redirector(gThreadCount);
   size_t access_pattern = 0;
   TpccSource sourcer(&tpcc_scale_params, &redirector, num_txn,
-                     SourceType::PARTITION_SOURCE, gThreadCount, dist_ratio,
-                     config.GetMyPartitionId());
+    SourceType::PARTITION_SOURCE, gThreadCount, dist_ratio,
+    config.GetMyPartitionId());
   //TpccSource sourcer(&tpcc_scale_params, &redirector, num_txn, SourceType::RANDOM_SOURCE, gThreadCount, dist_ratio);
   sourcer.Start();
   synchronizer.Fence();
@@ -79,11 +79,11 @@ int main(int argc, char* argv[]) {
   return 0;
 }
 
-void ExchPerfStatistics(ClusterConfig* config, 
-    ClusterSync* synchronizer, PerfStatistics* s) {
+void ExchPerfStatistics(ClusterConfig *config,
+  ClusterSync *synchronizer, PerfStatistics *s) {
   PerfStatistics *stats = new PerfStatistics[config->GetPartitionNum()];
   synchronizer->MasterCollect<PerfStatistics>(
-      s, stats);
+    s, stats);
   synchronizer->MasterBroadcast<PerfStatistics>(stats);
   for (size_t i = 0; i < config->GetPartitionNum(); ++i) {
     stats[i].Print();

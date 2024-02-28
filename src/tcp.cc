@@ -15,7 +15,7 @@
 
 void AcceptTcpClientHandle(aeEventLoop *el, int fd, void *data, int mask) {
   epicAssert(data != nullptr);
-  Server *server = (Server*) (data);
+  Server *server = (Server *)(data);
   char msg[MAX_CONN_STRLEN + 1];
   int n;
   const char *p;
@@ -63,9 +63,9 @@ void AcceptTcpClientHandle(aeEventLoop *el, int fd, void *data, int mask) {
   if (server->IsMaster())
     server->PostAcceptWorker(cfd, server);
 
-  out: close(cfd);
+out: close(cfd);
 }
 
 void ProcessRdmaRequestHandle(aeEventLoop *el, int fd, void *data, int mask) {
-  ((Server *) data)->ProcessRdmaRequest();
+  ((Server *)data)->ProcessRdmaRequest();
 }

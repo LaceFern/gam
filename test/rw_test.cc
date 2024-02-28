@@ -17,15 +17,15 @@ int main() {
   int level = LOG_WARNING;
 
   //master
-  Conf* conf = new Conf();
+  Conf *conf = new Conf();
   conf->loglevel = level;
   GAllocFactory::SetConf(conf);
-  Master* master = new Master(*conf);
+  Master *master = new Master(*conf);
 
   //worker1
   conf = new Conf();
   conf->loglevel = level;
-  RdmaResource* res = new RdmaResource(list[0], false);
+  RdmaResource *res = new RdmaResource(list[0], false);
   Worker *worker1, *worker2, *worker3;
   WorkerHandle *wh1, *wh2, *wh3;
   worker1 = new Worker(*conf, res);
@@ -49,7 +49,7 @@ int main() {
 
   sleep(2);
 
-  WorkRequest wr { };
+  WorkRequest wr{ };
   Size size = 8;
   GAddr gaddr;
   int i = 0;
@@ -60,7 +60,7 @@ int main() {
 
   //init the data to be written
   for (i = 0; i < size; i++) {
-    wbuf[i] = (char) i;
+    wbuf[i] = (char)i;
   }
 
   //local allocate
@@ -85,7 +85,7 @@ int main() {
   for (i = 0; i < size; i++) {
     if (buf[i] != local_init) {
       epicLog(LOG_WARNING, "local read failed at buf[%d] (%d) != %d\n", i,
-              buf[i], local_init);
+        buf[i], local_init);
       break;
     }
   }
@@ -118,7 +118,7 @@ int main() {
   for (i = 0; i < size; i++) {
     if (buf[i] != wbuf[i]) {
       epicLog(LOG_WARNING, "local read failed at buf[%d] (%d) != %d\n", i,
-              buf[i], wbuf[i]);
+        buf[i], wbuf[i]);
       break;
     }
   }
@@ -142,8 +142,8 @@ int main() {
   for (i = 0; i < size; i++) {
     if (buf[i] != wbuf[i]) {
       epicLog(LOG_WARNING,
-              "READ Case 2 (null): remote read failed at buf[%d] (%d) != %d\n",
-              i, buf[i], wbuf[i]);
+        "READ Case 2 (null): remote read failed at buf[%d] (%d) != %d\n",
+        i, buf[i], wbuf[i]);
       break;
     }
   }
@@ -167,9 +167,9 @@ int main() {
   for (i = 0; i < size; i++) {
     if (buf[i] != wbuf[i]) {
       epicLog(
-          LOG_WARNING,
-          "READ Case 2 (shared): remote read failed at buf[%d] (%d) != %d\n", i,
-          buf[i], wbuf[i]);
+        LOG_WARNING,
+        "READ Case 2 (shared): remote read failed at buf[%d] (%d) != %d\n", i,
+        buf[i], wbuf[i]);
       break;
     }
   }
@@ -183,7 +183,7 @@ int main() {
   //remote write from worker3 (WRITE Case 3, cflag = shared, cached)
   memset(buf, 0, size);
   for (i = 0; i < size; i++) {
-    wbuf[i] = (char) (i + 1);
+    wbuf[i] = (char)(i + 1);
   }
   wr.Reset();
   wr.addr = gaddr;
@@ -205,9 +205,9 @@ int main() {
   for (i = 0; i < size; i++) {
     if (buf[i] != wbuf[i]) {
       epicLog(
-          LOG_WARNING,
-          "WRITE Case 3 (shared, cached): remote read failed at buf[%d] (%d) != %d\n",
-          i, buf[i], wbuf[i]);
+        LOG_WARNING,
+        "WRITE Case 3 (shared, cached): remote read failed at buf[%d] (%d) != %d\n",
+        i, buf[i], wbuf[i]);
       break;
     }
   }
@@ -231,8 +231,8 @@ int main() {
   for (i = 0; i < size; i++) {
     if (buf[i] != wbuf[i]) {
       epicLog(LOG_WARNING,
-              "READ Case 1: remote read failed at buf[%d] (%d) != %d\n", i,
-              buf[i], wbuf[i]);
+        "READ Case 1: remote read failed at buf[%d] (%d) != %d\n", i,
+        buf[i], wbuf[i]);
       break;
     }
   }
@@ -257,9 +257,9 @@ int main() {
     for (i = 0; i < size; i++) {
       if (buf[i] != wbuf[i]) {
         epicLog(
-            LOG_WARNING,
-            "WRITE Case 1 - step 1: remote read failed at buf[%d] (%d) != %d\n",
-            i, buf[i], wbuf[i]);
+          LOG_WARNING,
+          "WRITE Case 1 - step 1: remote read failed at buf[%d] (%d) != %d\n",
+          i, buf[i], wbuf[i]);
         break;
       }
     }
@@ -273,7 +273,7 @@ int main() {
     //and write from worker1
     memset(buf, 0, size);
     for (i = 0; i < size; i++) {
-      wbuf[i] = (char) (wbuf[i] + 1);
+      wbuf[i] = (char)(wbuf[i] + 1);
     }
     wr.Reset();
     wr.addr = gaddr;
@@ -295,8 +295,8 @@ int main() {
     for (i = 0; i < size; i++) {
       if (buf[i] != wbuf[i]) {
         epicLog(LOG_WARNING,
-                "READ Case 1: remote read failed at buf[%d] (%d) != %d\n", i,
-                buf[i], wbuf[i]);
+          "READ Case 1: remote read failed at buf[%d] (%d) != %d\n", i,
+          buf[i], wbuf[i]);
         break;
       }
     }
@@ -314,7 +314,7 @@ int main() {
     //write from worker2 (WRITE Case 3, null)
     memset(buf, 0, size);
     for (i = 0; i < size; i++) {
-      wbuf[i] = (char) (wbuf[i] + 1);
+      wbuf[i] = (char)(wbuf[i] + 1);
     }
     wr.Reset();
     wr.addr = gaddr;
@@ -336,9 +336,9 @@ int main() {
     for (i = 0; i < size; i++) {
       if (buf[i] != wbuf[i]) {
         epicLog(
-            LOG_WARNING,
-            "WRITE Case 2 - step 1: remote read failed at buf[%d] (%d) != %d\n",
-            i, buf[i], wbuf[i]);
+          LOG_WARNING,
+          "WRITE Case 2 - step 1: remote read failed at buf[%d] (%d) != %d\n",
+          i, buf[i], wbuf[i]);
         break;
       }
     }
@@ -352,7 +352,7 @@ int main() {
     //and write from worker1
     memset(buf, 0, size);
     for (i = 0; i < size; i++) {
-      wbuf[i] = (char) (wbuf[i] + 1);
+      wbuf[i] = (char)(wbuf[i] + 1);
     }
     wr.Reset();
     wr.addr = gaddr;
@@ -374,8 +374,8 @@ int main() {
     for (i = 0; i < size; i++) {
       if (buf[i] != wbuf[i]) {
         epicLog(LOG_WARNING,
-                "WRITE Case 2: remote read failed at buf[%d] (%d) != %d\n", i,
-                buf[i], wbuf[i]);
+          "WRITE Case 2: remote read failed at buf[%d] (%d) != %d\n", i,
+          buf[i], wbuf[i]);
         break;
       }
     }
@@ -403,25 +403,25 @@ int main() {
     for (i = 0; i < size; i++) {
       if (buf[i] != wbuf[i]) {
         epicLog(
-            LOG_WARNING,
-            "WRITE Case 3 (shared, non-cached) - step 1: remote read failed at buf[%d] (%d) != %d\n",
-            i, buf[i], wbuf[i]);
+          LOG_WARNING,
+          "WRITE Case 3 (shared, non-cached) - step 1: remote read failed at buf[%d] (%d) != %d\n",
+          i, buf[i], wbuf[i]);
         break;
       }
     }
     if (i == size) {
       epicLog(LOG_WARNING,
-              "WRITE Case 3 (shared, non-cached)　- step 1: succeed!");
+        "WRITE Case 3 (shared, non-cached)　- step 1: succeed!");
     } else {
       epicLog(LOG_WARNING,
-              "WRITE Case 3 (shared, non-cached) - step 1: failed!");
+        "WRITE Case 3 (shared, non-cached) - step 1: failed!");
       exit(1);
     }
 
     //and write from worker3
     memset(buf, 0, size);
     for (i = 0; i < size; i++) {
-      wbuf[i] = (char) (wbuf[i] + 1);
+      wbuf[i] = (char)(wbuf[i] + 1);
     }
     wr.Reset();
     wr.addr = gaddr;
@@ -441,22 +441,22 @@ int main() {
       epicLog(LOG_WARNING, "send request failed");
     }
     for (i = 0; i < size; i++) {
-      if (i == size - 1 && buf[i] == (char) (wbuf[i] - 1))
+      if (i == size - 1 && buf[i] == (char)(wbuf[i] - 1))
         continue;
       if (buf[i] != wbuf[i]) {
         epicLog(
-            LOG_WARNING,
-            "WRITE Case 3 (shared, non-cached): remote read failed at buf[%d] (%d) != %d\n",
-            i, buf[i], wbuf[i]);
+          LOG_WARNING,
+          "WRITE Case 3 (shared, non-cached): remote read failed at buf[%d] (%d) != %d\n",
+          i, buf[i], wbuf[i]);
         break;
       }
     }
     if (i == size) {
       epicLog(LOG_WARNING,
-              "WRITE Case 3 (shared, non-cached) - step 2: succeed!");
+        "WRITE Case 3 (shared, non-cached) - step 2: succeed!");
     } else {
       epicLog(LOG_WARNING,
-              "WRITE Case 3 (shared, non-cached) - step 2: failed!");
+        "WRITE Case 3 (shared, non-cached) - step 2: failed!");
       exit(1);
     }
   }
@@ -475,12 +475,12 @@ int main() {
       epicLog(LOG_WARNING, "send request failed");
     }
     for (i = 0; i < size; i++) {
-      if (i == size - 1 && buf[i] == (char) (wbuf[i] - 1))
+      if (i == size - 1 && buf[i] == (char)(wbuf[i] - 1))
         continue;
       if (buf[i] != wbuf[i]) {
         epicLog(LOG_WARNING,
-                "Read Case 3: remote read failed at buf[%d] (%d) != %d\n", i,
-                buf[i], wbuf[i]);
+          "Read Case 3: remote read failed at buf[%d] (%d) != %d\n", i,
+          buf[i], wbuf[i]);
         break;
       }
     }
@@ -498,7 +498,7 @@ int main() {
     //write from worker2
     memset(buf, 0, size);
     for (i = 0; i < size; i++) {
-      wbuf[i] = (char) (wbuf[i] + 1);
+      wbuf[i] = (char)(wbuf[i] + 1);
     }
     wr.Reset();
     wr.addr = GADD(gaddr, 1);
@@ -518,20 +518,20 @@ int main() {
       epicLog(LOG_WARNING, "send request failed");
     }
     for (i = 0; i < size; i++) {
-      if (i == 0 && buf[i] == (char) (wbuf[i] - 1))
+      if (i == 0 && buf[i] == (char)(wbuf[i] - 1))
         continue;
       if (buf[i] != wbuf[i]) {
         epicLog(
-            LOG_WARNING,
-            "WRITE Case 3 (shared, cached): remote read failed at buf[%d] (%d) != %d\n",
-            i, buf[i], wbuf[i]);
+          LOG_WARNING,
+          "WRITE Case 3 (shared, cached): remote read failed at buf[%d] (%d) != %d\n",
+          i, buf[i], wbuf[i]);
         break;
       }
     }
     if (i == size) {
       epicLog(
-          LOG_WARNING,
-          "**************Write Case 3 (shared, cached): succeed!******************");
+        LOG_WARNING,
+        "**************Write Case 3 (shared, cached): succeed!******************");
     } else {
       epicLog(LOG_WARNING, "Write Case 3 (shared, cached): failed!");
       exit(1);
@@ -544,7 +544,7 @@ int main() {
     //write from worker3
     memset(buf, 0, size);
     for (i = 0; i < size; i++) {
-      wbuf[i] = (char) (wbuf[i] + 1);
+      wbuf[i] = (char)(wbuf[i] + 1);
     }
     wr.Reset();
     wr.addr = gaddr;
@@ -566,25 +566,25 @@ int main() {
     for (i = 0; i < size; i++) {
       if (buf[i] != wbuf[i]) {
         epicLog(LOG_WARNING,
-                "WRITE Case 4: remote read failed at buf[%d] (%d) != %d\n", i,
-                buf[i], wbuf[i]);
+          "WRITE Case 4: remote read failed at buf[%d] (%d) != %d\n", i,
+          buf[i], wbuf[i]);
         break;
       }
     }
     if (i == size) {
       epicLog(LOG_WARNING,
-              "**************Write Case 4: succeed!******************");
+        "**************Write Case 4: succeed!******************");
     } else {
       epicLog(LOG_WARNING, "Write Case 4: failed!");
       exit(1);
     }
   }
 
-  end:
-//	master->Join();
-//	worker1->Join();
-//	worker2->Join();
-//	worker3->Join();
+end:
+  //	master->Join();
+  //	worker1->Join();
+  //	worker2->Join();
+  //	worker3->Join();
   sleep(2);
   epicLog(LOG_WARNING, "test done");
 

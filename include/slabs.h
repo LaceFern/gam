@@ -76,7 +76,7 @@ typedef struct _stritem {
   int size;
   uint8_t it_flags; /* ITEM_* above */
   uint8_t slabs_clsid;/* which slab class we're in */
-  void* data;
+  void *data;
 } item;
 
 class SlabAllocator {
@@ -92,7 +92,7 @@ class SlabAllocator {
   atomic<size_t> mem_avail;
   atomic<size_t> mem_free;
 #else
-  char* mem_current = NULL;
+  char *mem_current = NULL;
   size_t mem_avail = 0;
   size_t mem_free;
 #endif
@@ -100,16 +100,16 @@ class SlabAllocator {
   int SB_PREFIX_SIZE = 0;  //sizeof(item);
 
 #ifdef FINE_SLAB_LOCK
-  HashTable<void*, item*> stats_map;
+  HashTable<void *, item *> stats_map;
 #else
-  unordered_map<void*, item*> stats_map;
+  unordered_map<void *, item *> stats_map;
 #endif
 
 #ifdef DHT
-	/*
-	 * FIXME: not support free for now
-	 */
-	unordered_map<void*, size_t> bigblock_map;
+  /*
+   * FIXME: not support free for now
+   */
+  unordered_map<void *, size_t> bigblock_map;
 #endif
 
   //TODO: no init func
@@ -125,18 +125,18 @@ class SlabAllocator {
   /**
    * Access to the slab allocator is protected by this lock
    */
-  //static pthread_mutex_t slabs_lock = PTHREAD_MUTEX_INITIALIZER;
-  //static pthread_mutex_t slabs_rebalance_lock = PTHREAD_MUTEX_INITIALIZER;
+   //static pthread_mutex_t slabs_lock = PTHREAD_MUTEX_INITIALIZER;
+   //static pthread_mutex_t slabs_rebalance_lock = PTHREAD_MUTEX_INITIALIZER;
   int nz_strcmp(int nzlength, const char *nz, const char *z);
   void do_slabs_free(void *ptr, const size_t size, unsigned int id);
-  void* do_slabs_alloc(const size_t size, unsigned int id);
+  void *do_slabs_alloc(const size_t size, unsigned int id);
   int do_slabs_newslab(const unsigned int id);
   void split_slab_page_into_freelist(char *ptr, const unsigned int id);
   int grow_slab_list(const unsigned int id);
-  void* memory_allocate(size_t size);
+  void *memory_allocate(size_t size);
   void slabs_preallocate(const unsigned int maxslabs);
-  void* mmap_malloc(size_t size);
-  void mmap_free(void* ptr);
+  void *mmap_malloc(size_t size);
+  void mmap_free(void *ptr);
 
   /** Allocate object of given length. 0 on error *//*@null@*/
   void *slabs_alloc(const size_t size, unsigned int id);
@@ -167,25 +167,25 @@ class SlabAllocator {
 
   unsigned int slabs_clsid(const size_t size);
 
- public:
+public:
   /** Init the subsystem. 1st argument is the limit on no. of bytes to allocate,
    0 if no limit. 2nd argument is the growth factor; each slab will use a chunk
    size equal to the previous slab's chunk size times this factor.
    3rd argument specifies if the slab allocator should allocate all memory
    up front (if true), or allocate memory in chunks as it is needed (if false)
    */
-  void* slabs_init(const size_t limit, const double factor,
-                   const bool prealloc);
+  void *slabs_init(const size_t limit, const double factor,
+    const bool prealloc);
   size_t get_avail();
 
   void *sb_calloc(size_t count, size_t size);
   void *sb_malloc(size_t size);
-  void* sb_aligned_malloc(size_t size, size_t block = BLOCK_SIZE);
-  void* sb_aligned_calloc(size_t count, size_t size, size_t block = BLOCK_SIZE);
-  void *sb_realloc(void * ptr, size_t size);
-  size_t sb_free(void * ptr);
-  bool is_free(void* ptr);
-  size_t get_size(void* ptr);
+  void *sb_aligned_malloc(size_t size, size_t block = BLOCK_SIZE);
+  void *sb_aligned_calloc(size_t count, size_t size, size_t block = BLOCK_SIZE);
+  void *sb_realloc(void *ptr, size_t size);
+  size_t sb_free(void *ptr);
+  bool is_free(void *ptr);
+  size_t get_size(void *ptr);
 
   ~SlabAllocator();
 

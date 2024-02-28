@@ -16,11 +16,11 @@
 #endif
 
 class GAlloc {
-  WorkerHandle* wh;  //handle to communicate with local worker
+  WorkerHandle *wh;  //handle to communicate with local worker
 
   int Lock(Work op, const GAddr addr, const Size count, Flag flag = 0);
- public:
-  GAlloc(Worker* worker);
+public:
+  GAlloc(Worker *worker);
 
   /**
    * malloc in the global address
@@ -41,21 +41,21 @@ class GAlloc {
   /*
    * read is blocking until buf is filled with requested data
    */
-  int Read(const GAddr addr, void* buf, const Size count, Flag flag = 0);
-  int Read(const GAddr addr, const Size offset, void* buf, const Size count,
-           Flag flag = 0);
+  int Read(const GAddr addr, void *buf, const Size count, Flag flag = 0);
+  int Read(const GAddr addr, const Size offset, void *buf, const Size count,
+    Flag flag = 0);
 
   /*
    * Generally, write is non-blocking as we're using release memory consistency model
    */
-  int Write(const GAddr addr, void* buf, const Size count, Flag flag = 0);
+  int Write(const GAddr addr, void *buf, const Size count, Flag flag = 0);
 #ifdef GFUNC_SUPPORT
-  int Write(const GAddr addr, const Size offset, void* buf, const Size count,
-            Flag flag = 0, GFunc* func = nullptr, uint64_t arg = 0);
-  int Write(const GAddr addr, void* buf, const Size count, GFunc* func,
-            uint64_t arg = 0, Flag flag = 0);
+  int Write(const GAddr addr, const Size offset, void *buf, const Size count,
+    Flag flag = 0, GFunc *func = nullptr, uint64_t arg = 0);
+  int Write(const GAddr addr, void *buf, const Size count, GFunc *func,
+    uint64_t arg = 0, Flag flag = 0);
 #else
-  int Write(const GAddr addr, const Size offset, void* buf, const Size count, Flag flag = 0);
+  int Write(const GAddr addr, const Size offset, void *buf, const Size count, Flag flag = 0);
 #endif
 
   void MFence();
@@ -69,11 +69,11 @@ class GAlloc {
   int Try_RLock(const GAddr addr, const Size count);
   int Try_WLock(const GAddr addr, const Size count);
 
-  Size Put(uint64_t key, const void* value, Size count);
-  Size Get(uint64_t key, void* value);
+  Size Put(uint64_t key, const void *value, Size count);
+  Size Get(uint64_t key, void *value);
 
 #ifdef DHT
-  int HTable(void*);
+  int HTable(void *);
 #endif
 
   inline int GetID() {
@@ -94,7 +94,7 @@ class GAlloc {
    * return the local pointer of the global address addr
    * if not local, return nullptr
    */
-  inline void* GetLocal(GAddr addr) {
+  inline void *GetLocal(GAddr addr) {
     if (!IsLocal(addr)) {
       return nullptr;
     } else {
@@ -135,33 +135,33 @@ class GAlloc {
 };
 
 class GAllocFactory {
-  static const Conf* conf;
-  static Worker* worker;
-  static Master* master;
+  static const Conf *conf;
+  static Worker *worker;
+  static Master *master;
   static LockWrapper lock;
- public:
+public:
 #ifdef GFUNC_SUPPORT
 #define MAX_GFUNCS 100
-  static GFunc* gfuncs[MAX_GFUNCS];
+  static GFunc *gfuncs[MAX_GFUNCS];
 #endif
   /*
    * this function should be call in every thread
    * in order to init some per-thread data
    */
-  static GAlloc* CreateAllocator(const std::string& conf_file) {
+  static GAlloc *CreateAllocator(const std::string &conf_file) {
     return CreateAllocator(ParseConf(conf_file));
   }
 
-  static const Conf* InitConf() {
+  static const Conf *InitConf() {
     lock.lock();
     conf = new Conf();
-    const Conf* ret = conf;
+    const Conf *ret = conf;
     lock.unlock();
     return ret;
   }
 
   //need to call for every thread
-  static GAlloc* CreateAllocator(const Conf* c = nullptr) {
+  static GAlloc *CreateAllocator(const Conf *c = nullptr) {
     lock.lock();
     if (c) {
       if (!conf) {
@@ -182,16 +182,16 @@ class GAllocFactory {
     if (!worker) {
       worker = WorkerFactory::CreateServer(*conf);
     }
-    GAlloc* ret = new GAlloc(worker);
+    GAlloc *ret = new GAlloc(worker);
     lock.unlock();
     return ret;
   }
 
   //need to call for every thread
-  static GAlloc* CreateAllocator(const Conf& c) {
+  static GAlloc *CreateAllocator(const Conf &c) {
     lock.lock();
     if (!conf) {
-      Conf* lc = new Conf();
+      Conf *lc = new Conf();
       *lc = c;
       conf = lc;
     } else {
@@ -204,12 +204,12 @@ class GAllocFactory {
     if (!worker) {
       worker = WorkerFactory::CreateServer(*conf);
     }
-    GAlloc* ret = new GAlloc(worker);
+    GAlloc *ret = new GAlloc(worker);
     lock.unlock();
     return ret;
   }
 
-  static void SetConf(Conf* c) {
+  static void SetConf(Conf *c) {
     lock.lock();
     conf = c;
     lock.unlock();
@@ -226,8 +226,8 @@ class GAllocFactory {
   /*
    * TODO: fake parseconf function
    */
-  static const Conf* ParseConf(const std::string& conf_file) {
-    Conf* c = new Conf();
+  static const Conf *ParseConf(const std::string &conf_file) {
+    Conf *c = new Conf();
     return c;
   }
 
@@ -236,8 +236,8 @@ class GAllocFactory {
     return ret;
   }
 
-  static string* LogFile() {
-    string* ret = conf->logfile;
+  static string *LogFile() {
+    string *ret = conf->logfile;
     return ret;
   }
 };

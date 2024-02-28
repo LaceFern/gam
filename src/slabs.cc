@@ -7,7 +7,7 @@
  * slab size is always 1MB, since that's the maximum item size allowed by the
  * memcached protocol.
  */
-//#include "memcached.h"
+ //#include "memcached.h"
 #include <sys/stat.h>
 #include <sys/socket.h>
 #include <sys/signal.h>
@@ -48,10 +48,10 @@ unsigned int SlabAllocator::slabs_clsid(const size_t size) {
   return res;
 }
 
-void* SlabAllocator::mmap_malloc(size_t size) {
+void *SlabAllocator::mmap_malloc(size_t size) {
   static void *fixed_base = NULL;  //(void *) (0x7fc435400000);
   epicLog(LOG_INFO, "mmap_malloc size  = %ld", size);
-  void* ret;
+  void *ret;
   if (size % BLOCK_SIZE) {
     size_t old_size = size;
     size = ALIGN(size, BLOCK_SIZE);
@@ -59,7 +59,7 @@ void* SlabAllocator::mmap_malloc(size_t size) {
   }
 #ifdef USE_HUGEPAGE
   ret = mmap(fixed_base, size, PROT_READ | PROT_WRITE,
-             MAP_PRIVATE | MAP_ANON | MAP_HUGETLB | MAP_NORESERVE, -1, 0);
+    MAP_PRIVATE | MAP_ANON | MAP_HUGETLB | MAP_NORESERVE, -1, 0);
 #else
   ret = mmap(fixed_base, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON | MAP_NORESERVE, -1, 0);
 #endif
@@ -67,24 +67,24 @@ void* SlabAllocator::mmap_malloc(size_t size) {
     perror("map failed");
     return NULL;
   }
-  uint64_t uret = (uint64_t) ret;
+  uint64_t uret = (uint64_t)ret;
   if (uret % BLOCK_SIZE) {
     uret += (BLOCK_SIZE - (uret % BLOCK_SIZE));
   }
-  ret = (void*) uret;
+  ret = (void *)uret;
 
-//	if(posix_memalign(&ret, BLOCK_SIZE, size)){
-//		epicLog(LOG_FATAL, "allocate memory %ld failed (%d:%s)", size, errno, strerror(errno));
-//	}
+  //	if(posix_memalign(&ret, BLOCK_SIZE, size)){
+  //		epicLog(LOG_FATAL, "allocate memory %ld failed (%d:%s)", size, errno, strerror(errno));
+  //	}
   return ret;
 }
 
-void SlabAllocator::mmap_free(void* ptr) {
-  uint64_t uptr = (uint64_t) ptr;
+void SlabAllocator::mmap_free(void *ptr) {
+  uint64_t uptr = (uint64_t)ptr;
   if (uptr % BLOCK_SIZE) {
     uptr -= (BLOCK_SIZE - (uptr % BLOCK_SIZE));
   }
-  munmap((void*) uptr, mem_limit);
+  munmap((void *)uptr, mem_limit);
   //free(ptr);
 }
 
@@ -96,10 +96,10 @@ size_t SlabAllocator::get_avail() {
  * Determines the chunk sizes and initializes the slab class descriptors
  * accordingly.
  */
-void* SlabAllocator::slabs_init(const size_t limit, const double factor,
-                                const bool prealloc) {
+void *SlabAllocator::slabs_init(const size_t limit, const double factor,
+  const bool prealloc) {
   epicLog(LOG_DEBUG, "limit = %ld, factor = %lf, prealloc = %d\n", limit,
-          factor, prealloc);
+    factor, prealloc);
 
   int i = POWER_SMALLEST - 1;
   unsigned int size = SB_PREFIX_SIZE + chunk_size;
@@ -110,14 +110,14 @@ void* SlabAllocator::slabs_init(const size_t limit, const double factor,
   if (prealloc) {
     /* Allocate everything in a big chunk with malloc */
     //hack by zh
-    mem_base = (char*) mmap_malloc(mem_limit);
+    mem_base = (char *)mmap_malloc(mem_limit);
     if (mem_base != NULL) {
       dbprintf("allocate succeed\n");
       mem_current = mem_base;
       mem_avail = mem_limit;
     } else {
       fprintf(stderr, "Warning: Failed to allocate requested memory in"
-              " one large chunk.\nWill allocate in smaller chunks\n");
+        " one large chunk.\nWill allocate in smaller chunks\n");
     }
   }
 
@@ -128,8 +128,8 @@ void* SlabAllocator::slabs_init(const size_t limit, const double factor,
     if (size % CHUNK_ALIGN_BYTES)
       size += CHUNK_ALIGN_BYTES - (size % CHUNK_ALIGN_BYTES);
 
-    if ((int) (pre_size / BLOCK_SIZE) < (int) (size / BLOCK_SIZE)
-        && (size % BLOCK_SIZE)) {
+    if ((int)(pre_size / BLOCK_SIZE) < (int)(size / BLOCK_SIZE)
+      && (size % BLOCK_SIZE)) {
       slabclass[i].size = size / BLOCK_SIZE * BLOCK_SIZE;
       slabclass[i].perslab = item_size_max / slabclass[i].size;
       //epicLog(LOG_DEBUG, "aligned slab to slabclass[i].size = %d", slabclass[i].size);
@@ -140,21 +140,21 @@ void* SlabAllocator::slabs_init(const size_t limit, const double factor,
     slabclass[i].perslab = item_size_max / slabclass[i].size;
     pre_size = size;
     size *= factor;
-//  epicLog(LOG_DEBUG, "slab class %3d: chunk size %9u perslab %7u\n",
-//          i, slabclass[i].size, slabclass[i].perslab);
+    //  epicLog(LOG_DEBUG, "slab class %3d: chunk size %9u perslab %7u\n",
+    //          i, slabclass[i].size, slabclass[i].perslab);
   }
 
   power_largest = i;
   slabclass[power_largest].size = item_size_max;
   slabclass[power_largest].perslab = 1;
   epicLog(LOG_DEBUG, "slab class %3d: chunk size %9u perslab %7u\n", i,
-          slabclass[i].size, slabclass[i].perslab);
+    slabclass[i].size, slabclass[i].perslab);
 
   /* for the test suite:  faking of how much we've already malloc'd */
   {
     char *t_initial_malloc = getenv("T_MEMD_INITIAL_MALLOC");
     if (t_initial_malloc) {
-      mem_malloced = (size_t) atol(t_initial_malloc);
+      mem_malloced = (size_t)atol(t_initial_malloc);
     }
 
   }
@@ -180,15 +180,15 @@ void SlabAllocator::slabs_preallocate(const unsigned int maxslabs) {
       return;
     if (do_slabs_newslab(i) == 0) {
       fprintf(stderr, "Error while preallocating slab memory!\n"
-              "If using -L or other prealloc options, max memory must be "
-              "at least %d megabytes.\n",
-              power_largest);
+        "If using -L or other prealloc options, max memory must be "
+        "at least %d megabytes.\n",
+        power_largest);
       exit(1);
     }
   }
 }
 
-void* SlabAllocator::memory_allocate(size_t size) {
+void *SlabAllocator::memory_allocate(size_t size) {
   void *ret = NULL;
 
   if (mem_base == NULL) {
@@ -224,13 +224,13 @@ int SlabAllocator::grow_slab_list(const unsigned int id) {
     if (new_list == 0)
       return 0;
     p->list_size = new_size;
-    p->slab_list = (void **) new_list;
+    p->slab_list = (void **)new_list;
   }
   return 1;
 }
 
 void SlabAllocator::split_slab_page_into_freelist(char *ptr,
-                                                  const unsigned int id) {
+  const unsigned int id) {
   slabclass_t *p = &slabclass[id];
   int x;
   for (x = 0; x < p->perslab; x++) {
@@ -245,8 +245,8 @@ int SlabAllocator::do_slabs_newslab(const unsigned int id) {
   char *ptr;
 
   if ((mem_limit && mem_malloced + len > mem_limit && p->slabs > 0)
-      || (grow_slab_list(id) == 0)
-      || ((ptr = (char *) memory_allocate((size_t) len)) == 0)) {
+    || (grow_slab_list(id) == 0)
+    || ((ptr = (char *)memory_allocate((size_t)len)) == 0)) {
 
     epicLog(LOG_DEBUG, "new slab class %d failed, mem limit: %d, mem malloced: %d, len: %d, slabs: %d", id, mem_limit, mem_malloced, len, p->slabs);
     return 0;
@@ -265,7 +265,7 @@ int SlabAllocator::do_slabs_newslab(const unsigned int id) {
 }
 
 /*@null@*/
-void * SlabAllocator::do_slabs_alloc(const size_t size, unsigned int id) {
+void *SlabAllocator::do_slabs_alloc(const size_t size, unsigned int id) {
   slabclass_t *p;
   void *ret = NULL;
   item *it = NULL;
@@ -281,7 +281,7 @@ void * SlabAllocator::do_slabs_alloc(const size_t size, unsigned int id) {
 #endif
 
   //printf("sl_curr = %d, ((item *)p->slots)->slabs_clsid = %d\n", p->sl_curr, ((item *)p->slots)->slabs_clsid);
-  assert(p->sl_curr == 0 || ((item * )p->slots)->slabs_clsid == 0);
+  assert(p->sl_curr == 0 || ((item *)p->slots)->slabs_clsid == 0);
 
   /* fail unless we have space at the end of a recently allocated page,
    we have something on our freelist, or we could allocate a new page */
@@ -290,7 +290,7 @@ void * SlabAllocator::do_slabs_alloc(const size_t size, unsigned int id) {
     ret = NULL;
   } else if (p->sl_curr != 0) {
     /* return off our freelist */
-    it = (item *) p->slots;
+    it = (item *)p->slots;
     p->slots = it->next;
     if (it->next)
       it->next->prev = 0;
@@ -318,7 +318,7 @@ void * SlabAllocator::do_slabs_alloc(const size_t size, unsigned int id) {
 }
 
 void SlabAllocator::do_slabs_free(void *ptr, const size_t size,
-                                  unsigned int id) {
+  unsigned int id) {
   slabclass_t *p;
   item *it;
 
@@ -341,7 +341,7 @@ void SlabAllocator::do_slabs_free(void *ptr, const size_t size,
 
   it->it_flags |= ITEM_SLABBED;
   it->prev = 0;
-  it->next = (struct _stritem *) p->slots;
+  it->next = (struct _stritem *)p->slots;
   if (it->next)
     it->next->prev = it;
   p->slots = it;
@@ -356,22 +356,22 @@ void SlabAllocator::do_slabs_free(void *ptr, const size_t size,
 /*
  * return the ptr where data should be stored without the header
  */
-void * SlabAllocator::sb_malloc(size_t size) {
+void *SlabAllocator::sb_malloc(size_t size) {
 
 #ifdef DHT
-	/*
-	 * enable to allocate memory larger than 1M
-	 * FIXME: not support free of large block for now
-	 */
-	if(size > item_size_max) {
-		lock();
-		void* ret = memory_allocate(size);
-		epicLog(LOG_WARNING, "allocate memory %lu, larger than default max %d, at %lx", size, item_size_max, ret);
-		epicAssert(((uint64_t)ret % BLOCK_SIZE) == 0);
-		bigblock_map[ret] = size;
-		unlock();
-		return ret;
-	}
+  /*
+   * enable to allocate memory larger than 1M
+   * FIXME: not support free of large block for now
+   */
+  if (size > item_size_max) {
+    lock();
+    void *ret = memory_allocate(size);
+    epicLog(LOG_WARNING, "allocate memory %lu, larger than default max %d, at %lx", size, item_size_max, ret);
+    epicAssert(((uint64_t)ret % BLOCK_SIZE) == 0);
+    bigblock_map[ret] = size;
+    unlock();
+    return ret;
+  }
 #endif
 
   lock();
@@ -388,28 +388,28 @@ void * SlabAllocator::sb_malloc(size_t size) {
   unsigned int id = slabs_clsid(newsize);
   //item * ret = (item *)slabs_alloc(newsize, id); //sep
   //return ret == NULL ? NULL : ITEM_key(ret); //sep
-  void* ret = slabs_alloc(newsize, id);  //sep
+  void *ret = slabs_alloc(newsize, id);  //sep
   epicAssert(ret);
   unlock();
   return ret;
 }
 
-void * SlabAllocator::sb_aligned_malloc(size_t size, size_t block) {
+void *SlabAllocator::sb_aligned_malloc(size_t size, size_t block) {
 
 #ifdef DHT
-	/*
-	 * enable to allocate memory larger than 1M
-	 * FIXME: not support free of large block for now
-	 */
-	if(size > item_size_max) {
-		epicLog(LOG_WARNING, "allocate memory %lu, larger than default max %lu", size, item_size_max);
-		lock();
-		void* ret = memory_allocate(size);
-		epicAssert((uint64_t)ret % BLOCK_SIZE == 0);
-		bigblock_map[ret] = size;
-		unlock();
-		return ret;
-	}
+  /*
+   * enable to allocate memory larger than 1M
+   * FIXME: not support free of large block for now
+   */
+  if (size > item_size_max) {
+    epicLog(LOG_WARNING, "allocate memory %lu, larger than default max %lu", size, item_size_max);
+    lock();
+    void *ret = memory_allocate(size);
+    epicAssert((uint64_t)ret % BLOCK_SIZE == 0);
+    bigblock_map[ret] = size;
+    unlock();
+    return ret;
+  }
 #endif
 
   lock();
@@ -428,10 +428,10 @@ void * SlabAllocator::sb_aligned_malloc(size_t size, size_t block) {
   unsigned int id = slabs_clsid(newsize);
   //item * ret = (item *)slabs_alloc(newsize, id); //sep
   //return ret == NULL ? NULL : ITEM_key(ret); //sep
-  void* ret = slabs_alloc(newsize, id);  //sep
+  void *ret = slabs_alloc(newsize, id);  //sep
   epicAssert(ret);
   epicLog(LOG_DEBUG, "ret = %lx, newsize = %d", ret, newsize);
-  epicAssert((uint64_t )ret % block == 0);
+  epicAssert((uint64_t)ret % block == 0);
   unlock();
   return ret;
 }
@@ -439,7 +439,7 @@ void * SlabAllocator::sb_aligned_malloc(size_t size, size_t block) {
 /*
  * return the ptr where data should be stored without the header
  */
-void * SlabAllocator::sb_calloc(size_t count, size_t size) {
+void *SlabAllocator::sb_calloc(size_t count, size_t size) {
 
   dbprintf("sb_calloc size = %ld\n", size);
 
@@ -448,19 +448,19 @@ void * SlabAllocator::sb_calloc(size_t count, size_t size) {
     return NULL;
   }
 
-  void * ptr = sb_malloc(count * size);
+  void *ptr = sb_malloc(count * size);
   if (ptr != NULL) {
     epicLog(LOG_INFO,
-            "WARNING: touch the registered memory area during allocation!!!");
+      "WARNING: touch the registered memory area during allocation!!!");
     memset(ptr, 0, size);
   } else {
-      epicAssert(false);
+    epicAssert(false);
   }
   return ptr;
 }
 
-void * SlabAllocator::sb_aligned_calloc(size_t count, size_t size,
-                                        size_t block) {
+void *SlabAllocator::sb_aligned_calloc(size_t count, size_t size,
+  size_t block) {
 
   dbprintf("sb_calloc size = %ld\n", size);
 
@@ -469,10 +469,10 @@ void * SlabAllocator::sb_aligned_calloc(size_t count, size_t size,
     return NULL;
   }
 
-  void * ptr = sb_aligned_malloc(count * size, block);
+  void *ptr = sb_aligned_malloc(count * size, block);
   if (ptr != NULL) {
     epicLog(LOG_INFO,
-            "WARNING: touch the registered memory area during allocation!!!");
+      "WARNING: touch the registered memory area during allocation!!!");
     memset(ptr, 0, size);
   } else {
     epicLog(LOG_WARNING, "no free memory");
@@ -484,7 +484,7 @@ void * SlabAllocator::sb_aligned_calloc(size_t count, size_t size,
 /*
  * return the ptr where data should be stored without the header
  */
-void *SlabAllocator::sb_realloc(void * ptr, size_t size) {
+void *SlabAllocator::sb_realloc(void *ptr, size_t size) {
 
   dbprintf("sb_realloc size = %ld\n", size);
   /*
@@ -501,14 +501,14 @@ void *SlabAllocator::sb_realloc(void * ptr, size_t size) {
   lock();
   //item * it1 = (item *) ((char*)ptr-SB_PREFIX_SIZE); //sep
   epicAssert(stats_map.count(ptr));  //sep
-  item* it1 = stats_map.at(ptr);  //sep
+  item *it1 = stats_map.at(ptr);  //sep
   unsigned int id1 = it1->slabs_clsid;
   int size1 = it1->size;
   epicAssert(id1 == slabs_clsid(size1));
 
   size_t size2 = size + SB_PREFIX_SIZE;
   unsigned int id2 = slabs_clsid(size2);
-  void* ret = nullptr;
+  void *ret = nullptr;
   if (id1 == id2) {
     it1->size = size2;
     slabs_adjust_mem_requested(id1, size1, size2);
@@ -516,9 +516,9 @@ void *SlabAllocator::sb_realloc(void * ptr, size_t size) {
   } else {
     epicAssert(size1 != size2);
     //item * it2 = (item *)slabs_alloc(size2, id2); //sep
-    void* ptr = slabs_alloc(size2, id2);  //sep
+    void *ptr = slabs_alloc(size2, id2);  //sep
     epicAssert(stats_map.count(ptr));  //sep
-    item* it2 = stats_map.at(ptr);  //sep
+    item *it2 = stats_map.at(ptr);  //sep
 
     if (size2 < size1)
       memcpy(ITEM_key(it2), ptr, size);
@@ -536,18 +536,18 @@ void *SlabAllocator::sb_realloc(void * ptr, size_t size) {
   return ret;
 }
 
-bool SlabAllocator::is_free(void* ptr) {
+bool SlabAllocator::is_free(void *ptr) {
   lock();
   epicAssert(stats_map.count(ptr));  //sep
-  item* it = stats_map.at(ptr);  //sep
+  item *it = stats_map.at(ptr);  //sep
   bool ret = it->slabs_clsid == 0 ? true : false;
   unlock();
   return ret;
 }
 
-size_t SlabAllocator::get_size(void* ptr) {
+size_t SlabAllocator::get_size(void *ptr) {
   epicAssert(stats_map.count(ptr));
-  item* it = stats_map[ptr];
+  item *it = stats_map[ptr];
   return it->size;
 }
 
@@ -555,11 +555,11 @@ size_t SlabAllocator::sb_free(void *ptr) {
   lock();
 
 #ifdef DHT
-	if(bigblock_map.count(ptr)) {
-		epicLog(LOG_WARNING, "not support free of big block for now");
-		unlock();
-		return 0;
-	}
+  if (bigblock_map.count(ptr)) {
+    epicLog(LOG_WARNING, "not support free of big block for now");
+    unlock();
+    return 0;
+  }
 #endif
 
   /*
@@ -572,7 +572,7 @@ size_t SlabAllocator::sb_free(void *ptr) {
 
   //item * it = (item *) ((char*)ptr-SB_PREFIX_SIZE); //sep
   epicAssert(stats_map.count(ptr));  //sep
-  item* it = stats_map.at(ptr);  //sep
+  item *it = stats_map.at(ptr);  //sep
   unsigned int id = it->slabs_clsid;
   size_t size = it->size;
 
@@ -598,7 +598,7 @@ void *SlabAllocator::slabs_alloc(size_t size, unsigned int id) {
 
 void SlabAllocator::slabs_free(void *ptr, size_t size, unsigned int id) {
   ////pthread_mutex_lock(&slabs_lock);
-  slabclass_t* p = &slabclass[id];
+  slabclass_t *p = &slabclass[id];
 #ifdef FINE_SLAB_LOCK
   p->lock();
 #endif
@@ -615,7 +615,7 @@ int SlabAllocator::nz_strcmp(int nzlength, const char *nz, const char *z) {
 }
 
 void SlabAllocator::slabs_adjust_mem_requested(unsigned int id, size_t old,
-                                               size_t ntotal) {
+  size_t ntotal) {
   ////pthread_mutex_lock(&slabs_lock);
   slabclass_t *p;
   if (id < POWER_SMALLEST || id > power_largest) {

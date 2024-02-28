@@ -33,7 +33,7 @@
  * function does not properly distribute keys, or for certain adversarial
  * workloads.
  */
-class libcuckoo_load_factor_too_low : public std::exception {
+class libcuckoo_load_factor_too_low: public std::exception {
 public:
     /**
      * Constructor
@@ -41,9 +41,10 @@ public:
      * @param lf the load factor of the table when the exception was thrown
      */
     libcuckoo_load_factor_too_low(const double lf)
-        : load_factor_(lf) {}
+        : load_factor_(lf) {
+    }
 
-    virtual const char* what() const noexcept {
+    virtual const char *what() const noexcept {
         return "Automatic expansion triggered when load factor was below "
             "minimum threshold";
     }
@@ -63,7 +64,7 @@ private:
  * than the maximum, which can be set with the \ref
  * cuckoohash_map::maximum_hashpower method.
  */
-class libcuckoo_maximum_hashpower_exceeded : public std::exception {
+class libcuckoo_maximum_hashpower_exceeded: public std::exception {
 public:
     /**
      * Constructor
@@ -71,9 +72,10 @@ public:
      * @param hp the hash power we were trying to expand to
      */
     libcuckoo_maximum_hashpower_exceeded(const size_t hp)
-        : hashpower_(hp) {}
+        : hashpower_(hp) {
+    }
 
-    virtual const char* what() const noexcept {
+    virtual const char *what() const noexcept {
         return "Expansion beyond maximum hashpower";
     }
 
@@ -90,9 +92,9 @@ private:
 // Allocates an array of the given size and value-initializes each element with
 // the 0-argument constructor
 template <class T, class Alloc>
-T* create_array(const size_t size) {
+T *create_array(const size_t size) {
     Alloc allocator;
-    T* arr = allocator.allocate(size);
+    T *arr = allocator.allocate(size);
     // Initialize all the elements, safely deallocating and destroying
     // everything in case of error.
     size_t i;
@@ -100,7 +102,8 @@ T* create_array(const size_t size) {
         for (i = 0; i < size; ++i) {
             allocator.construct(&arr[i]);
         }
-    } catch (...) {
+    }
+    catch (...) {
         for (size_t j = 0; j < i; ++j) {
             allocator.destroy(&arr[j]);
         }
@@ -113,7 +116,7 @@ T* create_array(const size_t size) {
 // Destroys every element of an array of the given size and then deallocates the
 // memory.
 template <class T, class Alloc>
-void destroy_array(T* arr, const size_t size) {
+void destroy_array(T *arr, const size_t size) {
     Alloc allocator;
     for (size_t i = 0; i < size; ++i) {
         allocator.destroy(&arr[i]);
@@ -124,7 +127,7 @@ void destroy_array(T* arr, const size_t size) {
 // executes the function over the given range split over num_threads threads
 template <class F>
 static void parallel_exec(size_t start, size_t end,
-                          size_t num_threads, F func) {
+    size_t num_threads, F func) {
     size_t work_per_thread = (end - start) / num_threads;
     std::vector<std::thread> threads(num_threads);
     for (size_t i = 0; i < num_threads - 1; ++i) {
@@ -132,7 +135,7 @@ static void parallel_exec(size_t start, size_t end,
         start += work_per_thread;
     }
     threads[num_threads - 1] = std::thread(func, start, end);
-    for (std::thread& t : threads) {
+    for (std::thread &t : threads) {
         t.join();
     }
 }

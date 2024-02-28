@@ -35,7 +35,7 @@ string ip_worker = get_local_ip("eth0");
 int port_master = 12345;
 int port_worker = 12346;
 
-const char* result_file = "result.csv";
+const char *result_file = "result.csv";
 
 //exp parameters
 long ITERATION = 2000000;
@@ -71,7 +71,7 @@ int addr_size = sizeof(GAddr);
 int item_size = addr_size;
 int items_per_block = BLOCK_SIZE / item_size;
 
-bool TrueOrFalse(double probability, unsigned int* seedp) {
+bool TrueOrFalse(double probability, unsigned int *seedp) {
   return (rand_r(seedp) % 100) < probability;
 }
 
@@ -91,18 +91,18 @@ double Revise(double orig, int remaining, bool positive) {
 /*
  * not used any more
  */
-void PopulateOneBlock(GAlloc* alloc, GAddr data[], GAddr* ldata[], int i,
-                      double remote_ratio, double space_locality,
-                      unsigned int* seedp) {
+void PopulateOneBlock(GAlloc *alloc, GAddr data[], GAddr *ldata[], int i,
+  double remote_ratio, double space_locality,
+  unsigned int *seedp) {
   for (int j = 0; j < items_per_block; j++) {
     GAddr next;
     if (j + 1 == items_per_block) {
       //next = GADD(data[GetRandom(0, STEPS, seedp)], GetRandom(0, items_per_block, seedp)*item_size); //data[CyclingIncr(i, STEPS)];
       GAddr n = GADD(data[GetRandom(0, STEPS, seedp)],
-                     GetRandom(0, items_per_block, seedp) * item_size);
+        GetRandom(0, items_per_block, seedp) * item_size);
       while (TOBLOCK(n) == TOBLOCK(data[i])) {
         n = GADD(data[GetRandom(0, STEPS, seedp)],
-                 GetRandom(0, items_per_block, seedp) * item_size);
+          GetRandom(0, items_per_block, seedp) * item_size);
       }
       next = n;
     } else {
@@ -111,16 +111,16 @@ void PopulateOneBlock(GAlloc* alloc, GAddr data[], GAddr* ldata[], int i,
       } else {
         //next = GADD(data[GetRandom(0, STEPS, seedp)], GetRandom(0, items_per_block, seedp)*item_size); //data[CyclingIncr(i, STEPS)];
         GAddr n = GADD(data[GetRandom(0, STEPS, seedp)],
-                       GetRandom(0, items_per_block, seedp) * item_size);
+          GetRandom(0, items_per_block, seedp) * item_size);
         while (TOBLOCK(n) == TOBLOCK(data[i])) {
           n = GADD(data[GetRandom(0, STEPS, seedp)],
-                   GetRandom(0, items_per_block, seedp) * item_size);
+            GetRandom(0, items_per_block, seedp) * item_size);
         }
         next = n;
       }
     }
 #ifdef LOCAL_MEMORY
-    *((GAddr*)data[i] + j) = next;
+    *((GAddr *)data[i] + j) = next;
 #else
     ldata[i][j] = next;
 #endif
@@ -133,8 +133,8 @@ void PopulateOneBlock(GAlloc* alloc, GAddr data[], GAddr* ldata[], int i,
   }
 }
 
-void Init(GAlloc* alloc, GAddr data[], GAddr access[], bool shared[], int id,
-          unsigned int* seedp) {
+void Init(GAlloc *alloc, GAddr data[], GAddr access[], bool shared[], int id,
+  unsigned int *seedp) {
   epicLog(LOG_WARNING, "start init");
 
   int l_remote_ratio = remote_ratio;
@@ -248,39 +248,40 @@ bool Equal(char buf1[], char buf2[], int size) {
   return i == size ? true : false;
 }
 
-void Run(GAlloc* alloc, GAddr data[], GAddr access[],
-         unordered_map<GAddr, int>& addr_to_pos, bool shared[], int id,
-         unsigned int* seedp, bool warmup) {
+void Run(GAlloc *alloc, GAddr data[], GAddr access[],
+  unordered_map<GAddr, int> &addr_to_pos, bool shared[], int id,
+  unsigned int *seedp, bool warmup) {
 
   GAddr to_access = access[0];  //access starting point
   char buf[item_size];
   int ret;
   int j = 0;
-//	int writes = 0;
-//	GAddr fence_addr = alloc->Malloc(1);
-//	epicAssert(fence_addr);
+  //	int writes = 0;
+  //	GAddr fence_addr = alloc->Malloc(1);
+  //	epicAssert(fence_addr);
   long start = get_time();
   for (int i = 0; i < ITERATION; i++) {
-//		if(writes == FENCE_PERIOD) {
-//			alloc->MFence();
-//			char c;
-//			ret = alloc->Read(fence_addr, &c, 1);
-//			epicAssert(ret == 1);
-//			writes = 0;
-//		}
+    //		if(writes == FENCE_PERIOD) {
+    //			alloc->MFence();
+    //			char c;
+    //			ret = alloc->Read(fence_addr, &c, 1);
+    //			epicAssert(ret == 1);
+    //			writes = 0;
+    //		}
 
 #ifdef STATS_COLLECTION
     int pos;
     try {
       pos = addr_to_pos.at(TOBLOCK(to_access));
-    } catch (const exception& e) {
+    }
+    catch (const exception &e) {
       epicLog(LOG_WARNING, "cannot find pos for addr %lx\n", TOBLOCK(to_access), e.what());
       epicAssert(false);
     }
-    if(WID(to_access) != alloc->GetID()) {
+    if (WID(to_access) != alloc->GetID()) {
       remote_access++;
     }
-    if(shared[pos]) {
+    if (shared[pos]) {
       shared_access++;
     }
     stat_lock.lock();
@@ -289,95 +290,95 @@ void Run(GAlloc* alloc, GAddr data[], GAddr access[],
     stat_lock.unlock();
 #endif
     switch (op_type) {
-      case 0:  //read/write
-        if (TrueOrFalse(read_ratio, seedp)) {
-          memset(buf, 0, item_size);
+    case 0:  //read/write
+      if (TrueOrFalse(read_ratio, seedp)) {
+        memset(buf, 0, item_size);
 #ifdef LOCAL_MEMORY
-          //buf = *(GAddr*)to_access;
-          memcpy(buf, (void*)to_access, item_size);
-          ret = item_size;
+        //buf = *(GAddr*)to_access;
+        memcpy(buf, (void *)to_access, item_size);
+        ret = item_size;
 #else
-          ret = alloc->Read(to_access, buf, item_size);
+        ret = alloc->Read(to_access, buf, item_size);
 #endif
 #ifdef STATS_COLLECTION
-          read_access++;
+        read_access++;
 #endif
-        } else {
-          memset(buf, i, item_size);
-//				writes++;
+      } else {
+        memset(buf, i, item_size);
+        //				writes++;
 #ifdef LOCAL_MEMORY
           //*(GAddr*)to_access = buf;
-          memcpy((void *)to_access, buf, item_size);
-          ret = item_size;
+        memcpy((void *)to_access, buf, item_size);
+        ret = item_size;
 #else
-          ret = alloc->Write(to_access, buf, item_size);
-          //if (!warmup)
-          //    alloc->MFence();
+        ret = alloc->Write(to_access, buf, item_size);
+        //if (!warmup)
+        //    alloc->MFence();
 #ifdef BENCHMARK_DEBUG
-          char readback[item_size];
-          int back_ret = alloc->Read(to_access, &readback, item_size);
-          epicAssert(back_ret == item_size);
-          epicAssert(Equal(readback, buf, item_size));
+        char readback[item_size];
+        int back_ret = alloc->Read(to_access, &readback, item_size);
+        epicAssert(back_ret == item_size);
+        epicAssert(Equal(readback, buf, item_size));
 #endif
 #endif
-        }
-        epicAssert(item_size == ret);
-        break;
-      case 1:  //rlock/wlock
-      {
-        if (TrueOrFalse(read_ratio, seedp)) {
-          alloc->RLock(to_access, item_size);
-#ifdef STATS_COLLECTION
-          read_access++;
-#endif
-        } else {
-          alloc->WLock(to_access, item_size);
-        }
-        alloc->UnLock(to_access, item_size);
-        break;
       }
-      case 2:  //rlock+read/wlock+write
-      {
-        if (TrueOrFalse(read_ratio, seedp)) {
-          alloc->RLock(to_access, item_size);
-          memset(buf, 0, item_size);
-          ret = alloc->Read(to_access, buf, item_size);
+      epicAssert(item_size == ret);
+      break;
+    case 1:  //rlock/wlock
+    {
+      if (TrueOrFalse(read_ratio, seedp)) {
+        alloc->RLock(to_access, item_size);
 #ifdef STATS_COLLECTION
-          read_access++;
+        read_access++;
 #endif
-        } else {
-          alloc->WLock(to_access, item_size);
-          memset(buf, i, item_size);
-          ret = alloc->Write(to_access, buf, item_size);
+      } else {
+        alloc->WLock(to_access, item_size);
+      }
+      alloc->UnLock(to_access, item_size);
+      break;
+    }
+    case 2:  //rlock+read/wlock+write
+    {
+      if (TrueOrFalse(read_ratio, seedp)) {
+        alloc->RLock(to_access, item_size);
+        memset(buf, 0, item_size);
+        ret = alloc->Read(to_access, buf, item_size);
+#ifdef STATS_COLLECTION
+        read_access++;
+#endif
+      } else {
+        alloc->WLock(to_access, item_size);
+        memset(buf, i, item_size);
+        ret = alloc->Write(to_access, buf, item_size);
 #ifdef BENCHMARK_DEBUG
-          char readback[item_size];
-          int back_ret = alloc->Read(to_access, &readback, item_size);
-          epicAssert(back_ret == item_size);
-          epicAssert(Equal(readback, buf, item_size));
+        char readback[item_size];
+        int back_ret = alloc->Read(to_access, &readback, item_size);
+        epicAssert(back_ret == item_size);
+        epicAssert(Equal(readback, buf, item_size));
 #endif
-        }
-        alloc->UnLock(to_access, item_size);
-        epicAssert(item_size == ret);
-        break;
       }
-      case 3:  //try_rlock/try_wlock
-      {
-        int lret;
-        if (TrueOrFalse(read_ratio, seedp)) {
-          lret = alloc->Try_RLock(to_access, item_size);
+      alloc->UnLock(to_access, item_size);
+      epicAssert(item_size == ret);
+      break;
+    }
+    case 3:  //try_rlock/try_wlock
+    {
+      int lret;
+      if (TrueOrFalse(read_ratio, seedp)) {
+        lret = alloc->Try_RLock(to_access, item_size);
 #ifdef STATS_COLLECTION
-          read_access++;
+        read_access++;
 #endif
-        } else {
-          lret = alloc->Try_WLock(to_access, item_size);
-        }
-        if (!lret)
-          alloc->UnLock(to_access, item_size);
-        break;
+      } else {
+        lret = alloc->Try_WLock(to_access, item_size);
       }
-      default:
-        epicLog(LOG_WARNING, "unknown op type");
-        break;
+      if (!lret)
+        alloc->UnLock(to_access, item_size);
+      break;
+    }
+    default:
+      epicLog(LOG_WARNING, "unknown op type");
+      break;
     }
 
     //time locality
@@ -404,19 +405,19 @@ void Run(GAlloc* alloc, GAddr data[], GAddr access[],
   }
 
   if (op_type == 0) {
-      // issue a fence and a read request to the last address to ensure all previous
-      // op have been done
-      alloc->MFence();
-      ret = alloc->Read(to_access, buf, item_size);
+    // issue a fence and a read request to the last address to ensure all previous
+    // op have been done
+    alloc->MFence();
+    ret = alloc->Read(to_access, buf, item_size);
   }
 
   long end = get_time();
-  long throughput = ITERATION / ((double) (end - start) / 1000 / 1000 / 1000);
+  long throughput = ITERATION / ((double)(end - start) / 1000 / 1000 / 1000);
   long latency = (end - start) / ITERATION;
   epicLog(
-      LOG_WARNING,
-      "node_id %d, thread %d, average throughput = %ld per-second, latency = %ld ns %s",
-      node_id, id, throughput, latency, warmup ? "(warmup)" : "");
+    LOG_WARNING,
+    "node_id %d, thread %d, average throughput = %ld per-second, latency = %ld ns %s",
+    node_id, id, throughput, latency, warmup ? "(warmup)" : "");
   if (!warmup) {
     total_throughput.fetch_add(throughput);
     avg_latency.fetch_add(latency);
@@ -424,7 +425,7 @@ void Run(GAlloc* alloc, GAddr data[], GAddr access[],
 }
 
 void Benchmark(int id) {
-  GAlloc* alloc = GAllocFactory::CreateAllocator();
+  GAlloc *alloc = GAllocFactory::CreateAllocator();
   unsigned int seedp = no_node * alloc->GetID() + id;
   epicLog(LOG_INFO, "seedp = %d", seedp);
 
@@ -442,8 +443,8 @@ void Benchmark(int id) {
   long end = get_time();
   long duration = end - start;
   epicLog(LOG_WARNING, "Malloc (local): throughput = %lf op/s, latency = %ld ns",
-      (double )it / ((double )duration / 1000 / 1000 / 1000),
-      duration / it);
+    (double)it / ((double)duration / 1000 / 1000 / 1000),
+    duration / it);
 
   start = get_time();
   for (int i = 0; i < it; i++) {
@@ -454,18 +455,18 @@ void Benchmark(int id) {
   end = get_time();
   duration = end - start;
   epicLog(LOG_WARNING, "Malloc (remote): throughput = %lf op/s, latency = %ld ns",
-      (double )it / ((double )duration / 1000 / 1000 / 1000),
-      duration / it);
+    (double)it / ((double)duration / 1000 / 1000 / 1000),
+    duration / it);
 
 #endif
 
-  GAddr *data = (GAddr*) malloc(sizeof(GAddr) * STEPS);
+  GAddr *data = (GAddr *)malloc(sizeof(GAddr) * STEPS);
   unordered_map<GAddr, int> addr_to_pos;
 
-  GAddr* access = (GAddr*) malloc(sizeof(GAddr) * ITERATION);
+  GAddr *access = (GAddr *)malloc(sizeof(GAddr) * ITERATION);
 
   //bool shared[STEPS];
-  bool* shared = (bool*) malloc(sizeof(bool) * STEPS);
+  bool *shared = (bool *)malloc(sizeof(bool) * STEPS);
 
   Init(alloc, data, access, shared, id, &seedp);
 
@@ -493,7 +494,7 @@ void Benchmark(int id) {
       alloc->Get(SYNC_RUN_BASE + no_node * i + j, &sync_id);
       epicAssert(sync_id == SYNC_RUN_BASE + no_node * i + j);
       epicLog(LOG_WARNING, "get sync_id %d from node %d, thread %d", sync_id, i,
-              j);
+        j);
     }
   }
 
@@ -516,7 +517,7 @@ void Benchmark(int id) {
 #endif
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
   //the first argument should be the program name
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "--ip_master") == 0) {
@@ -571,26 +572,26 @@ int main(int argc, char* argv[]) {
 #endif
   printf("Currently configuration is: ");
   printf(
-      "master: %s:%d, worker: %s:%d, is_master: %s, no_thread: %d, no_node: %d\n",
-      ip_master.c_str(), port_master, ip_worker.c_str(), port_worker,
-      is_master == 1 ? "true" : "false", no_thread, no_node);
+    "master: %s:%d, worker: %s:%d, is_master: %s, no_thread: %d, no_node: %d\n",
+    ip_master.c_str(), port_master, ip_worker.c_str(), port_worker,
+    is_master == 1 ? "true" : "false", no_thread, no_node);
   printf(
-      "no_node = %d, no_thread = %d, remote_ratio: %d, shared_ratio: %d, read_ratio: %d, "
-      "space_locality: %d, time_locality: %d, op_type = %s, memory_type = %s, item_size = %d, cache_th = %f, result_file = %s\n",
-      no_node,
-      no_thread,
-      remote_ratio,
-      shared_ratio,
-      read_ratio,
-      space_locality,
-      time_locality,
-      op_type == 0 ?
-          "read/write" :
-          (op_type == 1 ?
-              "rlock/wlock" :
-              (op_type == 2 ? "rlock+read/wlock+write" : "try_rlock/try_wlock")),
-      memory_type == 0 ? "local memory" : "global memory", item_size, cache_th,
-      result_file);
+    "no_node = %d, no_thread = %d, remote_ratio: %d, shared_ratio: %d, read_ratio: %d, "
+    "space_locality: %d, time_locality: %d, op_type = %s, memory_type = %s, item_size = %d, cache_th = %f, result_file = %s\n",
+    no_node,
+    no_thread,
+    remote_ratio,
+    shared_ratio,
+    read_ratio,
+    space_locality,
+    time_locality,
+    op_type == 0 ?
+    "read/write" :
+    (op_type == 1 ?
+      "rlock/wlock" :
+      (op_type == 2 ? "rlock+read/wlock+write" : "try_rlock/try_wlock")),
+    memory_type == 0 ? "local memory" : "global memory", item_size, cache_th,
+    result_file);
 
   //srand(1);
 
@@ -601,13 +602,13 @@ int main(int argc, char* argv[]) {
   conf.master_port = port_master;
   conf.worker_ip = ip_worker;
   conf.worker_port = port_worker;
-  long size = ((long) BLOCK_SIZE) * STEPS * no_thread * 4;
+  long size = ((long)BLOCK_SIZE) * STEPS * no_thread * 4;
   conf.size = size < conf.size ? conf.size : size;
   printf("This size!!!!!! %d\n", conf.size);
 
   conf.cache_th = cache_th;
 
-  GAlloc* alloc = GAllocFactory::CreateAllocator(&conf);
+  GAlloc *alloc = GAllocFactory::CreateAllocator(&conf);
 
   sleep(1);
 
@@ -635,11 +636,11 @@ int main(int argc, char* argv[]) {
   long end = get_time();
   long duration = end - start;
   epicLog(LOG_WARNING, "GET: throughput = %lf op/s, latency = %ld ns",
-      (double )it / ((double )duration / 1000 / 1000 / 1000),
-      duration / it);
+    (double)it / ((double)duration / 1000 / 1000 / 1000),
+    duration / it);
 #endif
 
-  thread* ths[no_thread];
+  thread *ths[no_thread];
   for (int i = 0; i < no_thread; i++) {
     ths[i] = new thread(Benchmark, i);
   }
@@ -656,9 +657,9 @@ int main(int argc, char* argv[]) {
   long a_lat = avg_latency;
   a_lat /= no_thread;
   epicLog(
-      LOG_WARNING,
-      "results for node_id %d: total_throughput: %ld, avg_throuhgput:%ld, avg_latency:%ld",
-      node_id, t_thr, a_thr, a_lat);
+    LOG_WARNING,
+    "results for node_id %d: total_throughput: %ld, avg_throuhgput:%ld, avg_latency:%ld",
+    node_id, t_thr, a_thr, a_lat);
 
   //sync with all the other workers
   //check all the benchmark are completed
@@ -682,29 +683,29 @@ int main(int argc, char* argv[]) {
     ofstream result;
     result.open(result_file, ios::app);
     result << no_node << "," << no_thread << "," << remote_ratio << ","
-           << shared_ratio << "," << read_ratio << "," << space_locality << ","
-           << time_locality << "," << op_type << "," << memory_type << ","
-           << item_size << "," << t_thr << "," << a_thr << "," << a_lat << ","
-           << cache_th << "\n";
+      << shared_ratio << "," << read_ratio << "," << space_locality << ","
+      << time_locality << "," << op_type << "," << memory_type << ","
+      << item_size << "," << t_thr << "," << a_thr << "," << a_lat << ","
+      << cache_th << "\n";
     epicLog(
-        LOG_WARNING,
-        "results for all the nodes: "
-        "no_node: %d, no_thread: %d, remote_ratio: %d, shared_ratio: %d, read_ratio: %d, space_locality: %d, "
-        "time_locality: %d, op_type = %d, memory_type = %d, item_size = %d, "
-        "total_throughput: %ld, avg_throuhgput:%ld, avg_latency:%ld, cache_th = %f\n\n",
-        no_node, no_thread, remote_ratio, shared_ratio, read_ratio,
-        space_locality, time_locality, op_type, memory_type, item_size, t_thr,
-        a_thr, a_lat, cache_th);
+      LOG_WARNING,
+      "results for all the nodes: "
+      "no_node: %d, no_thread: %d, remote_ratio: %d, shared_ratio: %d, read_ratio: %d, space_locality: %d, "
+      "time_locality: %d, op_type = %d, memory_type = %d, item_size = %d, "
+      "total_throughput: %ld, avg_throuhgput:%ld, avg_latency:%ld, cache_th = %f\n\n",
+      no_node, no_thread, remote_ratio, shared_ratio, read_ratio,
+      space_locality, time_locality, op_type, memory_type, item_size, t_thr,
+      a_thr, a_lat, cache_th);
     result.close();
   }
 
 #ifdef STATS_COLLECTION
   epicLog(LOG_WARNING, "shared_ratio = %lf, remote_ratio = %lf, read_ratio = %lf, space_locality = %lf, time_locality = %lf, "
-      "total blocks touched %d, expected blocks touched %d\n",
-      ((double)shared_access)/(ITERATION*no_thread)*100/2, ((double)remote_access)/(ITERATION*no_thread)*100/2,
-      ((double)read_access)/(ITERATION*no_thread)*100/2,
-      ((double)space_local_access)/(ITERATION*no_thread)*100/2, ((double)time_local_access)/(ITERATION*no_thread)*100/2,
-      real_accesses.size(), gen_accesses.size());
+    "total blocks touched %d, expected blocks touched %d\n",
+    ((double)shared_access) / (ITERATION * no_thread) * 100 / 2, ((double)remote_access) / (ITERATION * no_thread) * 100 / 2,
+    ((double)read_access) / (ITERATION * no_thread) * 100 / 2,
+    ((double)space_local_access) / (ITERATION * no_thread) * 100 / 2, ((double)time_local_access) / (ITERATION * no_thread) * 100 / 2,
+    real_accesses.size(), gen_accesses.size());
 #endif
 
   long time = 1;

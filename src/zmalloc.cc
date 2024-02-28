@@ -31,10 +31,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-/* This function provide us access to the original libc free(). This is useful
- * for instance to free results obtained by backtrace_symbols(). We need
- * to define this function before including zmalloc.h that may shadow the
- * free implementation if we use jemalloc or another non standard allocator. */
+ /* This function provide us access to the original libc free(). This is useful
+  * for instance to free results obtained by backtrace_symbols(). We need
+  * to define this function before including zmalloc.h that may shadow the
+  * free implementation if we use jemalloc or another non standard allocator. */
 void zlibc_free(void *ptr) {
   free(ptr);
 }
@@ -114,7 +114,7 @@ pthread_mutex_t used_memory_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static void zmalloc_default_oom(size_t size) {
   fprintf(stderr, "zmalloc: Out of memory trying to allocate %zu bytes\n",
-          size);
+    size);
   fflush(stderr);
   abort();
 }
@@ -130,9 +130,9 @@ void *zmalloc(size_t size) {
   update_zmalloc_stat_alloc(zmalloc_size(ptr));
   return ptr;
 #else
-  *((size_t*) ptr) = size;
-  update_zmalloc_stat_alloc(size+PREFIX_SIZE);
-  return (char*) ptr + PREFIX_SIZE;
+  *((size_t *)ptr) = size;
+  update_zmalloc_stat_alloc(size + PREFIX_SIZE);
+  return (char *)ptr + PREFIX_SIZE;
 #endif
 }
 
@@ -145,9 +145,9 @@ void *zcalloc(size_t size) {
   update_zmalloc_stat_alloc(zmalloc_size(ptr));
   return ptr;
 #else
-  *((size_t*) ptr) = size;
-  update_zmalloc_stat_alloc(size+PREFIX_SIZE);
-  return (char*) ptr + PREFIX_SIZE;
+  *((size_t *)ptr) = size;
+  update_zmalloc_stat_alloc(size + PREFIX_SIZE);
+  return (char *)ptr + PREFIX_SIZE;
 #endif
 }
 
@@ -162,23 +162,23 @@ void *zrealloc(void *ptr, size_t size) {
     return zmalloc(size);
 #ifdef HAVE_MALLOC_SIZE
   oldsize = zmalloc_size(ptr);
-  newptr = realloc(ptr,size);
+  newptr = realloc(ptr, size);
   if (!newptr) zmalloc_oom_handler(size);
 
   update_zmalloc_stat_free(oldsize);
   update_zmalloc_stat_alloc(zmalloc_size(newptr));
   return newptr;
 #else
-  realptr = (char*) ptr - PREFIX_SIZE;
-  oldsize = *((size_t*) realptr);
+  realptr = (char *)ptr - PREFIX_SIZE;
+  oldsize = *((size_t *)realptr);
   newptr = realloc(realptr, size + PREFIX_SIZE);
   if (!newptr)
     zmalloc_oom_handler(size);
 
-  *((size_t*) newptr) = size;
+  *((size_t *)newptr) = size;
   update_zmalloc_stat_free(oldsize);
   update_zmalloc_stat_alloc(size);
-  return (char*) newptr + PREFIX_SIZE;
+  return (char *)newptr + PREFIX_SIZE;
 #endif
 }
 
@@ -187,8 +187,8 @@ void *zrealloc(void *ptr, size_t size) {
  * information as the first bytes of every allocation. */
 #ifndef HAVE_MALLOC_SIZE
 size_t zmalloc_size(void *ptr) {
-  void *realptr = (char*) ptr - PREFIX_SIZE;
-  size_t size = *((size_t*) realptr);
+  void *realptr = (char *)ptr - PREFIX_SIZE;
+  size_t size = *((size_t *)realptr);
   /* Assume at least that all the allocations are padded at sizeof(long) by
    * the underlying allocator. */
   if (size & (sizeof(long) - 1))
@@ -209,16 +209,16 @@ void zfree(void *ptr) {
   update_zmalloc_stat_free(zmalloc_size(ptr));
   free(ptr);
 #else
-  realptr = (char*) ptr - PREFIX_SIZE;
-  oldsize = *((size_t*) realptr);
-  update_zmalloc_stat_free(oldsize+PREFIX_SIZE);
+  realptr = (char *)ptr - PREFIX_SIZE;
+  oldsize = *((size_t *)realptr);
+  update_zmalloc_stat_free(oldsize + PREFIX_SIZE);
   free(realptr);
 #endif
 }
 
 char *zstrdup(const char *s) {
   size_t l = strlen(s) + 1;
-  char *p = (char *) zmalloc(l);
+  char *p = (char *)zmalloc(l);
 
   memcpy(p, s, l);
   return p;
@@ -316,7 +316,7 @@ size_t zmalloc_get_rss(void) {
   mach_msg_type_number_t t_info_count = TASK_BASIC_INFO_COUNT;
 
   if (task_for_pid(current_task(), getpid(), &task) != KERN_SUCCESS)
-  return 0;
+    return 0;
   task_info(task, TASK_BASIC_INFO, (task_info_t)&t_info, &t_info_count);
 
   return t_info.resident_size;
@@ -334,7 +334,7 @@ size_t zmalloc_get_rss(void) {
 
 /* Fragmentation = RSS / allocated-bytes */
 float zmalloc_get_fragmentation_ratio(size_t rss) {
-  return (float) rss / zmalloc_used_memory();
+  return (float)rss / zmalloc_used_memory();
 }
 
 /* Get the sum of the specified field (converted form kb to bytes) in
@@ -366,7 +366,7 @@ size_t zmalloc_get_smap_bytes_by_field(const char *field) {
 }
 #else
 size_t zmalloc_get_smap_bytes_by_field(const char *field) {
-  ((void) field);
+  ((void)field);
   return 0;
 }
 #endif

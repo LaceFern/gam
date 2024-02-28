@@ -68,12 +68,12 @@ class AllEnvironment {
 public:
     AllEnvironment()
         : table(numkeys), table2(numkeys), keys(numkeys), vals(numkeys),
-          vals2(numkeys), in_table(new bool[numkeys]), in_use(numkeys),
-          val_dist(std::numeric_limits<ValType>::min(),
-                   std::numeric_limits<ValType>::max()),
-          val_dist2(std::numeric_limits<ValType2>::min(),
-                    std::numeric_limits<ValType2>::max()),
-          ind_dist(0, numkeys-1), finished(false) {
+        vals2(numkeys), in_table(new bool[numkeys]), in_use(numkeys),
+        val_dist(std::numeric_limits<ValType>::min(),
+            std::numeric_limits<ValType>::max()),
+        val_dist2(std::numeric_limits<ValType2>::min(),
+            std::numeric_limits<ValType2>::max()),
+        ind_dist(0, numkeys - 1), finished(false) {
         // Sets up the random number generator
         if (seed == 0) {
             seed = std::chrono::system_clock::now().time_since_epoch().count();
@@ -170,8 +170,8 @@ template <class KType>
 void update_thread(AllEnvironment<KType> *env) {
     std::mt19937_64 gen(env->gen_seed);
     std::uniform_int_distribution<size_t> third(0, 2);
-    auto updatefn = [](ValType& v) { v += 3; };
-    auto updatefn2 = [](ValType2& v) { v += 10; };
+    auto updatefn = [](ValType &v) { v += 3; };
+    auto updatefn2 = [](ValType2 &v) { v += 10; };
     while (!env->finished.load()) {
         // Run updates, update_fns, or upserts on a random key, check
         // that the operations succeeded only if the keys were in the
@@ -252,13 +252,15 @@ void find_thread(AllEnvironment<KType> *env) {
             try {
                 EXPECT_EQ(env->vals[ind], env->table.find(k));
                 EXPECT_TRUE(env->in_table[ind]);
-            } catch (const std::out_of_range&) {
+            }
+            catch (const std::out_of_range &) {
                 EXPECT_FALSE(env->in_table[ind]);
             }
             try {
                 EXPECT_EQ(env->vals2[ind], env->table2.find(k));
                 EXPECT_TRUE(env->in_table[ind]);
-            } catch (const std::out_of_range&) {
+            }
+            catch (const std::out_of_range &) {
                 EXPECT_FALSE(env->in_table[ind]);
             }
             num_finds.fetch_add(2, std::memory_order_relaxed);
@@ -306,24 +308,24 @@ void StressTest(AllEnvironment<KType> *env) {
     std::cout << "Number of finds:\t" << num_finds.load() << std::endl;
 }
 
-int main(int argc, char** argv) {
-    const char* args[] = {"--power", "--thread-num", "--time", "--seed"};
-    size_t* arg_vars[] = {&power, &thread_num, &test_len, &seed};
-    const char* arg_help[] = {
+int main(int argc, char **argv) {
+    const char *args[] = { "--power", "--thread-num", "--time", "--seed" };
+    size_t *arg_vars[] = { &power, &thread_num, &test_len, &seed };
+    const char *arg_help[] = {
         "The number of keys to size the table with, expressed as a power of 2",
         "The number of threads to spawn for each type of operation",
         "The number of seconds to run the test for",
         "The seed for the random number generator"
     };
-    const char* flags[] = {
+    const char *flags[] = {
         "--disable-inserts", "--disable-deletes", "--disable-updates",
         "--disable-finds", "--use-strings"
     };
-    bool* flag_vars[] = {
+    bool *flag_vars[] = {
         &disable_inserts, &disable_deletes, &disable_updates,
         &disable_finds, &use_strings
     };
-    const char* flag_help[] = {
+    const char *flag_help[] = {
         "If set, no inserts will be run",
         "If set, no deletes will be run",
         "If set, no updates will be run",
@@ -331,8 +333,8 @@ int main(int argc, char** argv) {
         "If set, the key type of the map will be std::string"
     };
     parse_flags(argc, argv, "Runs a stress test on inserts, deletes, and finds",
-                args, arg_vars, arg_help, sizeof(args)/sizeof(const char*),
-                flags, flag_vars, flag_help, sizeof(flags)/sizeof(const char*));
+        args, arg_vars, arg_help, sizeof(args) / sizeof(const char *),
+        flags, flag_vars, flag_help, sizeof(flags) / sizeof(const char *));
     numkeys = 1U << power;
 
     if (use_strings) {

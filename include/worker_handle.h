@@ -12,8 +12,8 @@
 #include "workrequest.h"
 
 class WorkerHandle {
-  boost::lockfree::queue<WorkRequest*>* wqueue;  //work queue used to communicate with worker
-  Worker* worker;
+  boost::lockfree::queue<WorkRequest *> *wqueue;  //work queue used to communicate with worker
+  Worker *worker;
   //app-side pipe fd
   int send_pipe[2];
   int recv_pipe[2];
@@ -23,21 +23,21 @@ class WorkerHandle {
   pthread_cond_t cond;
 #endif
 #if !(defined(USE_PIPE_W_TO_H) && defined(USE_PIPE_H_TO_W))
-  volatile int* notify_buf;
+  volatile int *notify_buf;
   int notify_buf_size;
 #endif
-  public:
-  WorkerHandle(Worker* w);
+public:
+  WorkerHandle(Worker *w);
   void RegisterThread();
   void DeRegisterThread();
-  int SendRequest(WorkRequest* wr);
+  int SendRequest(WorkRequest *wr);
   inline int GetWorkerId() {
     return worker->GetWorkerId();
   }
   int GetWorkersSize() {
     return worker->GetWorkersSize();
   }
-  inline void* GetLocal(GAddr addr) {
+  inline void *GetLocal(GAddr addr) {
     return worker->ToLocal(addr);
   }
 

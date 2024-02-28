@@ -9,15 +9,15 @@
 #include "log.h"
 #include "gallocator.h"
 
-void _epicLogRaw(int level, const char* msg) {
+void _epicLogRaw(int level, const char *msg) {
   const char *c = ".-*#";
   FILE *fp;
   char buf[128];
 
   fp =
-      (GAllocFactory::LogFile() == nullptr) ?
-          (level <= LOG_FATAL ? stderr : stdout) :
-          fopen(GAllocFactory::LogFile()->c_str(), "a");
+    (GAllocFactory::LogFile() == nullptr) ?
+    (level <= LOG_FATAL ? stderr : stdout) :
+    fopen(GAllocFactory::LogFile()->c_str(), "a");
   if (!fp)
     return;
 
@@ -26,9 +26,9 @@ void _epicLogRaw(int level, const char* msg) {
 
   gettimeofday(&tv, NULL);
   off = strftime(buf, sizeof(buf), "%d %b %H:%M:%S.", localtime(&tv.tv_sec));
-  snprintf(buf + off, sizeof(buf) - off, "%03d", (int) tv.tv_usec / 1000);
+  snprintf(buf + off, sizeof(buf) - off, "%03d", (int)tv.tv_usec / 1000);
   //fprintf(fp,"[%d] %s %c %s\n",(int)getpid(),buf,c[level],msg);
-  fprintf(fp, "[%d] %s %c %s\n", (int) syscall(SYS_gettid), buf, c[level], msg);
+  fprintf(fp, "[%d] %s %c %s\n", (int)syscall(SYS_gettid), buf, c[level], msg);
 
   fflush(fp);
 
@@ -36,8 +36,8 @@ void _epicLogRaw(int level, const char* msg) {
     fclose(fp);
 }
 
-void _epicLog(char* file, char* func, int lineno, int level, const char *fmt,
-              ...) {
+void _epicLog(char *file, char *func, int lineno, int level, const char *fmt,
+  ...) {
   if (level > GAllocFactory::LogLevel())
     return;
 

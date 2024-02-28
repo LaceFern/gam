@@ -10,12 +10,12 @@
 int main() {
   ibv_device **list = ibv_get_device_list(NULL);
   //worker1
-  Conf* conf = new Conf();
+  Conf *conf = new Conf();
   GAllocFactory::SetConf(conf);
   conf->master_ip = "10.10.41.221";
   conf->worker_ip = "10.10.41.201";
-  RdmaResource* res = new RdmaResource(list[0], false);
-  Worker* worker1 = new Worker(*conf, res);
+  RdmaResource *res = new RdmaResource(list[0], false);
+  Worker *worker1 = new Worker(*conf, res);
 
   //worker2
 //  conf = new Conf();
@@ -30,7 +30,7 @@ int main() {
 //  Worker* worker3 = new Worker(*conf, res);
 
   worker1->Join();
-//  worker2->Join();
-//  worker3->Join();
+  //  worker2->Join();
+  //  worker3->Join();
   return 0;
 }

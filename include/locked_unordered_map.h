@@ -17,31 +17,31 @@ using std::string;
 using std::exception;
 
 template<typename Key, typename T>
-class UnorderedMap : public std::unordered_map<Key, T> {
- public:
+class UnorderedMap: public std::unordered_map<Key, T> {
+public:
   UnorderedMap(string name = "DEFAULT_HASHTABLE_NAME") {
     this->name = name;
   }
   void lock(Key key);
   void unlock(Key key);
 
- private:
+private:
   LockWrapper lock_;
   string name;
 };
 
 template<typename Key, typename T>
 inline void UnorderedMap<Key, T>::lock(Key key) {
-//		epicLog(LOG_DEBUG, "trying to lock %s", name.c_str());
-//		lock_.lock();
-//		epicLog(LOG_DEBUG, "locked %s", name.c_str());
+  //		epicLog(LOG_DEBUG, "trying to lock %s", name.c_str());
+  //		lock_.lock();
+  //		epicLog(LOG_DEBUG, "locked %s", name.c_str());
 }
 
 template<typename Key, typename T>
 inline void UnorderedMap<Key, T>::unlock(Key key) {
-//		epicLog(LOG_DEBUG, "trying to lock %s", name.c_str());
-//		lock_.unlock();
-//		epicLog(LOG_DEBUG, "locked %s", name.c_str());
+  //		epicLog(LOG_DEBUG, "trying to lock %s", name.c_str());
+  //		lock_.unlock();
+  //		epicLog(LOG_DEBUG, "locked %s", name.c_str());
 }
 
 #endif

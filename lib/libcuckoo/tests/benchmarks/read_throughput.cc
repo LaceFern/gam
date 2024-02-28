@@ -53,7 +53,7 @@ class ReadEnvironment {
 public:
     // We allocate the vectors with 2^power keys.
     ReadEnvironment()
-        : numkeys(1U<<power), table(numkeys), keys(numkeys) {
+        : numkeys(1U << power), table(numkeys), keys(numkeys) {
         // Sets up the random number generator
         if (seed == 0) {
             seed = std::chrono::system_clock::now().time_since_epoch().count();
@@ -67,7 +67,7 @@ public:
         for (size_t i = 1; i < numkeys; i++) {
             const size_t swapind = gen() % i;
             keys[i] = keys[swapind];
-            keys[swapind] = generateKey<KType>(i+numkeys);
+            keys[swapind] = generateKey<KType>(i + numkeys);
         }
 
         // We prefill the table to load with thread_num
@@ -76,8 +76,8 @@ public:
         size_t keys_per_thread = numkeys * (load / 100.0) / thread_num;
         for (size_t i = 0; i < thread_num; i++) {
             threads.emplace_back(insert_thread<T>::func, std::ref(table),
-                                 keys.begin()+i*keys_per_thread,
-                                 keys.begin()+(i+1)*keys_per_thread);
+                keys.begin() + i * keys_per_thread,
+                keys.begin() + (i + 1) * keys_per_thread);
         }
         for (size_t i = 0; i < threads.size(); i++) {
             threads[i].join();
@@ -87,8 +87,8 @@ public:
         ASSERT_TRUE(init_size == keys_per_thread * thread_num);
 
         std::cout << "Table with capacity " << numkeys
-                  << " prefilled to a load factor of " << load << "%"
-                  << std::endl;
+            << " prefilled to a load factor of " << load << "%"
+            << std::endl;
     }
 
     size_t numkeys;
@@ -117,15 +117,15 @@ void ReadThroughputTest(ReadEnvironment<T> *env) {
         second_threadnum;
     for (size_t i = 0; i < first_threadnum; i++) {
         threads.emplace_back(read_thread<T>::func, std::ref(env->table),
-                             env->keys.begin() + (i*in_keys_per_thread),
-                             env->keys.begin() + ((i+1)*in_keys_per_thread),
-                             std::ref(counter), true, std::ref(finished));
+            env->keys.begin() + (i * in_keys_per_thread),
+            env->keys.begin() + ((i + 1) * in_keys_per_thread),
+            std::ref(counter), true, std::ref(finished));
     }
     for (size_t i = 0; i < second_threadnum; i++) {
         threads.emplace_back(
             read_thread<T>::func, std::ref(env->table),
-            env->keys.begin() + (i*out_keys_per_thread) + env->init_size,
-            env->keys.begin() + (i+1)*out_keys_per_thread + env->init_size,
+            env->keys.begin() + (i * out_keys_per_thread) + env->init_size,
+            env->keys.begin() + (i + 1) * out_keys_per_thread + env->init_size,
             std::ref(counter), false, std::ref(finished));
     }
     sleep(test_len);
@@ -138,28 +138,28 @@ void ReadThroughputTest(ReadEnvironment<T> *env) {
     std::cout << "Number of reads:\t" << counter.load() << std::endl;
     std::cout << "Time elapsed:\t" << test_len << " seconds" << std::endl;
     std::cout << "Throughput: " << std::fixed
-              << counter.load() / (double)test_len << " reads/sec" << std::endl;
+        << counter.load() / (double)test_len << " reads/sec" << std::endl;
 }
 
-int main(int argc, char** argv) {
-    const char* args[] = {"--power", "--thread-num", "--load",
-                          "--time", "--seed"};
-    size_t* arg_vars[] = {&power, &thread_num, &load, &test_len, &seed};
-    const char* arg_help[] = {
+int main(int argc, char **argv) {
+    const char *args[] = { "--power", "--thread-num", "--load",
+                          "--time", "--seed" };
+    size_t *arg_vars[] = { &power, &thread_num, &load, &test_len, &seed };
+    const char *arg_help[] = {
         "The number of keys to size the table with, expressed as a power of 2",
         "The number of threads to spawn for each type of operation",
         "The load factor to fill the table up to before testing reads",
         "The number of seconds to run the test for",
         "The seed used by the random number generator"
     };
-    const char* flags[] = {"--use-strings"};
-    bool* flag_vars[] = {&use_strings};
-    const char* flag_help[] = {
+    const char *flags[] = { "--use-strings" };
+    bool *flag_vars[] = { &use_strings };
+    const char *flag_help[] = {
         "If set, the key type of the map will be std::string"
     };
     parse_flags(argc, argv, "A benchmark for reads", args, arg_vars,
-                arg_help, sizeof(args)/sizeof(const char*), flags,
-                flag_vars, flag_help, sizeof(flags)/sizeof(const char*));
+        arg_help, sizeof(args) / sizeof(const char *), flags,
+        flag_vars, flag_help, sizeof(flags) / sizeof(const char *));
 
     if (use_strings) {
         auto *env = new ReadEnvironment<cuckoohash_map<KeyType2, ValType>>;

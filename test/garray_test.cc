@@ -7,8 +7,8 @@
 using std::cout;
 
 template<typename T, size_t BUCKET_SIZE>
-void Populate(GArray<T, BUCKET_SIZE>& ga, size_t size, GAlloc* allocator =
-                  nullptr) {
+void Populate(GArray<T, BUCKET_SIZE> &ga, size_t size, GAlloc *allocator =
+  nullptr) {
   for (size_t i = 0; i < size; i++) {
     int w = i;
     ga.Write(i, &w);
@@ -16,8 +16,8 @@ void Populate(GArray<T, BUCKET_SIZE>& ga, size_t size, GAlloc* allocator =
 }
 
 template<typename T, size_t BUCKET_SIZE>
-void Test(GArray<T, BUCKET_SIZE>& ga, size_t size,
-          GAlloc* allocator = nullptr) {
+void Test(GArray<T, BUCKET_SIZE> &ga, size_t size,
+  GAlloc *allocator = nullptr) {
   int b;
   for (size_t i = 0; i < size; i++) {
     int w = i;
@@ -28,7 +28,7 @@ void Test(GArray<T, BUCKET_SIZE>& ga, size_t size,
 
 size_t org_size = 0;
 template<typename T, size_t BUCKET_SIZE>
-void TestThread(GArray<T, BUCKET_SIZE>& ga, GAlloc* galloc, bool enlarge) {
+void TestThread(GArray<T, BUCKET_SIZE> &ga, GAlloc *galloc, bool enlarge) {
   epicLog(LOG_WARNING, "running test in worker %d", galloc->GetID());
   GArray<T, BUCKET_SIZE> gaclone(ga, galloc);
   if (enlarge) {
@@ -46,7 +46,7 @@ void TestThread(GArray<T, BUCKET_SIZE>& ga, GAlloc* galloc, bool enlarge) {
 }
 
 int main() {
-  GAlloc* allocators[4];
+  GAlloc *allocators[4];
   ibv_device **list = ibv_get_device_list(NULL);
 
   Conf conf;
@@ -55,19 +55,19 @@ int main() {
   conf.worker_port = 12346;
 
   GAllocFactory::SetConf(&conf);
-  Master* master = new Master(conf);
+  Master *master = new Master(conf);
 
-  RdmaResource* res = new RdmaResource(list[0], false);
-  Worker* worker = new Worker(conf, res);
+  RdmaResource *res = new RdmaResource(list[0], false);
+  Worker *worker = new Worker(conf, res);
   ;
-  GAlloc* allocator = allocators[0] = new GAlloc(worker);
+  GAlloc *allocator = allocators[0] = new GAlloc(worker);
   allocators[1] = new GAlloc(worker);
 
   Conf conf2;
   conf2.is_master = false;
   conf2.worker_port = 12347;
-  RdmaResource* res2 = new RdmaResource(list[0], false);
-  Worker* worker2 = new Worker(conf2, res2);
+  RdmaResource *res2 = new RdmaResource(list[0], false);
+  Worker *worker2 = new Worker(conf2, res2);
   allocators[2] = new GAlloc(worker2);
   allocators[3] = new GAlloc(worker2);
 
@@ -130,9 +130,9 @@ int main() {
   resize = pow(4, 6) * 8;  //7 layers
   gaclone.Resize(resize);
   epicAssert(gaclone.Size() == resize);
-  epicAssert(gaclone.Capacity() == ceil((double )resize / (33 / 4)) * 8);
-  int layer = ceil(log((double) resize / (33 / 4)) / log((double) (33 / 8)))
-      + 1;
+  epicAssert(gaclone.Capacity() == ceil((double)resize / (33 / 4)) * 8);
+  int layer = ceil(log((double)resize / (33 / 4)) / log((double)(33 / 8)))
+    + 1;
   epicAssert(gaclone.Layers() == layer);
   Test(gaclone, old_size);
   Populate(gaclone, resize);
@@ -169,10 +169,10 @@ int main() {
   Test(gaclone, resize);
 
   org_size = gaclone.Size();
-  thread* threads[4];
+  thread *threads[4];
   for (int i = 0; i < 4; i++) {
     threads[i] = new std::thread(TestThread<int, 33>, std::ref(gaclone),
-                                 allocators[i], i % 2);
+      allocators[i], i % 2);
   }
   for (int i = 0; i < 4; i++) {
     threads[i]->join();

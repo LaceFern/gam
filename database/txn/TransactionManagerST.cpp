@@ -2,8 +2,8 @@
 #include "TransactionManager.h"
 
 namespace Database {
-  bool TransactionManager::InsertRecord(TxnContext* context, size_t table_id, const IndexKey* keys, 
-      size_t key_num, Record *record, const GAddr& record_addr) {
+  bool TransactionManager::InsertRecord(TxnContext *context, size_t table_id, const IndexKey *keys,
+    size_t key_num, Record *record, const GAddr &record_addr) {
     Access *access = access_list_.NewAccess();
     access->access_type_ = INSERT_ONLY;
     access->access_record_ = record;
@@ -11,8 +11,8 @@ namespace Database {
     return true;
   }
 
-  bool TransactionManager::SelectRecordCC(TxnContext* context, size_t table_id, 
-      Record *&record, const GAddr& record_addr, AccessType access_type) {
+  bool TransactionManager::SelectRecordCC(TxnContext *context, size_t table_id,
+    Record *&record, const GAddr &record_addr, AccessType access_type) {
     RecordSchema *schema_ptr = storage_manager_->tables_[table_id]->GetSchema();
     record = new Record(schema_ptr);
     record->Deserialize(record_addr, gallocators[thread_id_]);
@@ -23,7 +23,7 @@ namespace Database {
     return true;
   }
 
-  bool TransactionManager::CommitTransaction(TxnContext* context, TxnParam* param, CharArray& ret_str) {
+  bool TransactionManager::CommitTransaction(TxnContext *context, TxnParam *param, CharArray &ret_str) {
     for (size_t i = 0; i < access_list_.access_count_; ++i) {
       Access *access = access_list_.GetAccess(i);
       if (access->access_type_ == INSERT_ONLY) {

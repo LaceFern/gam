@@ -9,95 +9,95 @@
 #include "Meta.h"
 
 namespace Database {
-class TxnParam {
- public:
-  TxnParam() {
-  }
-  virtual ~TxnParam() {
-  }
-  
- public:
-  size_t type_;
-};
+  class TxnParam {
+  public:
+    TxnParam() {
+    }
+    virtual ~TxnParam() {
+    }
 
-class ParamBatch {
- public:
-  ParamBatch() {
-    params_ = new TxnParam*[gParamBatchSize];
-    param_count_ = 0;
-    batch_size_ = gParamBatchSize;
-  }
-  ParamBatch(const size_t &batch_size) {
-    params_ = new TxnParam*[batch_size];
-    param_count_ = 0;
-    batch_size_ = batch_size;
-  }
-  ~ParamBatch() {
-    delete[] params_;
-    params_ = NULL;
-  }
+  public:
+    size_t type_;
+  };
 
-  void push_back(TxnParam *tuple) {
-    assert(param_count_ < batch_size_);
-    params_[param_count_] = tuple;
-    ++param_count_;
-  }
+  class ParamBatch {
+  public:
+    ParamBatch() {
+      params_ = new TxnParam * [gParamBatchSize];
+      param_count_ = 0;
+      batch_size_ = gParamBatchSize;
+    }
+    ParamBatch(const size_t &batch_size) {
+      params_ = new TxnParam * [batch_size];
+      param_count_ = 0;
+      batch_size_ = batch_size;
+    }
+    ~ParamBatch() {
+      delete[] params_;
+      params_ = NULL;
+    }
 
-  size_t size() const {
-    return param_count_;
-  }
+    void push_back(TxnParam *tuple) {
+      assert(param_count_ < batch_size_);
+      params_[param_count_] = tuple;
+      ++param_count_;
+    }
 
-  TxnParam* get(const size_t idx) const {
-    return params_[idx];
-  }
+    size_t size() const {
+      return param_count_;
+    }
 
- private:
-  TxnParam **params_;
-  size_t param_count_;
-  size_t batch_size_;
-};
+    TxnParam *get(const size_t idx) const {
+      return params_[idx];
+    }
 
-struct ParamPtrWrapper {
-  size_t part_id_;
-  TxnParam *param_;
-};
+  private:
+    TxnParam **params_;
+    size_t param_count_;
+    size_t batch_size_;
+  };
 
-class ParamBatchWrapper {
- public:
-  ParamBatchWrapper() {
-    params_ = new ParamPtrWrapper[gParamBatchSize];
-    param_count_ = 0;
-    batch_size_ = gParamBatchSize;
-  }
-  ParamBatchWrapper(const size_t &batch_size) {
-    params_ = new ParamPtrWrapper[batch_size];
-    param_count_ = 0;
-    batch_size_ = batch_size;
-  }
-  ~ParamBatchWrapper() {
-    delete[] params_;
-    params_ = NULL;
-  }
+  struct ParamPtrWrapper {
+    size_t part_id_;
+    TxnParam *param_;
+  };
 
-  void push_back(TxnParam *tuple, const size_t &part_id) {
-    assert(param_count_ < batch_size_);
-    params_[param_count_].param_ = tuple;
-    params_[param_count_].part_id_ = part_id;
-    ++param_count_;
-  }
+  class ParamBatchWrapper {
+  public:
+    ParamBatchWrapper() {
+      params_ = new ParamPtrWrapper[gParamBatchSize];
+      param_count_ = 0;
+      batch_size_ = gParamBatchSize;
+    }
+    ParamBatchWrapper(const size_t &batch_size) {
+      params_ = new ParamPtrWrapper[batch_size];
+      param_count_ = 0;
+      batch_size_ = batch_size;
+    }
+    ~ParamBatchWrapper() {
+      delete[] params_;
+      params_ = NULL;
+    }
 
-  size_t size() const {
-    return param_count_;
-  }
+    void push_back(TxnParam *tuple, const size_t &part_id) {
+      assert(param_count_ < batch_size_);
+      params_[param_count_].param_ = tuple;
+      params_[param_count_].part_id_ = part_id;
+      ++param_count_;
+    }
 
-  ParamPtrWrapper* get(const size_t idx) const {
-    return &(params_[idx]);
-  }
+    size_t size() const {
+      return param_count_;
+    }
 
- private:
-  ParamPtrWrapper *params_;
-  size_t param_count_;
-  size_t batch_size_;
-};
+    ParamPtrWrapper *get(const size_t idx) const {
+      return &(params_[idx]);
+    }
+
+  private:
+    ParamPtrWrapper *params_;
+    size_t param_count_;
+    size_t batch_size_;
+  };
 }
 #endif

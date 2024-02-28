@@ -7,8 +7,7 @@ and [examples
 directory](https://github.com/efficient/libcuckoo/tree/master/examples) for
 information and examples of how to use iterators.
 
-libcuckoo
-=========
+# libcuckoo
 
 libcuckoo provides a high-performance, compact hash table that allows
 multiple concurrent reader and writer threads.
@@ -25,11 +24,10 @@ in [1] serializes all writer threads, while our current
 implementation supports multiple concurrent writers), however, and this source
 code is now the definitive reference.
 
-   [1]: http://www.cs.cmu.edu/~dga/papers/memc3-nsdi2013.pdf "MemC3: Compact and Concurrent Memcache with Dumber Caching and Smarter Hashing"
-   [2]: http://www.cs.princeton.edu/~mfreed/docs/cuckoo-eurosys14.pdf "Algorithmic Improvements for Fast Concurrent Cuckoo Hashing"
+[1]: http://www.cs.cmu.edu/~dga/papers/memc3-nsdi2013.pdf "MemC3: Compact and Concurrent Memcache with Dumber Caching and Smarter Hashing"
+[2]: http://www.cs.princeton.edu/~mfreed/docs/cuckoo-eurosys14.pdf "Algorithmic Improvements for Fast Concurrent Cuckoo Hashing"
 
-Requirements
-================
+# Requirements
 
 This library has been tested on Mac OSX >= 10.8 and Ubuntu >= 12.04.
 
@@ -40,16 +38,14 @@ autotools. Install them on Ubuntu
 
     $ sudo apt-get update && sudo apt-get install build-essential autoconf libtool
 
-Building
-==========
+# Building
 
     $ autoreconf -fis
     $ ./configure
     $ make
     $ make install
 
-Usage
-==========
+# Usage
 
 To build a program with the hash table, include
 `libcuckoo/cuckoohash_map.hh` into your source file. If you want to
@@ -67,8 +63,7 @@ The
 contains some simple demonstrations of some of the basic features of the hash
 table.
 
-Tests
-==========
+# Tests
 
 The [tests directory](https://github.com/efficient/libcuckoo/tree/master/tests)
 directory contains a number of tests and benchmarks of the hash table, which
@@ -77,16 +72,15 @@ After running `make all`, the entire test suite can be run with the `make check`
 command. This will not run the benchmarks, which must be run individually. The
 test executables, which have the suffix `.out`, can be run individually as well.
 
-Issue Report
-============
+# Issue Report
 
 To let us know your questions or issues, we recommend you
 [report an issue](https://github.com/efficient/libcuckoo/issues) on
 github. You can also email us at
 [libcuckoo-dev@googlegroups.com](mailto:libcuckoo-dev@googlegroups.com).
 
-Licence
-===========
+# Licence
+
 Copyright (C) 2013, Carnegie Mellon University and Intel Corporation
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -101,7 +95,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
----------------------------
+---
 
 CityHash (lib/city.h, lib/city.cc) is Copyright (c) Google, Inc. and
 has its own license, as detailed in the source files.

@@ -19,7 +19,7 @@
 # define __ASSERT_VOID_CAST (void)
 #endif
 
-void _epicLog(char* file, char *func, int lineno, int level, const char *fmt, ...);
+void _epicLog(char *file, char *func, int lineno, int level, const char *fmt, ...);
 void PrintStackTrace();
 
 //#ifdef NDEBUG

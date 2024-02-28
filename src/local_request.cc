@@ -26,36 +26,36 @@
 #endif
 
 #ifdef DHT
-int Worker::ProcessLocalHTable(WorkRequest* pwr) {
-    pwr->id = this->GetWorkPsn();
+int Worker::ProcessLocalHTable(WorkRequest *pwr) {
+  pwr->id = this->GetWorkPsn();
 
-    uint64_t mem = this->FindClientWid(GetWorkerId())->GetTotalMem();
-    if (mem > 0)
-        this->ProcessHTableReply(NULL, pwr);
+  uint64_t mem = this->FindClientWid(GetWorkerId())->GetTotalMem();
+  if (mem > 0)
+    this->ProcessHTableReply(NULL, pwr);
 
-    bool local_only = true;
-    for (auto& entry: widCliMapWorker) {
-        if (entry.first != this->GetWorkerId()) {
-            this->SubmitRequest(entry.second, pwr);
-            local_only = false;
-        }
+  bool local_only = true;
+  for (auto &entry : widCliMapWorker) {
+    if (entry.first != this->GetWorkerId()) {
+      this->SubmitRequest(entry.second, pwr);
+      local_only = false;
     }
+  }
 
-    if (!local_only) {
-        AddToPending(pwr->id, pwr);
-        return REMOTE_REQUEST;
-    } else return SUCCESS;
+  if (!local_only) {
+    AddToPending(pwr->id, pwr);
+    return REMOTE_REQUEST;
+  } else return SUCCESS;
 }
 #endif // DHT
 
-int Worker::ProcessLocalMalloc(WorkRequest* wr) {
+int Worker::ProcessLocalMalloc(WorkRequest *wr) {
   epicAssert(!(wr->flag & ASYNC));
   if ((wr->flag & REMOTE) || (wr->addr && !IsLocal(wr->addr))) {  //remote alloc
-    Client* cli = GetClient(wr->addr);
+    Client *cli = GetClient(wr->addr);
     if (!cli) {
       //wr->status = ALLOC_ERROR;
       epicLog(LOG_WARNING,
-              "there is no remote worker, we allocate locally instead");
+        "there is no remote worker, we allocate locally instead");
     } else {
       cli->SetMemStat(cli->GetTotalMem(), cli->GetFreeMem() - wr->size);
       SubmitRequest(cli, wr, ADD_TO_PENDING | REQUEST_SEND);
@@ -65,7 +65,7 @@ int Worker::ProcessLocalMalloc(WorkRequest* wr) {
     size_t size = GetWorkersSize();
     static unsigned int seed = GetWorkerId();
     int i;
-    Client* cli = nullptr;
+    Client *cli = nullptr;
     for (i = 0; i < size; i++) {
       cli = nullptr;
       int workid = GetRandom(0, size, &seed);
@@ -95,7 +95,7 @@ int Worker::ProcessLocalMalloc(WorkRequest* wr) {
   //local alloc
   //we reserve a minimum conf->cache_th size for cache
   if (cache.GetUsedBytes() + sb.get_avail() < conf->size * conf->cache_th) {
-    Client* cli = GetClient();
+    Client *cli = GetClient();
     cli->lock();
     if (cli) {
       epicLog(LOG_WARNING, "allocate remotely at worker %d", cli->GetWorkerId());
@@ -111,7 +111,7 @@ int Worker::ProcessLocalMalloc(WorkRequest* wr) {
     }
   }
 
-  void* addr;
+  void *addr;
   if (wr->flag & ALIGNED) {
     addr = sb.sb_aligned_malloc(wr->size);
     epicAssert((uint64_t)addr % BLOCK_SIZE == 0);
@@ -150,19 +150,19 @@ int Worker::ProcessLocalMalloc(WorkRequest* wr) {
 
 //FIXME: check whether other nodes are sharing this data
 //issue a write request first, and then process the free
-int Worker::ProcessLocalFree(WorkRequest* wr) {
+int Worker::ProcessLocalFree(WorkRequest *wr) {
   epicAssert(!(wr->flag & ASYNC));
   //TODO: whether need to invalidate the cached copies
   //don't need to invalidate as other data co-located within the same block may be still in use.
   epicAssert(wr->addr);
   if (IsLocal(wr->addr)) {
-    void* addr = ToLocal(wr->addr);
+    void *addr = ToLocal(wr->addr);
     Size size = sb.sb_free(addr);
     ghost_size -= size;
     if (labs(ghost_size.load()) > conf->ghost_th)
       SyncMaster();
   } else {
-    Client* cli = GetClient(wr->addr);
+    Client *cli = GetClient(wr->addr);
     if (!cli) {
       wr->status = ALLOC_ERROR;
     } else {
@@ -186,20 +186,20 @@ int Worker::ProcessLocalFree(WorkRequest* wr) {
   return SUCCESS;
 }
 
-int Worker::ProcessLocalMFence(WorkRequest* wr) {
+int Worker::ProcessLocalMFence(WorkRequest *wr) {
   epicAssert(!(wr->flag & FENCE));
-  Fence* fence = fences_.at(wr->fd);
+  Fence *fence = fences_.at(wr->fd);
   fence->lock();
   if (unlikely(IsFenced(fence, wr))) {
     epicLog(LOG_DEBUG, "fenced (mfenced = %d, sfenced = %d): %d",
-            fence->mfenced, fence->sfenced, fence->pending_works.size());
+      fence->mfenced, fence->sfenced, fence->pending_works.size());
     AddToFence(fence, wr);
     fence->unlock();
   } else {
     if (fence->pending_writes) {  //we only mark fenced when there are pending writes
       fence->mfenced = true;
       epicLog(LOG_DEBUG, "mfenced!!, pending_writes = %d",
-              fence->pending_writes.load());
+        fence->pending_writes.load());
     }
     fence->unlock();
 #ifdef MULTITHREAD
@@ -221,15 +221,15 @@ int Worker::ProcessLocalMFence(WorkRequest* wr) {
   return SUCCESS;
 }
 
-int Worker::ProcessLocalSFence(WorkRequest* wr) {
+int Worker::ProcessLocalSFence(WorkRequest *wr) {
   epicAssert(!(wr->flag & FENCE));
   //TODO: add the sfence support
   epicLog(LOG_WARNING, "SFENCE is not supported for now!");
-  Fence* fence = fences_.at(wr->fd);
+  Fence *fence = fences_.at(wr->fd);
   fence->lock();
   if (IsFenced(fence, wr)) {
     epicLog(LOG_DEBUG, "fenced (mfenced = %d, sfenced = %d): %d",
-            fence->mfenced, fence->sfenced, wr->op);
+      fence->mfenced, fence->sfenced, wr->op);
     AddToFence(fence, wr);
     fence->unlock();
   } else {
@@ -256,11 +256,11 @@ int Worker::ProcessLocalSFence(WorkRequest* wr) {
   return SUCCESS;
 }
 
-int Worker::ProcessLocalRequest(WorkRequest* wr) {
+int Worker::ProcessLocalRequest(WorkRequest *wr) {
   epicLog(
-      LOG_DEBUG,
-      "wr->code = %d, wr->flag = %d, wr->addr = %lx, wr->size = %d, wr->fd = %d\n",
-      wr->op, wr->flag, wr->addr, wr->size, wr->fd);
+    LOG_DEBUG,
+    "wr->code = %d, wr->flag = %d, wr->addr = %lx, wr->size = %d, wr->fd = %d\n",
+    wr->op, wr->flag, wr->addr, wr->size, wr->fd);
   int ret = SUCCESS;
   if (MALLOC == wr->op) {
     ret = ProcessLocalMalloc(wr);
@@ -310,29 +310,29 @@ int Worker::ProcessLocalRequest(WorkRequest* wr) {
   } else {
     wr->status = UNRECOGNIZED_OP;
     epicLog(LOG_WARNING, "unrecognized op %d from local thread %d", wr->op,
-            wr->fd);
+      wr->fd);
     exit(-1);
   }
   return ret;
 }
 
 void Worker::ProcessLocalRequest(aeEventLoop *el, int fd, void *data,
-                                 int mask) {
+  int mask) {
   char buf[1];
   if (1 != read(fd, buf, 1)) {
     epicLog(LOG_WARNING, "read pipe failed (%d:%s)", errno, strerror(errno));
   }
   epicLog(LOG_DEBUG, "receive local request %c", buf[0]);
 
-  Worker* w = (Worker*) data;
-  WorkRequest* wr;
+  Worker *w = (Worker *)data;
+  WorkRequest *wr;
   int i = 0;
   while (w->wqueue->pop(wr)) {
     i++;
     epicLog(
-        LOG_DEBUG,
-        "wr->code = %d, wr->flag = %d, wr->addr = %lx, wr->size = %d, wr->fd = %d\n",
-        wr->op, wr->flag, wr->addr, wr->size, wr->fd);
+      LOG_DEBUG,
+      "wr->code = %d, wr->flag = %d, wr->addr = %lx, wr->size = %d, wr->fd = %d\n",
+      wr->op, wr->flag, wr->addr, wr->size, wr->fd);
     w->ProcessLocalRequest(wr);
   }
   if (!i)

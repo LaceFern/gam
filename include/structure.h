@@ -55,12 +55,12 @@ struct Conf {
   int maxthreads = 10;
   int backlog = TCP_BACKLOG;
   int loglevel = LOG_WARNING;
-  std::string* logfile = nullptr;
+  std::string *logfile = nullptr;
   int timeout = 10;  //ms
   int eviction_period = 100;  //ms
 };
 
-typedef int PostProcessFunc(int, void*);
+typedef int PostProcessFunc(int, void *);
 
 #define LOCK_MICRO(table, key) do {((table).lock(key));} while(0)
 #define UNLOCK_MICRO(table, key) ((table).unlock(key))

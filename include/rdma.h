@@ -20,7 +20,7 @@
 class RdmaResource;
 class RdmaContext;
 
-typedef void* raddr;  //raddr means registered addr
+typedef void *raddr;  //raddr means registered addr
 
 #define MASTER_RDMA_CONN_STRLEN 54 /** 4 bytes for lid + 8 bytes qpn
                                     * + 8 bytes for psn + 32 bytes gid
@@ -61,12 +61,12 @@ class RdmaResource {
   friend class RdmaContext;
 
   //the follow three variables are only used for comm among workers
-  void* base;  //the base addr for the local memory
+  void *base;  //the base addr for the local memory
   size_t size;
   struct ibv_mr *bmr;
 
   //node-wide communication buf used for receive request
-  std::vector<struct ibv_mr*> comm_buf;
+  std::vector<struct ibv_mr *> comm_buf;
   //size_t buf_size; buf_size = slots.size() * MAX_REQUEST_SIZE
   int slot_head;  //current slot head
   int slot_inuse;  //number of slots in use
@@ -80,7 +80,7 @@ class RdmaResource {
   std::atomic<int> recv_posted;
   int rx_depth = 0;
 
- public:
+public:
   /*
    * isForMaster: true -- used to communicate with/by Master (no need to reg whole mem space)
    * 				false -- used to communicate among workers (reg whole mem space + comm buf)
@@ -95,7 +95,7 @@ class RdmaResource {
   }
   //int regHtableMemory(const void *htable, size_t size);
 
-  inline ibv_cq* GetCompQueue() const {
+  inline ibv_cq *GetCompQueue() const {
     return cq;
   }
   inline int GetChannelFd() const {
@@ -105,15 +105,15 @@ class RdmaResource {
   int RegLocalMemory(void *base, size_t sz);
 
   int RegCommSlot(int);
-  char* GetSlot(int s);  //get the starting addr of the slot
+  char *GetSlot(int s);  //get the starting addr of the slot
   int PostRecv(int n = 1);  //post n RR to the srq
   int PostRecvSlot(int slot);
   inline void ClearSlot(int s) {
     slots.at(s) = false;
   }
 
-  RdmaContext* NewRdmaContext(bool isForMaster);
-  void DeleteRdmaContext(RdmaContext* ctx);
+  RdmaContext *NewRdmaContext(bool isForMaster);
+  void DeleteRdmaContext(RdmaContext *ctx);
   inline int GetCounter() {
     return rdma_context_counter;
   }
@@ -122,10 +122,10 @@ class RdmaResource {
 
 struct RdmaRequest {
   ibv_wr_opcode op;
-  const void* src;
+  const void *src;
   size_t len;
   unsigned int id;bool signaled;
-  void* dest;
+  void *dest;
   uint32_t imm;
   uint64_t oldval;
   uint64_t newval;
@@ -138,9 +138,9 @@ struct profile_return {
 };
 
 class RdmaContext {
- private:
+private:
   ibv_qp *qp;
-  ibv_mr* send_buf;  //send buf
+  ibv_mr *send_buf;  //send buf
   int slot_head;
   int slot_tail;bool full;  //to differentiate between all free and all occupied slot_head == slot_tail
 
@@ -158,32 +158,32 @@ class RdmaContext {
 
   char *msg;
 
-  ssize_t Rdma(ibv_wr_opcode op, const void* src, size_t len, unsigned int id =
-                   0,
-               bool signaled =
-               false,
-               void* dest = nullptr, uint32_t imm = 0, uint64_t oldval = 0,
-               uint64_t newval = 0);
-  struct profile_return Rdma_profile(ibv_wr_opcode op, const void* src, size_t len, unsigned int id =
-  0,
-               bool signaled =
-               false,
-               void* dest = nullptr, uint32_t imm = 0, uint64_t oldval = 0,
-               uint64_t newval = 0);
+  ssize_t Rdma(ibv_wr_opcode op, const void *src, size_t len, unsigned int id =
+    0,
+    bool signaled =
+    false,
+    void *dest = nullptr, uint32_t imm = 0, uint64_t oldval = 0,
+    uint64_t newval = 0);
+  struct profile_return Rdma_profile(ibv_wr_opcode op, const void *src, size_t len, unsigned int id =
+    0,
+    bool signaled =
+    false,
+    void *dest = nullptr, uint32_t imm = 0, uint64_t oldval = 0,
+    uint64_t newval = 0);
 
-  inline ssize_t Rdma(RdmaRequest& r) {
+  inline ssize_t Rdma(RdmaRequest &r) {
     epicLog(LOG_DEBUG, "process pending rdma request");
     epicLog(
-        LOG_DEBUG,
-        "op = %d, src = %lx, len = %d, id = %d, signaled = %d, dest = %lx, imm = %u, oldval = %lu, newval = %lu\n"
-        "src = %s",
-        r.op, r.src, r.len, r.id, r.signaled, r.dest, r.imm, r.oldval, r.newval,
-        r.src);
+      LOG_DEBUG,
+      "op = %d, src = %lx, len = %d, id = %d, signaled = %d, dest = %lx, imm = %u, oldval = %lu, newval = %lu\n"
+      "src = %s",
+      r.op, r.src, r.len, r.id, r.signaled, r.dest, r.imm, r.oldval, r.newval,
+      r.src);
     return Rdma(r.op, r.src, r.len, r.id, r.signaled, r.dest, r.imm, r.oldval,
-                r.newval);
+      r.newval);
   }
 
-//for multithread
+  //for multithread
   LockWrapper global_lock_;
   inline void lock() {
     global_lock_.lock();
@@ -191,32 +191,32 @@ class RdmaContext {
   inline void unlock() {
     global_lock_.unlock();
   }
-  char* GetFreeSlot_();
+  char *GetFreeSlot_();
 
- public:
+public:
   RdmaContext(RdmaResource *, bool isForMaster);
   inline bool IsMaster() {
     return isForMaster;
   }
-  const char* GetRdmaConnString();
+  const char *GetRdmaConnString();
   int SetRemoteConnParam(const char *remConn);
 
   inline uint32_t GetQP() {
     return qp->qp_num;
   }
-  inline void* GetBase() {
-    return (void*) vaddr;
+  inline void *GetBase() {
+    return (void *)vaddr;
   }
 
-  unsigned int SendComp(ibv_wc& wc);
-  unsigned int WriteComp(ibv_wc& wc);
-  char* RecvComp(ibv_wc& wc);
-  char* GetFreeSlot();bool IsRegistered(const void* addr);
+  unsigned int SendComp(ibv_wc &wc);
+  unsigned int WriteComp(ibv_wc &wc);
+  char *RecvComp(ibv_wc &wc);
+  char *GetFreeSlot();bool IsRegistered(const void *addr);
 
-  ssize_t Send(const void* ptr, size_t len, unsigned int id = 0, bool signaled =
-                   false);
-  struct profile_return Send_profile(const void* ptr, size_t len, unsigned int id = 0, bool signaled =
-  false);
+  ssize_t Send(const void *ptr, size_t len, unsigned int id = 0, bool signaled =
+    false);
+  struct profile_return Send_profile(const void *ptr, size_t len, unsigned int id = 0, bool signaled =
+    false);
   inline int PostRecv(int n) {
     return resource->PostRecv(n);
   }
@@ -229,41 +229,41 @@ class RdmaContext {
    * @src: src addr at local node
    */
   ssize_t Write(raddr dest, raddr src, size_t len, unsigned int id = 0,
-                bool signaled = false);
+    bool signaled = false);
   ssize_t WriteWithImm(raddr dest, raddr src, size_t len, uint32_t imm,
-                       unsigned int id = 0, bool signaled = false);
+    unsigned int id = 0, bool signaled = false);
   /*
    * @dest: dest addr at local node
    * @src: src addr at remote node
    */
   ssize_t Read(raddr dest, raddr src, size_t len, unsigned int id = 0,
-               bool signaled = false);
+    bool signaled = false);
 
   ssize_t Cas(raddr src, uint64_t oldval, uint64_t newval, unsigned int id = 0,
-              bool signaled = false);
+    bool signaled = false);
 
   ~RdmaContext();
 };
 
 class RdmaResourceFactory {
   /* TODO: thread safety */
- private:
+private:
   static std::vector<RdmaResource *> resources;
   static const char *defaultDevname;
-  static RdmaResource* GetRdmaResource(bool isServer, const char *devName);
- public:
-  inline static RdmaResource* getMasterRdmaResource(
-      const char *devName = NULL) {
+  static RdmaResource *GetRdmaResource(bool isServer, const char *devName);
+public:
+  inline static RdmaResource *getMasterRdmaResource(
+    const char *devName = NULL) {
     return GetRdmaResource(true, devName);
   }
-  inline static RdmaResource* getWorkerRdmaResource(
-      const char *devName = NULL) {
+  inline static RdmaResource *getWorkerRdmaResource(
+    const char *devName = NULL) {
     return GetRdmaResource(false, devName);
   }
 
   ~RdmaResourceFactory() {
     for (std::vector<RdmaResource *>::iterator i = resources.begin();
-        i != resources.end(); ++i) {
+      i != resources.end(); ++i) {
       delete (*i);
     }
   }

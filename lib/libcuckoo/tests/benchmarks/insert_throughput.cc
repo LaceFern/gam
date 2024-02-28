@@ -57,7 +57,7 @@ class InsertEnvironment {
 public:
     InsertEnvironment()
         : numkeys(1U << power),
-          table(table_capacity ? table_capacity : numkeys), keys(numkeys) {
+        table(table_capacity ? table_capacity : numkeys), keys(numkeys) {
         // Sets up the random number generator
         if (seed == 0) {
             seed = std::chrono::system_clock::now().time_since_epoch().count();
@@ -71,7 +71,7 @@ public:
         for (size_t i = 1; i < numkeys; i++) {
             const size_t swapind = gen() % i;
             keys[i] = keys[swapind];
-            keys[swapind] = generateKey<KType>(i+numkeys);
+            keys[swapind] = generateKey<KType>(i + numkeys);
         }
 
         // We prefill the table to begin_load with thread_num threads,
@@ -80,8 +80,8 @@ public:
         size_t keys_per_thread = numkeys * (begin_load / 100.0) / thread_num;
         for (size_t i = 0; i < thread_num; i++) {
             threads.emplace_back(insert_thread<T>::func, std::ref(table),
-                                 keys.begin()+i*keys_per_thread,
-                                 keys.begin()+(i+1)*keys_per_thread);
+                keys.begin() + i * keys_per_thread,
+                keys.begin() + (i + 1) * keys_per_thread);
         }
         for (size_t i = 0; i < threads.size(); i++) {
             threads[i].join();
@@ -104,15 +104,15 @@ public:
 template <class T>
 void InsertThroughputTest(InsertEnvironment<T> *env) {
     std::vector<std::thread> threads;
-    size_t keys_per_thread = env->numkeys * ((end_load-begin_load) / 100.0) /
+    size_t keys_per_thread = env->numkeys * ((end_load - begin_load) / 100.0) /
         thread_num;
     timeval t1, t2;
     gettimeofday(&t1, NULL);
     for (size_t i = 0; i < thread_num; i++) {
         threads.emplace_back(
             insert_thread<T>::func, std::ref(env->table),
-            env->keys.begin()+(i*keys_per_thread)+env->init_size,
-            env->keys.begin()+((i+1)*keys_per_thread)+env->init_size);
+            env->keys.begin() + (i * keys_per_thread) + env->init_size,
+            env->keys.begin() + ((i + 1) * keys_per_thread) + env->init_size);
     }
     for (size_t i = 0; i < threads.size(); i++) {
         threads[i].join();
@@ -125,19 +125,19 @@ void InsertThroughputTest(InsertEnvironment<T> *env) {
     std::cout << "----------Results----------" << std::endl;
     std::cout << "Final load factor:\t" << end_load << "%" << std::endl;
     std::cout << "Number of inserts:\t" << num_inserts << std::endl;
-    std::cout << "Time elapsed:\t" << elapsed_time/1000 << " seconds"
-              << std::endl;
+    std::cout << "Time elapsed:\t" << elapsed_time / 1000 << " seconds"
+        << std::endl;
     std::cout << "Throughput: " << std::fixed
-              << (double)num_inserts / (elapsed_time/1000)
-              << " inserts/sec" << std::endl;
+        << (double)num_inserts / (elapsed_time / 1000)
+        << " inserts/sec" << std::endl;
 }
 
-int main(int argc, char** argv) {
-    const char* args[] = {"--power", "--table-capacity", "--thread-num",
-                          "--begin-load", "--end-load", "--seed"};
-    size_t* arg_vars[] = {&power, &table_capacity, &thread_num, &begin_load,
-                          &end_load, &seed};
-    const char* arg_help[] = {
+int main(int argc, char **argv) {
+    const char *args[] = { "--power", "--table-capacity", "--thread-num",
+                          "--begin-load", "--end-load", "--seed" };
+    size_t *arg_vars[] = { &power, &table_capacity, &thread_num, &begin_load,
+                          &end_load, &seed };
+    const char *arg_help[] = {
         "The number of keys to size the table with, expressed as a power of 2",
         "The initial capacity of the table, expressed as a power of 2. "
         "If 0, the table is initialized to the number of keys",
@@ -147,21 +147,21 @@ int main(int argc, char** argv) {
         "throughput",
         "The seed used by the random number generator"
     };
-    const char* flags[] = {"--use-strings"};
-    bool* flag_vars[] = {&use_strings};
-    const char* flag_help[] = {
+    const char *flags[] = { "--use-strings" };
+    bool *flag_vars[] = { &use_strings };
+    const char *flag_help[] = {
         "If set, the key type of the map will be std::string"
     };
     parse_flags(argc, argv, "A benchmark for inserts", args, arg_vars, arg_help,
-                sizeof(args)/sizeof(const char*), flags, flag_vars, flag_help,
-                sizeof(flags)/sizeof(const char*));
+        sizeof(args) / sizeof(const char *), flags, flag_vars, flag_help,
+        sizeof(flags) / sizeof(const char *));
 
     if (begin_load >= 100) {
         std::cerr << "--begin-load must be between 0 and 99" << std::endl;
         exit(1);
     } else if (begin_load >= end_load) {
         std::cerr << "--end-load must be greater than --begin-load"
-                  << std::endl;
+            << std::endl;
         exit(1);
     }
 

@@ -141,64 +141,64 @@ struct WorkRequest {
   int status;
 
   Flag flag = 0;
-  void* ptr;
+  void *ptr;
 
   int fd;
 #if	!defined(USE_PIPE_W_TO_H) || !defined(USE_PIPE_H_TO_W)
-  volatile int* notify_buf;
+  volatile int *notify_buf;
 #endif
 #ifdef USE_PTHREAD_COND
-  pthread_mutex_t* cond_lock;
-  pthread_cond_t* cond;
+  pthread_mutex_t *cond_lock;
+  pthread_cond_t *cond;
 #endif
 
   int wid;
 
   atomic<int> counter;  //maybe negative in Write Case 4
 
-  WorkRequest* parent;
-  WorkRequest* next;
-  WorkRequest* dup;
+  WorkRequest *parent;
+  WorkRequest *next;
+  WorkRequest *dup;
 
   LockWrapper lock_;
 
   bool is_cache_hit_ = true;
 
 #ifdef GFUNC_SUPPORT
-  GFunc* gfunc = nullptr;
+  GFunc *gfunc = nullptr;
   uint64_t arg = 0;
 #endif
   WorkRequest()
-      : fd(),
-        id(),
-        pid(),
-        pwid(),
-        op(),
-        addr(),
-        size(),
-        status(),
-        flag(),
-        ptr(),
-        wid(),
-        counter(),
-        parent(),
-        next(),
-        dup() {
+    : fd(),
+    id(),
+    pid(),
+    pwid(),
+    op(),
+    addr(),
+    size(),
+    status(),
+    flag(),
+    ptr(),
+    wid(),
+    counter(),
+    parent(),
+    next(),
+    dup() {
 #if	!defined(USE_PIPE_W_TO_H) || !defined(USE_PIPE_H_TO_W)
     notify_buf = nullptr;
 #endif
   }
   ;
-  WorkRequest(WorkRequest& wr);
-  bool operator==(const WorkRequest& wr);
-  int Ser(char* buf, int& len);
-  int Deser(const char* buf, int& len);
+  WorkRequest(WorkRequest &wr);
+  bool operator==(const WorkRequest &wr);
+  int Ser(char *buf, int &len);
+  int Deser(const char *buf, int &len);
 
   //we only allow one-times copy of the original workrequest
   //second call will return the previous duplicated copy
   //NOTE: if you want multiple copies,
   //use the WorkRequest(WorkRequest&) constructor
-  WorkRequest* Copy() {
+  WorkRequest *Copy() {
     if (flag & COPY) {
       epicLog(LOG_DEBUG, "already copied before");
       if (dup) {
@@ -207,7 +207,7 @@ struct WorkRequest {
         return this;  //this is a copied version
       }
     } else {
-      WorkRequest* nw = new WorkRequest(*this);
+      WorkRequest *nw = new WorkRequest(*this);
       if (ptr && size) {
         nw->ptr = zmalloc(size);
         memcpy(nw->ptr, ptr, size);

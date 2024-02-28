@@ -15,13 +15,12 @@ static Size distance(int start, int end) {
   return (start < end) ? end - start : end + BUF_SIZE - start;
 }
 
-Log::Log(void* base): base_(base)
-  , spos_(0)
-  , epos_(BUF_SIZE)
-  , running_(false)
-  , buf_(new char[BUF_SIZE])
-  , thread_(std::this_thread::get_id()) 
-{
+Log::Log(void *base): base_(base)
+, spos_(0)
+, epos_(BUF_SIZE)
+, running_(false)
+, buf_(new char[BUF_SIZE])
+, thread_(std::this_thread::get_id()) {
   fd_ = open("/data/caiqc/gam.log", O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
 }
 
@@ -77,7 +76,7 @@ void Log::write() {
   running_.store(false);
 }
 
-int Log::writeToBuf(void* ptr, Size size, int spos) {
+int Log::writeToBuf(void *ptr, Size size, int spos) {
   if (spos + size < BUF_SIZE) {
     memcpy(spos + buf_, ptr, size);
     return spos + size;
@@ -89,13 +88,13 @@ int Log::writeToBuf(void* ptr, Size size, int spos) {
   }
 }
 
-void Log::logWrite(GAddr addr, Size size, const void* content) {
+void Log::logWrite(GAddr addr, Size size, const void *content) {
 
   int sz = size + sizeof addr + sizeof size;
   int spos = reserve(sz);
 
   // simply memory copy
-  void* p = TO_LOCAL(addr, base_);
+  void *p = TO_LOCAL(addr, base_);
 
   spos = writeToBuf(&addr, sizeof(GAddr), spos);
   spos = writeToBuf(&size, sizeof(Size), spos);
@@ -113,7 +112,7 @@ void Log::logOwner(int node, GAddr addr) {
   int sz = sizeof addr + sizeof id;
   int spos = reserve(sz);
 
-  id |= (1ul << (8*(sizeof(Size)) - 1));
+  id |= (1ul << (8 * (sizeof(Size)) - 1));
   spos = writeToBuf(&addr, sizeof(GAddr), spos);
   spos = writeToBuf(&id, sizeof(id), spos);
 }

@@ -14,37 +14,37 @@ namespace Database {
 #define DB_QUERY_CALLBACK(statement, callback) \
 	if (transaction_manager_->statement == false) { callback; return false; }
 
-class StoredProcedure {
- public:
-  StoredProcedure() {
-    context_.txn_type_ = 0;
-    thread_id_ = 0;
-  }
-  StoredProcedure(const size_t &txn_type) {
-    context_.txn_type_ = txn_type;
-    thread_id_ = 0;
-  }
-  virtual ~StoredProcedure() {
-  }
+  class StoredProcedure {
+  public:
+    StoredProcedure() {
+      context_.txn_type_ = 0;
+      thread_id_ = 0;
+    }
+    StoredProcedure(const size_t &txn_type) {
+      context_.txn_type_ = txn_type;
+      thread_id_ = 0;
+    }
+    virtual ~StoredProcedure() {
+    }
 
-  void SetTransactionManager(TransactionManager *transaction_manager) {
-    transaction_manager_ = transaction_manager;
-    thread_id_ = transaction_manager_->GetThreadId();
-  }
-  
-  virtual bool Execute(TxnParam *param, CharArray &ret) {
-    return true;
-  }
+    void SetTransactionManager(TransactionManager *transaction_manager) {
+      transaction_manager_ = transaction_manager;
+      thread_id_ = transaction_manager_->GetThreadId();
+    }
 
- private:
-  StoredProcedure(const StoredProcedure&);
-  StoredProcedure& operator=(const StoredProcedure&);
+    virtual bool Execute(TxnParam *param, CharArray &ret) {
+      return true;
+    }
 
- protected:
-  TxnContext context_;
-  TransactionManager *transaction_manager_;
-  size_t thread_id_;
-};
+  private:
+    StoredProcedure(const StoredProcedure &);
+    StoredProcedure &operator=(const StoredProcedure &);
+
+  protected:
+    TxnContext context_;
+    TransactionManager *transaction_manager_;
+    size_t thread_id_;
+  };
 }
 
 #endif

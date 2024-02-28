@@ -12,15 +12,15 @@
 #include "server.h"
 #include "zmalloc.h"
 
-Client::Client(RdmaResource* res, bool isForMaster, const char* rdmaConnStr)
-    : resource(res) {
+Client::Client(RdmaResource *res, bool isForMaster, const char *rdmaConnStr)
+  : resource(res) {
   wid = free = size = 0;
   this->ctx = res->NewRdmaContext(isForMaster);
   if (rdmaConnStr)
     this->SetRemoteConnParam(rdmaConnStr);
 }
 
-int Client::ExchConnParam(const char* ip, int port, Server* server) {
+int Client::ExchConnParam(const char *ip, int port, Server *server) {
   //open the socket to exch rdma resouces
   char neterr[ANET_ERR_LEN];
   int sockfd = anetTcpConnect(neterr, const_cast<char *>(ip), port);
@@ -29,7 +29,7 @@ int Client::ExchConnParam(const char* ip, int port, Server* server) {
     exit(1);
   }
 
-  const char* conn_str = GetConnString(server->GetWorkerId());
+  const char *conn_str = GetConnString(server->GetWorkerId());
   int conn_len = strlen(conn_str);
   if (write(sockfd, conn_str, conn_len) != conn_len) {
     return -1;
@@ -40,8 +40,8 @@ int Client::ExchConnParam(const char* ip, int port, Server* server) {
   int n = read(sockfd, msg, conn_len);
   if (n != conn_len) {
     epicLog(LOG_WARNING,
-            "Failed to read conn param from server (%s; read %d bytes)\n",
-            strerror(errno), n);
+      "Failed to read conn param from server (%s; read %d bytes)\n",
+      strerror(errno), n);
     return -1;
   }
   msg[n] = '\0';
@@ -53,9 +53,9 @@ int Client::ExchConnParam(const char* ip, int port, Server* server) {
   /*
    * TODO: check whether this is needed!
    */
-//    if (write(sockfd, ACK_CONN_STRING, sizeof ACK_CONN_STRING)) {
-//        /*do  nothing */
-//    }
+   //    if (write(sockfd, ACK_CONN_STRING, sizeof ACK_CONN_STRING)) {
+   //        /*do  nothing */
+   //    }
   if (IsForMaster())
     server->PostConnectMaster(sockfd, server);
 
@@ -64,7 +64,7 @@ int Client::ExchConnParam(const char* ip, int port, Server* server) {
 }
 
 int Client::SetRemoteConnParam(const char *conn) {
-  const char* p = conn;
+  const char *p = conn;
   if (resource->IsMaster()) {  //in the Master thread, connected to worker
     wid = resource->GetCounter();
   } else if (IsForMaster()) {  //in the worker thread, but connected to Master
@@ -79,10 +79,10 @@ int Client::SetRemoteConnParam(const char *conn) {
   return ctx->SetRemoteConnParam(p);
 }
 
-const char* Client::GetConnString(int workerid) {
-  const char* rdmaConn = ctx->GetRdmaConnString();
+const char *Client::GetConnString(int workerid) {
+  const char *rdmaConn = ctx->GetRdmaConnString();
   if (!connstr)
-    connstr = (char*) zmalloc(MAX_CONN_STRLEN + 1);
+    connstr = (char *)zmalloc(MAX_CONN_STRLEN + 1);
 
   if (resource->IsMaster()) {  //in the Master thread
     sprintf(connstr, "%04x:%s", wid, rdmaConn);  //wid is already set

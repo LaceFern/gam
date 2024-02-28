@@ -39,7 +39,7 @@
 #include <features.h>
 #endif
 
-/* Define redis_fstat to fstat or fstat64() */
+ /* Define redis_fstat to fstat or fstat64() */
 #if defined(__APPLE__) && !defined(MAC_OS_X_VERSION_10_6)
 #define redis_fstat fstat64
 #define redis_stat stat64
@@ -109,9 +109,9 @@
 #define rdb_fsync_range(fd,off,size) fsync(fd)
 #endif
 
-/* Check if we can use setproctitle().
- * BSD systems have support for it, we provide an implementation for
- * Linux and osx. */
+ /* Check if we can use setproctitle().
+  * BSD systems have support for it, we provide an implementation for
+  * Linux and osx. */
 #if (defined __NetBSD__ || defined __FreeBSD__ || defined __OpenBSD__)
 #define USE_SETPROCTITLE
 #endif
@@ -181,11 +181,11 @@ void setproctitle(const char *fmt, ...);
 
 #if !defined(BYTE_ORDER) || \
     (BYTE_ORDER != BIG_ENDIAN && BYTE_ORDER != LITTLE_ENDIAN)
-/* you must determine what the correct bit order is for
- * your compiler - the next line is an intentional error
- * which will force your compiles to bomb until you fix
- * the above macros.
- */
+ /* you must determine what the correct bit order is for
+  * your compiler - the next line is an intentional error
+  * which will force your compiles to bomb until you fix
+  * the above macros.
+  */
 #error "Undefined or invalid BYTE_ORDER"
 #endif
 

@@ -1268,7 +1268,7 @@ void Check(uint64 expected, uint64 actual) {
   }
 }
 
-void Test(const uint64* expected, int offset, int len) {
+void Test(const uint64 *expected, int offset, int len) {
   const uint128 u = CityHash128(data + offset, len);
   const uint128 v = CityHash128WithSeed(data + offset, len, kSeed128);
   Check(expected[0], CityHash64(data + offset, len));
@@ -1305,17 +1305,17 @@ void Dump(int offset, int len) {
   uint64 crc256_results[4];
   CityHashCrc256(data + offset, len, crc256_results);
   cout << hex
-       << "{C(" << CityHash64(data + offset, len) << "), "
-       << "C(" << CityHash64WithSeed(data + offset, len, kSeed0) << "), "
-       << "C(" << CityHash64WithSeeds(data + offset, len, kSeed0, kSeed1) << "), "
-       << "C(" << Uint128Low64(u) << "), "
-       << "C(" << Uint128High64(u) << "), "
-       << "C(" << Uint128Low64(v) << "), "
-       << "C(" << Uint128High64(v) << "),\n"
-       << "C(" << Uint128Low64(y) << "), "
-       << "C(" << Uint128High64(y) << "), "
-       << "C(" << Uint128Low64(z) << "), "
-       << "C(" << Uint128High64(z) << "),\n";
+    << "{C(" << CityHash64(data + offset, len) << "), "
+    << "C(" << CityHash64WithSeed(data + offset, len, kSeed0) << "), "
+    << "C(" << CityHash64WithSeeds(data + offset, len, kSeed0, kSeed1) << "), "
+    << "C(" << Uint128Low64(u) << "), "
+    << "C(" << Uint128High64(u) << "), "
+    << "C(" << Uint128Low64(v) << "), "
+    << "C(" << Uint128High64(v) << "),\n"
+    << "C(" << Uint128Low64(y) << "), "
+    << "C(" << Uint128High64(y) << "), "
+    << "C(" << Uint128Low64(z) << "), "
+    << "C(" << Uint128High64(z) << "),\n";
   for (int i = 0; i < 4; i++) {
     cout << hex << "C(" << crc256_results[i] << (i == 3 ? "),\n" : "), ");
   }
@@ -1324,10 +1324,10 @@ void Dump(int offset, int len) {
 
 #endif
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   setup();
   int i = 0;
-  for ( ; i < kTestSize - 1; i++) {
+  for (; i < kTestSize - 1; i++) {
     Test(testdata[i], i * i, i);
   }
   Test(testdata[i], 0, kDataSize);

@@ -7,35 +7,35 @@
 #include <string>
 
 namespace Database {
-enum PhaseType
-  : size_t {
+  enum PhaseType
+    : size_t {
     INDEX_READ,
-  INDEX_INSERT,
-  INDEX_INSERT_LOCK,
-  INDEX_INSERT_MUTATE,
-  INDEX_INSERT_GALLOCATE,
-  CC_SELECT,
-  CC_INSERT,
-  CC_COMMIT,
-  CC_ABORT,
-  TXN_ABORT,
-  TXN_EXECUTE,
-  LOCK_READ_TEST,
-  LOCK_WRITE_TEST,
-  POPULATE_DISK,
-  POPULATE_GALLOCATE,
-  POPULATE_INSERT,
-  kPhaseCount
-};
+    INDEX_INSERT,
+    INDEX_INSERT_LOCK,
+    INDEX_INSERT_MUTATE,
+    INDEX_INSERT_GALLOCATE,
+    CC_SELECT,
+    CC_INSERT,
+    CC_COMMIT,
+    CC_ABORT,
+    TXN_ABORT,
+    TXN_EXECUTE,
+    LOCK_READ_TEST,
+    LOCK_WRITE_TEST,
+    POPULATE_DISK,
+    POPULATE_GALLOCATE,
+    POPULATE_INSERT,
+    kPhaseCount
+  };
 
-const static std::string phase_type_string[kPhaseCount] = { "INDEX_READ",
-    "INDEX_INSERT", "INDEX_INSERT_LOCK", "INDEX_INSERT_MUTATE",
-    "INDEX_INSERT_GALLOCATE", "CC_SELECT", "CC_INSERT", "CC_COMMIT", "CC_ABORT",
-    "TXN_ABORT", "TXN_EXECUTE", "LOCK_READ", "LOCK_WRITE", "POPULATE_DISK",
-    "POPULATE_GALLOCATE", "POPULATE_INSERT" };
+  const static std::string phase_type_string[kPhaseCount] = { "INDEX_READ",
+      "INDEX_INSERT", "INDEX_INSERT_LOCK", "INDEX_INSERT_MUTATE",
+      "INDEX_INSERT_GALLOCATE", "CC_SELECT", "CC_INSERT", "CC_COMMIT", "CC_ABORT",
+      "TXN_ABORT", "TXN_EXECUTE", "LOCK_READ", "LOCK_WRITE", "POPULATE_DISK",
+      "POPULATE_GALLOCATE", "POPULATE_INSERT" };
 
-extern TimeMeasurer** profiler_timers;
-extern long long** profile_elapsed_time;
+  extern TimeMeasurer **profiler_timers;
+  extern long long **profile_elapsed_time;
 }
 
 #if defined(PROFILE)

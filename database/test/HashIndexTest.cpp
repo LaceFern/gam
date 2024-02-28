@@ -16,7 +16,7 @@ static uint64_t GetKey(size_t partition_id, size_t thread_id, size_t op_id) {
   return ret;
 }
 void ThreadExecute(size_t partition_id, size_t thread_id, HashIndex *hash_index) {
-  while (!is_begin) ;
+  while (!is_begin);
   GAlloc *gallocator = gallocators[thread_id];
   for (int i = 0; i < num_txn; ++i) {
     uint64_t key = GetKey(partition_id, thread_id, i);
@@ -28,14 +28,14 @@ void ThreadExecute(size_t partition_id, size_t thread_id, HashIndex *hash_index)
   }
 }
 void ThreadCheck(size_t partition_id, size_t thread_id, HashIndex *hash_index) {
-  while (!is_begin) ;
+  while (!is_begin);
   GAlloc *gallocator = gallocators[thread_id];
   for (int i = 0; i < num_txn; ++i) {
     uint64_t key = GetKey(partition_id, thread_id, i);
     uint64_t exp_value = key;
     GAddr data_addr = hash_index->SearchRecord(
-        key, gallocator, thread_id);
-    uint64_t act_value= 0;
+      key, gallocator, thread_id);
+    uint64_t act_value = 0;
     gallocator->Read(data_addr, &act_value, sizeof(uint64_t));
     assert(act_value == exp_value);
   }
@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
   std::string my_host_name = ClusterHelper::GetLocalHostName();
   ClusterConfig config(my_host_name, port, config_filename);
   ClusterSync synchronizer(&config);
-   
+
   BenchmarkInitiator initiator(gThreadCount, &config);
   // gam storage
   initiator.InitGAllocator();
@@ -55,7 +55,7 @@ int main(int argc, char *argv[]) {
   GAddr storage_addr = Gnullptr;
   if (config.IsMaster()) {
     storage_addr = default_gallocator->AlignedMalloc(
-        HashIndex::GetSerializeSize());
+      HashIndex::GetSerializeSize());
     HashIndex hash_index;
     hash_index.Init(kHashIndexBucketHeaderNum, default_gallocator);
     hash_index.Serialize(storage_addr, default_gallocator);
@@ -71,8 +71,8 @@ int main(int argc, char *argv[]) {
     boost::thread_group thread_group;
     for (size_t i = 0; i < gThreadCount; ++i) {
       thread_group.create_thread(
-          boost::bind(&ThreadExecute, config.GetMyPartitionId(), i, &hash_index)
-          );
+        boost::bind(&ThreadExecute, config.GetMyPartitionId(), i, &hash_index)
+      );
     }
     is_begin = true;
     thread_group.join_all();
@@ -89,14 +89,14 @@ int main(int argc, char *argv[]) {
     for (size_t i = 0; i < gThreadCount; ++i) {
       thread_group.create_thread(
         boost::bind(&ThreadCheck, config.GetMyPartitionId(), i, &hash_index)
-        );
+      );
     }
     is_begin = true;
     thread_group.join_all();
-  } 
+  }
   std::cout << "finish check" << std::endl;
   synchronizer.Fence();
-  
+
   std::cout << "exit..." << std::endl;
   return 0;
 }

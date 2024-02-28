@@ -109,8 +109,7 @@ static const uint32_t c1 = 0xcc9e2d51;
 static const uint32_t c2 = 0x1b873593;
 
 // A 32-bit to 32-bit integer hash copied from Murmur3.
-static uint32 fmix(uint32 h)
-{
+static uint32 fmix(uint32 h) {
   h ^= h >> 16;
   h *= 0x85ebca6b;
   h ^= h >> 13;
@@ -171,8 +170,8 @@ static uint32 Hash32Len5to12(const char *s, size_t len) {
 uint32 CityHash32(const char *s, size_t len) {
   if (len <= 24) {
     return len <= 12 ?
-        (len <= 4 ? Hash32Len0to4(s, len) : Hash32Len5to12(s, len)) :
-        Hash32Len13to24(s, len);
+      (len <= 4 ? Hash32Len0to4(s, len) : Hash32Len5to12(s, len)) :
+      Hash32Len13to24(s, len);
   }
 
   // len > 24
@@ -296,13 +295,13 @@ static uint64 HashLen17to32(const char *s, size_t len) {
   uint64 c = Fetch64(s + len - 8) * mul;
   uint64 d = Fetch64(s + len - 16) * k2;
   return HashLen16(Rotate(a + b, 43) + Rotate(c, 30) + d,
-                   a + Rotate(b + k2, 18) + c, mul);
+    a + Rotate(b + k2, 18) + c, mul);
 }
 
 // Return a 16-byte hash for 48 bytes.  Quick and dirty.
 // Callers do best to use "random-looking" values for a and b.
 static pair<uint64, uint64> WeakHashLen32WithSeeds(
-    uint64 w, uint64 x, uint64 y, uint64 z, uint64 a, uint64 b) {
+  uint64 w, uint64 x, uint64 y, uint64 z, uint64 a, uint64 b) {
   a += w;
   b = Rotate(b + a + z, 21);
   uint64 c = a;
@@ -314,13 +313,13 @@ static pair<uint64, uint64> WeakHashLen32WithSeeds(
 
 // Return a 16-byte hash for s[0] ... s[31], a, and b.  Quick and dirty.
 static pair<uint64, uint64> WeakHashLen32WithSeeds(
-    const char* s, uint64 a, uint64 b) {
+  const char *s, uint64 a, uint64 b) {
   return WeakHashLen32WithSeeds(Fetch64(s),
-                                Fetch64(s + 8),
-                                Fetch64(s + 16),
-                                Fetch64(s + 24),
-                                a,
-                                b);
+    Fetch64(s + 8),
+    Fetch64(s + 16),
+    Fetch64(s + 24),
+    a,
+    b);
 }
 
 // Return an 8-byte hash for 33 to 64 bytes.
@@ -380,7 +379,7 @@ uint64 CityHash64(const char *s, size_t len) {
     len -= 64;
   } while (len != 0);
   return HashLen16(HashLen16(v.first, w.first) + ShiftMix(y) * k1 + z,
-                   HashLen16(v.second, w.second) + x);
+    HashLen16(v.second, w.second) + x);
 }
 
 uint64 CityHash64WithSeed(const char *s, size_t len, uint64 seed) {
@@ -388,7 +387,7 @@ uint64 CityHash64WithSeed(const char *s, size_t len, uint64 seed) {
 }
 
 uint64 CityHash64WithSeeds(const char *s, size_t len,
-                           uint64 seed0, uint64 seed1) {
+  uint64 seed0, uint64 seed1) {
   return HashLen16(CityHash64(s, len) - seed0, seed1);
 }
 
@@ -484,14 +483,14 @@ uint128 CityHash128WithSeed(const char *s, size_t len, uint128 seed) {
   x = HashLen16(x, v.first);
   y = HashLen16(y + z, w.first);
   return uint128(HashLen16(x + v.second, w.second) + y,
-                 HashLen16(x + w.second, y + v.second));
+    HashLen16(x + w.second, y + v.second));
 }
 
 uint128 CityHash128(const char *s, size_t len) {
   return len >= 16 ?
-      CityHash128WithSeed(s + 16, len - 16,
-                          uint128(Fetch64(s), Fetch64(s + 8) + k0)) :
-      CityHash128WithSeed(s, len, uint128(k0, k1));
+    CityHash128WithSeed(s + 16, len - 16,
+      uint128(Fetch64(s), Fetch64(s + 8) + k0)) :
+    CityHash128WithSeed(s, len, uint128(k0, k1));
 }
 
 #ifdef __SSE4_2__
@@ -500,7 +499,7 @@ uint128 CityHash128(const char *s, size_t len) {
 
 // Requires len >= 240.
 static void CityHashCrc256Long(const char *s, size_t len,
-                               uint32 seed, uint64 *result) {
+  uint32 seed, uint64 *result) {
   uint64 a = Fetch64(s + 56) + k0;
   uint64 b = Fetch64(s + 96) + k0;
   uint64 c = result[0] = HashLen16(b, len);
@@ -611,7 +610,7 @@ uint128 CityHashCrc128WithSeed(const char *s, size_t len, uint128 seed) {
     uint64 u = Uint128High64(seed) + result[0];
     uint64 v = Uint128Low64(seed) + result[1];
     return uint128(HashLen16(u, v + result[2]),
-                   HashLen16(Rotate(v, 32), u * k0 + result[3]));
+      HashLen16(Rotate(v, 32), u * k0 + result[3]));
   }
 }
 

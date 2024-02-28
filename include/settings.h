@@ -22,7 +22,7 @@ using namespace std;
 /*
  * test switch
  */
-//#define WH_USE_LOCK
+ //#define WH_USE_LOCK
 #define USE_LRU
 #define LRU_NUM 10
 //#define USE_APPR_LRU
@@ -107,11 +107,11 @@ using namespace std;
  */
 #define GID_INDEX 3
 
-/**
- * Profile test configuration
- */
-//#define PROFILE_LATENCY
-//#define COLLECT_NETWORK_LATENCY
+ /**
+  * Profile test configuration
+  */
+  //#define PROFILE_LATENCY
+  //#define COLLECT_NETWORK_LATENCY
 #define COLLECT_CDF
 //#define GAM_SC
 

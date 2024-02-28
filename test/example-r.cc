@@ -16,8 +16,8 @@ int main() {
   int size = 4097;
   int iteration = 10000;
 
-  GAlloc* allocator = GAllocFactory::CreateAllocator(&conf);
-  GAlloc* allocator2 = GAllocFactory::CreateAllocator();
+  GAlloc *allocator = GAllocFactory::CreateAllocator(&conf);
+  GAlloc *allocator2 = GAllocFactory::CreateAllocator();
 
   sleep(2);
 
@@ -56,7 +56,7 @@ int main() {
     for (k = 0; k < size; k++) {
       if (buf[k] != wbuf[k]) {
         epicLog(LOG_WARNING, "read failed buf[%d] (%d) != wbuf[%d] (%d)", k,
-                buf[k], k, wbuf[k]);
+          buf[k], k, wbuf[k]);
         exit(-1);
       }
     }

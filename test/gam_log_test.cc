@@ -175,7 +175,7 @@ inline void interval_between_access(long delta_time_usec) {
 
 void do_log(void *arg) {
   //printf("Show the start of do_log\n");
-  struct trace_t *trace = (struct trace_t *) arg;
+  struct trace_t *trace = (struct trace_t *)arg;
 
 
   int ret;
@@ -193,52 +193,52 @@ void do_log(void *arg) {
       volatile char op = trace->logs[i * sizeof(RWlog)];
       cur = &(trace->logs[i * sizeof(RWlog)]);
       if (op == 'R') {
-        struct RWlog *log = (struct RWlog *) cur;
-        if(log->usec - old_ts <= 999999999) {
+        struct RWlog *log = (struct RWlog *)cur;
+        if (log->usec - old_ts <= 999999999) {
           total_interval += log->usec - old_ts;
         }
         interval_between_access(log->usec - old_ts);
         char buf;
         unsigned long addr = log->addr & MMAP_ADDR_MASK;
-	//printf("Address is: %lu\n", addr);
-	//fflush(stdout);
+        //printf("Address is: %lu\n", addr);
+        //fflush(stdout);
         size_t cache_line_block = (addr) / (BLOCK_SIZE * resize_ratio);
         size_t cache_line_offset = (addr) % (BLOCK_SIZE * resize_ratio);
         old_ts = log->usec;
 
       } else if (op == 'W') {
-        struct RWlog *log = (struct RWlog *) cur;
-        if(log->usec - old_ts <= 999999999) {
+        struct RWlog *log = (struct RWlog *)cur;
+        if (log->usec - old_ts <= 999999999) {
           total_interval += log->usec - old_ts;
         }
         interval_between_access(log->usec - old_ts);
         char buf = '0';
         unsigned long addr = log->addr & MMAP_ADDR_MASK;
-	//printf("Address is: %lu\n", addr);
-	//fflush(stdout);
+        //printf("Address is: %lu\n", addr);
+        //fflush(stdout);
         size_t cache_line_block = (addr) / (BLOCK_SIZE * resize_ratio);
         size_t cache_line_offset = (addr) % (BLOCK_SIZE * resize_ratio);
         old_ts = log->usec;
 
       } else if (op == 'M') {
-        struct Mlog *log = (struct Mlog *) cur;
-        if(log->hdr.usec <= 999999999) {
+        struct Mlog *log = (struct Mlog *)cur;
+        if (log->hdr.usec <= 999999999) {
           total_interval += log->hdr.usec;
         }
         interval_between_access(log->hdr.usec);
         unsigned int len = log->len;
         old_ts += log->hdr.usec;
       } else if (op == 'B') {
-        struct Blog *log = (struct Blog *) cur;
+        struct Blog *log = (struct Blog *)cur;
         interval_between_access(log->usec - old_ts);
-        if(log->usec - old_ts <= 999999999) {
+        if (log->usec - old_ts <= 999999999) {
           total_interval += log->usec - old_ts;
         }
         old_ts = log->usec;
       } else if (op == 'U') {
-        struct Ulog *log = (struct Ulog *) cur;
+        struct Ulog *log = (struct Ulog *)cur;
         interval_between_access(log->hdr.usec);
-        if(log->hdr.usec <= 999999999) {
+        if (log->hdr.usec <= 999999999) {
           total_interval += log->hdr.usec;
         }
         old_ts += log->hdr.usec;
@@ -254,7 +254,7 @@ void do_log(void *arg) {
 
 void standalone(void *arg) {
   //printf("Show the start of standalone\n");
-  struct memory_config_t *trace = (struct memory_config_t *) arg;
+  struct memory_config_t *trace = (struct memory_config_t *)arg;
   //GAlloc *alloc = GAllocFactory::CreateAllocator();
   //for (int i = 1; i <= trace->num_comp_nodes; i++) {
     //printf("Getting %lld\n", SYNC_KEY + i + 10);
@@ -263,7 +263,7 @@ void standalone(void *arg) {
     //printf("Get done \n");
     //epicAssert(id == i);
   //}
-  while(1){}
+  while (1) {}
 }
 
 int load_trace(int fd, struct trace_t *arg, unsigned long ts_limit) {
@@ -271,21 +271,21 @@ int load_trace(int fd, struct trace_t *arg, unsigned long ts_limit) {
   assert(sizeof(RWlog) == sizeof(Mlog));
   assert(sizeof(RWlog) == sizeof(Blog));
   assert(sizeof(RWlog) == sizeof(Ulog));
-/*
-	char *chunk = (char *)malloc(LOG_NUM_TOTAL * sizeof(RWlog));
-	char *buf;
-	if (!chunk) {
-		printf("fail to alloc buf to hold logs\n");
-		return -1;
-	} else {
-		arg->logs = chunk;
-	}
-	int fd = open(trace_name, O_RDONLY);
-	if (fd < 0) {
-		printf("fail to open log file\n");
-		return fd;
-	}
-*/
+  /*
+    char *chunk = (char *)malloc(LOG_NUM_TOTAL * sizeof(RWlog));
+    char *buf;
+    if (!chunk) {
+      printf("fail to alloc buf to hold logs\n");
+      return -1;
+    } else {
+      arg->logs = chunk;
+    }
+    int fd = open(trace_name, O_RDONLY);
+    if (fd < 0) {
+      printf("fail to open log file\n");
+      return fd;
+    }
+  */
   char *chunk = arg->logs;
   memset(chunk, 0, LOG_NUM_TOTAL * sizeof(RWlog));
   size_t size = 0;
@@ -301,7 +301,7 @@ int load_trace(int fd, struct trace_t *arg, unsigned long ts_limit) {
     unsigned long last_ts = 0;
     while (tail - buf >= 0) {
       if (*tail == 'R' || *tail == 'W' || *tail == 'B')
-        last_ts = ((struct RWlog *) tail)->usec;
+        last_ts = ((struct RWlog *)tail)->usec;
       else if (*tail == 'M' || *tail == 'U') {
         tail -= sizeof(RWlog);
         continue;
@@ -347,8 +347,8 @@ int main(int argc, char **argv) {
   num_nodes = atoi(argv[arg_node_cnt]);
   num_threads = atoi(argv[arg_num_threads]);
 #ifdef single_thread_test
-    num_threads = 1;
-    num_comp_nodes = 1;
+  num_threads = 1;
+  num_comp_nodes = 1;
 #endif
   string ip_master = string(argv[arg_ip_master]);
   string ip_worker = string(argv[arg_ip_worker]);
@@ -369,7 +369,7 @@ int main(int argc, char **argv) {
 #endif
 
   //open files
-  if(is_compute) {
+  if (is_compute) {
     int *fd = new int[num_threads];
     for (int i = 0; i < num_threads; ++i) {
       fd[i] = open(argv[arg_log1 + i], O_RDONLY);
@@ -396,7 +396,7 @@ int main(int argc, char **argv) {
       args[i].is_master = is_master;
       args[i].is_compute = is_compute;
       args[i].tid = i;
-      args[i].logs = (char *) malloc(LOG_NUM_TOTAL * sizeof(RWlog)); // This should be allocated locally
+      args[i].logs = (char *)malloc(LOG_NUM_TOTAL * sizeof(RWlog)); // This should be allocated locally
       args[i].benchmark_size = benchmark_size;
       if (!args[i].logs)
         printf("fail to alloc buf to hold logs\n");

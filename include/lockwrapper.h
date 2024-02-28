@@ -14,7 +14,7 @@ class LockWrapper {
   std::mutex lock_;
 #endif
 
- public:
+public:
   inline void lock() {
 #ifdef USE_ATOMIC
     while (__atomic_test_and_set(&lock_, __ATOMIC_RELAXED))

@@ -18,12 +18,12 @@ typedef std::lock_guard<std::mutex> mutex_guard;
 // Prints a message if the two items aren't equal
 template <class T, class U>
 inline void do_expect_equal(T x, const char *xname, U y,
-                            const char *yname, size_t line) {
+    const char *yname, size_t line) {
     if (x != y) {
         mutex_guard m(print_lock);
         main_return_value = EXIT_FAILURE;
         std::cout << "ERROR:\t" << xname << "(" << x << ") does not equal "
-                  << yname << "(" << y << ") on line " << line << std::endl;
+            << yname << "(" << y << ") on line " << line << std::endl;
     }
 }
 #define EXPECT_EQ(x, y) do_expect_equal(x, #x, y, #y, __LINE__)
@@ -31,12 +31,12 @@ inline void do_expect_equal(T x, const char *xname, U y,
 // Prints a message if the two items are equal
 template <class T, class U>
 inline void do_expect_not_equal(T x, const char *xname, U y,
-                                const char *yname, size_t line) {
+    const char *yname, size_t line) {
     if (x == y) {
         mutex_guard m(print_lock);
         main_return_value = EXIT_FAILURE;
         std::cout << "ERROR:\t" << xname << "(" << x << ") equals "
-                  << yname << "(" << y << ") on line " << line << std::endl;
+            << yname << "(" << y << ") on line " << line << std::endl;
     }
 }
 #define EXPECT_NE(x, y) do_expect_not_equal(x, #x, y, #y, __LINE__)
@@ -47,7 +47,7 @@ inline void do_expect_true(bool x, const char *xname, size_t line) {
         mutex_guard m(print_lock);
         main_return_value = EXIT_FAILURE;
         std::cout << "ERROR:\t" << xname << "(" << x << ") is false on line "
-                  << line << std::endl;
+            << line << std::endl;
     }
 }
 #define EXPECT_TRUE(x) do_expect_true(x, #x, __LINE__)
@@ -58,7 +58,7 @@ inline void do_expect_false(bool x, const char *xname, size_t line) {
         mutex_guard m(print_lock);
         main_return_value = EXIT_FAILURE;
         std::cout << "ERROR:\t" << xname << "(" << x << ") is true on line "
-                  << line << std::endl;
+            << line << std::endl;
     }
 }
 #define EXPECT_FALSE(x) do_expect_false(x, #x, __LINE__)
@@ -66,12 +66,12 @@ inline void do_expect_false(bool x, const char *xname, size_t line) {
 // Prints a message and exists if the two items aren't equal
 template <class T, class U>
 inline void do_assert_equal(T x, const char *xname, U y,
-                            const char *yname, size_t line) {
+    const char *yname, size_t line) {
     if (x != y) {
         mutex_guard m(print_lock);
         std::cout << "FATAL ERROR:\t" << xname << "(" << x
-                  << ") does not equal " << yname << "(" << y << ") on line "
-                  << line << std::endl;
+            << ") does not equal " << yname << "(" << y << ") on line "
+            << line << std::endl;
         exit(EXIT_FAILURE);
     }
 }
@@ -82,7 +82,7 @@ inline void do_assert_true(bool x, const char *xname, size_t line) {
     if (!x) {
         mutex_guard m(print_lock);
         std::cout << "FATAL ERROR:\t" << xname << "(" << x
-                  << ") is false on line " << line << std::endl;
+            << ") is false on line " << line << std::endl;
         exit(EXIT_FAILURE);
     }
 }
@@ -90,26 +90,26 @@ inline void do_assert_true(bool x, const char *xname, size_t line) {
 
 
 // Parses boolean flags and flags with positive integer arguments
-void parse_flags(int argc, char**argv, const char* description,
-                 const char* args[], size_t* arg_vars[],
-                 const char* arg_help[], size_t arg_num,
-                 const char* flags[], bool* flag_vars[],
-                 const char* flag_help[], size_t flag_num) {
+void parse_flags(int argc, char **argv, const char *description,
+    const char *args[], size_t *arg_vars[],
+    const char *arg_help[], size_t arg_num,
+    const char *flags[], bool *flag_vars[],
+    const char *flag_help[], size_t flag_num) {
 
     errno = 0;
     for (int i = 0; i < argc; i++) {
         for (size_t j = 0; j < arg_num; j++) {
             if (strcmp(argv[i], args[j]) == 0) {
-                if (i == argc-1) {
+                if (i == argc - 1) {
                     std::cerr << "You must provide a positive integer argument"
-                              << " after the " << args[j] << " argument"
-                              << std::endl;
+                        << " after the " << args[j] << " argument"
+                        << std::endl;
                     exit(EXIT_FAILURE);
                 } else {
-                    size_t argval = strtoull(argv[i+1], NULL, 10);
+                    size_t argval = strtoull(argv[i + 1], NULL, 10);
                     if (errno != 0) {
                         std::cerr << "The argument to " << args[j]
-                                  << " must be a valid size_t" << std::endl;
+                            << " must be a valid size_t" << std::endl;
                         exit(EXIT_FAILURE);
                     } else {
                         *(arg_vars[j]) = argval;
@@ -127,12 +127,12 @@ void parse_flags(int argc, char**argv, const char* description,
             std::cerr << "Arguments:" << std::endl;
             for (size_t j = 0; j < arg_num; j++) {
                 std::cerr << args[j] << " (default " << *arg_vars[j] << "):\t"
-                          << arg_help[j] << std::endl;
+                    << arg_help[j] << std::endl;
             }
             for (size_t j = 0; j < flag_num; j++) {
                 std::cerr << flags[j] << " (default "
-                          << (*flag_vars[j] ? "true" : "false") << "):\t"
-                          << flag_help[j] << std::endl;
+                    << (*flag_vars[j] ? "true" : "false") << "):\t"
+                    << flag_help[j] << std::endl;
             }
             exit(0);
         }
@@ -158,7 +158,7 @@ std::string generateKey<std::string>(size_t i) {
     std::string ret(min_length, 'a');
     const size_t startret = min_length - num.size();
     for (size_t i = 0; i < num.size(); i++) {
-        ret[i+startret] = num[i];
+        ret[i + startret] = num[i];
     }
     return ret;
 }
@@ -169,7 +169,7 @@ template <class Table>
 class insert_thread {
 public:
     typedef typename std::vector<typename Table::key_type>::iterator it_t;
-    static void func(Table& table, it_t begin, it_t end) {
+    static void func(Table &table, it_t begin, it_t end) {
         for (;begin != end; begin++) {
             ASSERT_TRUE(table.insert(*begin, 0));
         }
@@ -184,9 +184,9 @@ template <class Table>
 class read_thread {
 public:
     typedef typename std::vector<typename Table::key_type>::iterator it_t;
-    static void func(Table& table, it_t begin, it_t end,
-                     std::atomic<size_t>& counter, bool in_table,
-                     std::atomic<bool>& finished) {
+    static void func(Table &table, it_t begin, it_t end,
+        std::atomic<size_t> &counter, bool in_table,
+        std::atomic<bool> &finished) {
         typename Table::mapped_type v;
         // We keep track of our own local counter for reads, to avoid
         // over-burdening the shared atomic counter
@@ -211,9 +211,9 @@ template <class Table>
 class read_insert_thread {
 public:
     typedef typename std::vector<typename Table::key_type>::iterator it_t;
-    static void func(Table& table, it_t begin, it_t end,
-                     std::atomic<size_t>& counter, const double insert_prob,
-                     const size_t start_seed) {
+    static void func(Table &table, it_t begin, it_t end,
+        std::atomic<size_t> &counter, const double insert_prob,
+        const size_t start_seed) {
         typename Table::mapped_type v;
         std::mt19937_64 gen(start_seed);
         std::uniform_real_distribution<double> dist(0.0, 1.0);

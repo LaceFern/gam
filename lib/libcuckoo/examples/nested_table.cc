@@ -16,27 +16,27 @@ int main() {
     OuterTable tbl;
 
     tbl.insert("bob", std::unique_ptr<InnerTable>(new InnerTable));
-    tbl.update_fn("bob", [] (std::unique_ptr<InnerTable>& innerTbl) {
-            innerTbl->insert("nickname", "jimmy");
-            innerTbl->insert("pet", "dog");
-            innerTbl->insert("food", "bagels");
+    tbl.update_fn("bob", [](std::unique_ptr<InnerTable> &innerTbl) {
+        innerTbl->insert("nickname", "jimmy");
+        innerTbl->insert("pet", "dog");
+        innerTbl->insert("food", "bagels");
         });
 
     tbl.insert("jack", std::unique_ptr<InnerTable>(new InnerTable));
-    tbl.update_fn("jack", [] (std::unique_ptr<InnerTable>& innerTbl) {
-            innerTbl->insert("friend", "bob");
-            innerTbl->insert("activity", "sleeping");
-            innerTbl->insert("language", "javascript");
+    tbl.update_fn("jack", [](std::unique_ptr<InnerTable> &innerTbl) {
+        innerTbl->insert("friend", "bob");
+        innerTbl->insert("activity", "sleeping");
+        innerTbl->insert("language", "javascript");
         });
 
     {
         auto lt = tbl.lock_table();
-        for (const auto& item : lt) {
+        for (const auto &item : lt) {
             std::cout << "Properties for " << item.first << std::endl;
             auto innerLt = item.second->lock_table();
             for (auto innerItem : innerLt) {
                 std::cout << "\t" << innerItem.first << " = "
-                          << innerItem.second << std::endl;
+                    << innerItem.second << std::endl;
             }
         }
     }

@@ -19,14 +19,14 @@ typedef cuckoohash_map<KeyType, size_t, CityHasher<KeyType> > Table;
 const size_t thread_num = 8;
 const size_t total_inserts = 10000000;
 
-void do_inserts(Table& freq_map) {
+void do_inserts(Table &freq_map) {
     std::mt19937_64 gen(
         std::chrono::system_clock::now().time_since_epoch().count());
     std::uniform_int_distribution<KeyType> dist(
         std::numeric_limits<KeyType>::min(),
         std::numeric_limits<KeyType>::max());
-    auto updatefn = [](size_t& num) { ++num; };
-    for (size_t i = 0; i < total_inserts/thread_num; i++) {
+    auto updatefn = [](size_t &num) { ++num; };
+    for (size_t i = 0; i < total_inserts / thread_num; i++) {
         KeyType num = dist(gen);
         // If the number is already in the table, it will increment
         // its count by one. Otherwise it will insert a new entry in
@@ -53,7 +53,7 @@ int main() {
     size_t maxval = 0;
     {
         auto lt = freq_map.lock_table();
-        for (const auto& it : lt) {
+        for (const auto &it : lt) {
             if (it.second > maxval) {
                 maxkey = it.first;
                 maxval = it.second;

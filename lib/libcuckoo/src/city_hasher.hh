@@ -10,8 +10,8 @@
 template <class Key>
 class CityHasher {
 public:
-    size_t operator()(const Key& k) const {
-        return CityHash64((const char*) &k, sizeof(k));
+    size_t operator()(const Key &k) const {
+        return CityHash64((const char *)&k, sizeof(k));
     }
 };
 
@@ -20,7 +20,7 @@ public:
 template <>
 class CityHasher<std::string> {
 public:
-    size_t operator()(const std::string& k) const {
+    size_t operator()(const std::string &k) const {
         return CityHash64(k.c_str(), k.size());
     }
 };

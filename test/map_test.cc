@@ -7,7 +7,7 @@
 #include "map.h"
 
 int main() {
-  Map<int, int, 10> m { "m" };
+  Map<int, int, 10> m{ "m" };
   int iter = 1;
   for (int i = 0; i < iter; i++) {
     m[i] = i - 1;
@@ -28,7 +28,8 @@ int main() {
 
   try {
     sm.at(std::to_string(iter));
-  } catch (std::exception& e) {
+  }
+  catch (std::exception &e) {
     printf("key %d not exists (err = %s)\n", iter, e.what());
   }
 

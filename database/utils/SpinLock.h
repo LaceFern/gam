@@ -39,8 +39,8 @@ struct SpinLock {
   }
 
   inline void Lock() {
-    while(__sync_lock_test_and_set(&spinlock_, 1)) {
-      while(spinlock_);
+    while (__sync_lock_test_and_set(&spinlock_, 1)) {
+      while (spinlock_);
     }
   }
 
@@ -74,7 +74,7 @@ struct SpinLock {
     return spinlock_.v_ == 1;
   }
 
- private:
+private:
   boost::detail::spinlock spinlock_;
 };
 

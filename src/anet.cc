@@ -103,7 +103,7 @@ int anetKeepAlive(char *err, int fd, int interval) {
    * set to 7200 by default on Linux. Modify settings to make the feature
    * actually useful. */
 
-  /* Send first probe after interval. */
+   /* Send first probe after interval. */
   val = interval;
   if (setsockopt(fd, IPPROTO_TCP, TCP_KEEPIDLE, &val, sizeof(val)) < 0) {
     anetSetError(err, "setsockopt TCP_KEEPIDLE: %s\n", strerror(errno));
@@ -129,7 +129,7 @@ int anetKeepAlive(char *err, int fd, int interval) {
     return ANET_ERR;
   }
 #else
-  ((void) interval); /* Avoid unused var warning for non Linux systems. */
+  ((void)interval); /* Avoid unused var warning for non Linux systems. */
 #endif
 
   return ANET_OK;
@@ -153,7 +153,7 @@ int anetDisableTcpNoDelay(char *err, int fd) {
 
 int anetSetSendBuffer(char *err, int fd, int buffsize) {
   if (setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &buffsize, sizeof(buffsize))
-      == -1) {
+    == -1) {
     anetSetError(err, "setsockopt SO_SNDBUF: %s", strerror(errno));
     return ANET_ERR;
   }
@@ -191,7 +191,7 @@ int anetSendTimeout(char *err, int fd, long long ms) {
  * that are actually already IPv4 or IPv6 addresses. This turns the function
  * into a validating / normalizing function. */
 int anetGenericResolve(char *err, char *host, char *ipbuf, size_t ipbuf_len,
-                       int flags) {
+  int flags) {
   struct addrinfo hints, *info;
   int rv;
 
@@ -206,10 +206,10 @@ int anetGenericResolve(char *err, char *host, char *ipbuf, size_t ipbuf_len,
     return ANET_ERR;
   }
   if (info->ai_family == AF_INET) {
-    struct sockaddr_in *sa = (struct sockaddr_in *) info->ai_addr;
+    struct sockaddr_in *sa = (struct sockaddr_in *)info->ai_addr;
     inet_ntop(AF_INET, &(sa->sin_addr), ipbuf, ipbuf_len);
   } else {
-    struct sockaddr_in6 *sa = (struct sockaddr_in6 *) info->ai_addr;
+    struct sockaddr_in6 *sa = (struct sockaddr_in6 *)info->ai_addr;
     inet_ntop(AF_INET6, &(sa->sin6_addr), ipbuf, ipbuf_len);
   }
 
@@ -256,7 +256,7 @@ static int anetCreateSocket(char *err, int domain) {
 #define ANET_CONNECT_NONBLOCK 1
 #define ANET_CONNECT_BE_BINDING 2 /* Best effort binding. */
 static int anetTcpGenericConnect(char *err, char *addr, int port,
-                                 char *source_addr, int flags) {
+  char *source_addr, int flags) {
   int s = ANET_ERR, rv;
   char portstr[6]; /* strlen("65535") + 1; */
   struct addrinfo hints, *servinfo, *bservinfo, *p, *b;
@@ -316,20 +316,20 @@ static int anetTcpGenericConnect(char *err, char *addr, int port,
   if (p == NULL)
     anetSetError(err, "creating socket: %s", strerror(errno));
 
-  error: if (s != ANET_ERR) {
-    close(s);
-    s = ANET_ERR;
-  }
+error: if (s != ANET_ERR) {
+  close(s);
+  s = ANET_ERR;
+}
 
-  end: freeaddrinfo(servinfo);
+end: freeaddrinfo(servinfo);
 
-  /* Handle best effort binding: if a binding address was used, but it is
-   * not possible to create a socket, try again without a binding address. */
-  if (s == ANET_ERR && source_addr && (flags & ANET_CONNECT_BE_BINDING)) {
-    return anetTcpGenericConnect(err, addr, port, NULL, flags);
-  } else {
-    return s;
-  }
+/* Handle best effort binding: if a binding address was used, but it is
+ * not possible to create a socket, try again without a binding address. */
+if (s == ANET_ERR && source_addr && (flags & ANET_CONNECT_BE_BINDING)) {
+  return anetTcpGenericConnect(err, addr, port, NULL, flags);
+} else {
+  return s;
+}
 }
 
 int anetTcpConnect(char *err, char *addr, int port) {
@@ -341,15 +341,15 @@ int anetTcpNonBlockConnect(char *err, char *addr, int port) {
 }
 
 int anetTcpNonBlockBindConnect(char *err, char *addr, int port,
-                               char *source_addr) {
+  char *source_addr) {
   return anetTcpGenericConnect(err, addr, port, source_addr,
-  ANET_CONNECT_NONBLOCK);
+    ANET_CONNECT_NONBLOCK);
 }
 
 int anetTcpNonBlockBestEffortBindConnect(char *err, char *addr, int port,
-                                         char *source_addr) {
+  char *source_addr) {
   return anetTcpGenericConnect(err, addr, port, source_addr,
-  ANET_CONNECT_NONBLOCK | ANET_CONNECT_BE_BINDING);
+    ANET_CONNECT_NONBLOCK | ANET_CONNECT_BE_BINDING);
 }
 
 int anetUnixGenericConnect(char *err, char *path, int flags) {
@@ -365,7 +365,7 @@ int anetUnixGenericConnect(char *err, char *path, int flags) {
     if (anetNonBlock(err, s) != ANET_OK)
       return ANET_ERR;
   }
-  if (connect(s, (struct sockaddr*) &sa, sizeof(sa)) == -1) {
+  if (connect(s, (struct sockaddr *)&sa, sizeof(sa)) == -1) {
     if (errno == EINPROGRESS && flags & ANET_CONNECT_NONBLOCK)
       return s;
 
@@ -417,7 +417,7 @@ int anetWrite(int fd, char *buf, int count) {
 }
 
 static int anetListen(char *err, int s, struct sockaddr *sa, socklen_t len,
-                      int backlog) {
+  int backlog) {
   if (bind(s, sa, len) == -1) {
     anetSetError(err, "bind: %s", strerror(errno));
     close(s);
@@ -443,7 +443,7 @@ static int anetV6Only(char *err, int s) {
 }
 
 static int _anetTcpServer(char *err, int port, char *bindaddr, int af,
-                          int backlog) {
+  int backlog) {
   int s, rv;
   char _port[6]; /* strlen("65535") */
   struct addrinfo hints, *servinfo, *p;
@@ -475,8 +475,8 @@ static int _anetTcpServer(char *err, int port, char *bindaddr, int af,
     goto error;
   }
 
-  error: s = ANET_ERR;
-  end: freeaddrinfo(servinfo);
+error: s = ANET_ERR;
+end: freeaddrinfo(servinfo);
   return s;
 }
 
@@ -498,8 +498,8 @@ int anetUnixServer(char *err, char *path, mode_t perm, int backlog) {
   memset(&sa, 0, sizeof(sa));
   sa.sun_family = AF_LOCAL;
   strncpy(sa.sun_path, path, sizeof(sa.sun_path) - 1);
-  if (anetListen(err, s, (struct sockaddr*) &sa, sizeof(sa),
-                 backlog) == ANET_ERR)
+  if (anetListen(err, s, (struct sockaddr *)&sa, sizeof(sa),
+    backlog) == ANET_ERR)
     return ANET_ERR;
   if (perm)
     chmod(sa.sun_path, perm);
@@ -507,7 +507,7 @@ int anetUnixServer(char *err, char *path, mode_t perm, int backlog) {
 }
 
 static int anetGenericAccept(char *err, int s, struct sockaddr *sa,
-                             socklen_t *len) {
+  socklen_t *len) {
   int fd;
   while (1) {
     fd = accept(s, sa, len);
@@ -528,19 +528,19 @@ int anetTcpAccept(char *err, int s, char *ip, size_t ip_len, int *port) {
   int fd;
   struct sockaddr_storage sa;
   socklen_t salen = sizeof(sa);
-  if ((fd = anetGenericAccept(err, s, (struct sockaddr*) &sa, &salen)) == -1)
+  if ((fd = anetGenericAccept(err, s, (struct sockaddr *)&sa, &salen)) == -1)
     return ANET_ERR;
 
   if (sa.ss_family == AF_INET) {
-    struct sockaddr_in *s = (struct sockaddr_in *) &sa;
+    struct sockaddr_in *s = (struct sockaddr_in *)&sa;
     if (ip)
-      inet_ntop(AF_INET, (void*) &(s->sin_addr), ip, ip_len);
+      inet_ntop(AF_INET, (void *)&(s->sin_addr), ip, ip_len);
     if (port)
       *port = ntohs(s->sin_port);
   } else {
-    struct sockaddr_in6 *s = (struct sockaddr_in6 *) &sa;
+    struct sockaddr_in6 *s = (struct sockaddr_in6 *)&sa;
     if (ip)
-      inet_ntop(AF_INET6, (void*) &(s->sin6_addr), ip, ip_len);
+      inet_ntop(AF_INET6, (void *)&(s->sin6_addr), ip, ip_len);
     if (port)
       *port = ntohs(s->sin6_port);
   }
@@ -551,7 +551,7 @@ int anetUnixAccept(char *err, int s) {
   int fd;
   struct sockaddr_un sa;
   socklen_t salen = sizeof(sa);
-  if ((fd = anetGenericAccept(err, s, (struct sockaddr*) &sa, &salen)) == -1)
+  if ((fd = anetGenericAccept(err, s, (struct sockaddr *)&sa, &salen)) == -1)
     return ANET_ERR;
 
   return fd;
@@ -561,21 +561,21 @@ int anetPeerToString(int fd, char *ip, size_t ip_len, int *port) {
   struct sockaddr_storage sa;
   socklen_t salen = sizeof(sa);
 
-  if (getpeername(fd, (struct sockaddr*) &sa, &salen) == -1)
+  if (getpeername(fd, (struct sockaddr *)&sa, &salen) == -1)
     goto error;
   if (ip_len == 0)
     goto error;
 
   if (sa.ss_family == AF_INET) {
-    struct sockaddr_in *s = (struct sockaddr_in *) &sa;
+    struct sockaddr_in *s = (struct sockaddr_in *)&sa;
     if (ip)
-      inet_ntop(AF_INET, (void*) &(s->sin_addr), ip, ip_len);
+      inet_ntop(AF_INET, (void *)&(s->sin_addr), ip, ip_len);
     if (port)
       *port = ntohs(s->sin_port);
   } else if (sa.ss_family == AF_INET6) {
-    struct sockaddr_in6 *s = (struct sockaddr_in6 *) &sa;
+    struct sockaddr_in6 *s = (struct sockaddr_in6 *)&sa;
     if (ip)
-      inet_ntop(AF_INET6, (void*) &(s->sin6_addr), ip, ip_len);
+      inet_ntop(AF_INET6, (void *)&(s->sin6_addr), ip, ip_len);
     if (port)
       *port = ntohs(s->sin6_port);
   } else if (sa.ss_family == AF_UNIX) {
@@ -588,24 +588,24 @@ int anetPeerToString(int fd, char *ip, size_t ip_len, int *port) {
   }
   return 0;
 
-  error: if (ip) {
-    if (ip_len >= 2) {
-      ip[0] = '?';
-      ip[1] = '\0';
-    } else if (ip_len == 1) {
-      ip[0] = '\0';
-    }
+error: if (ip) {
+  if (ip_len >= 2) {
+    ip[0] = '?';
+    ip[1] = '\0';
+  } else if (ip_len == 1) {
+    ip[0] = '\0';
   }
-  if (port)
-    *port = 0;
-  return -1;
+}
+if (port)
+*port = 0;
+return -1;
 }
 
 int anetSockName(int fd, char *ip, size_t ip_len, int *port) {
   struct sockaddr_storage sa;
   socklen_t salen = sizeof(sa);
 
-  if (getsockname(fd, (struct sockaddr*) &sa, &salen) == -1) {
+  if (getsockname(fd, (struct sockaddr *)&sa, &salen) == -1) {
     if (port)
       *port = 0;
     ip[0] = '?';
@@ -613,15 +613,15 @@ int anetSockName(int fd, char *ip, size_t ip_len, int *port) {
     return -1;
   }
   if (sa.ss_family == AF_INET) {
-    struct sockaddr_in *s = (struct sockaddr_in *) &sa;
+    struct sockaddr_in *s = (struct sockaddr_in *)&sa;
     if (ip)
-      inet_ntop(AF_INET, (void*) &(s->sin_addr), ip, ip_len);
+      inet_ntop(AF_INET, (void *)&(s->sin_addr), ip, ip_len);
     if (port)
       *port = ntohs(s->sin_port);
   } else {
-    struct sockaddr_in6 *s = (struct sockaddr_in6 *) &sa;
+    struct sockaddr_in6 *s = (struct sockaddr_in6 *)&sa;
     if (ip)
-      inet_ntop(AF_INET6, (void*) &(s->sin6_addr), ip, ip_len);
+      inet_ntop(AF_INET6, (void *)&(s->sin6_addr), ip, ip_len);
     if (port)
       *port = ntohs(s->sin6_port);
   }

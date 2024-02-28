@@ -15,23 +15,23 @@
 // pre-defined, and are powers of two. The user must make sure the necessary
 // segments are allocated before accessing the array.
 template <uint8_t OFFSET_BITS, uint8_t SEGMENT_BITS,
-          class T, class Alloc = std::allocator<T>
-          >
+    class T, class Alloc = std::allocator<T>
+>
 class lazy_array {
-    static_assert(SEGMENT_BITS + OFFSET_BITS <= sizeof(size_t)*8,
-                  "The number of segment and offset bits cannot exceed "
-                  " the number of bits in a size_t");
+    static_assert(SEGMENT_BITS + OFFSET_BITS <= sizeof(size_t) * 8,
+        "The number of segment and offset bits cannot exceed "
+        " the number of bits in a size_t");
 private:
     static const size_t SEGMENT_SIZE = 1UL << OFFSET_BITS;
     static const size_t NUM_SEGMENTS = 1UL << SEGMENT_BITS;
     // The segments array itself is mutable, so that the const subscript
     // operator can still add segments
-    mutable std::array<T*, NUM_SEGMENTS> segments_;
+    mutable std::array<T *, NUM_SEGMENTS> segments_;
 
-    void move_other_array(lazy_array&& arr) {
+    void move_other_array(lazy_array &&arr) {
         clear();
         std::copy(arr.segments_.begin(), arr.segments_.end(),
-                  segments_.begin());
+            segments_.begin());
         std::fill(arr.segments_.begin(), arr.segments_.end(), nullptr);
     }
 
@@ -45,17 +45,17 @@ private:
     }
 
 public:
-    lazy_array(): segments_{{nullptr}} {}
+    lazy_array(): segments_{ {nullptr} } {}
 
     // No copying
-    lazy_array(const lazy_array&) = delete;
-    lazy_array& operator=(const lazy_array&) = delete;
+    lazy_array(const lazy_array &) = delete;
+    lazy_array &operator=(const lazy_array &) = delete;
 
     // Moving is allowed
-    lazy_array(lazy_array&& arr) : segments_{{nullptr}} {
+    lazy_array(lazy_array &&arr): segments_{ {nullptr} } {
         move_other_array(std::move(arr));
     }
-    lazy_array& operator=(lazy_array&& arr) {
+    lazy_array &operator=(lazy_array &&arr) {
         move_other_vector(std::move(arr));
         return *this;
     }
@@ -73,12 +73,12 @@ public:
         }
     }
 
-    T& operator[](size_t i) {
+    T &operator[](size_t i) {
         assert(segments_[get_segment(i)] != nullptr);
         return segments_[get_segment(i)][get_offset(i)];
     }
 
-    const T& operator[](size_t i) const {
+    const T &operator[](size_t i) const {
         assert(segments_[get_segment(i)] != nullptr);
         return segments_[get_segment(i)][get_offset(i)];
     }
@@ -105,8 +105,9 @@ public:
     size_t allocated_size() const {
         size_t num_allocated_segments = 0;
         for (; segments_[num_allocated_segments] != nullptr &&
-                 num_allocated_segments < NUM_SEGMENTS;
-             ++num_allocated_segments) {}
+            num_allocated_segments < NUM_SEGMENTS;
+            ++num_allocated_segments) {
+        }
         return num_allocated_segments * SEGMENT_SIZE;
     }
 

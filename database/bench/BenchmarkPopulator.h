@@ -9,34 +9,34 @@
 #include "TimeMeasurer.h"
 
 namespace Database {
-class BenchmarkPopulator {
- public:
-  BenchmarkPopulator(StorageManager *storage_manager)
+  class BenchmarkPopulator {
+  public:
+    BenchmarkPopulator(StorageManager *storage_manager)
       : storage_manager_(storage_manager) {
-  }
+    }
 
-  virtual ~BenchmarkPopulator() {
-  }
+    virtual ~BenchmarkPopulator() {
+    }
 
-  void Start() {
-    std::cout << "start population" << std::endl;
-    TimeMeasurer timer;
-    timer.StartTimer();
-    StartPopulate();
-    timer.EndTimer();
-    std::cout << "populate elapsed time=" << timer.GetElapsedMilliSeconds()
-              << "ms" << std::endl;
-  }
+    void Start() {
+      std::cout << "start population" << std::endl;
+      TimeMeasurer timer;
+      timer.StartTimer();
+      StartPopulate();
+      timer.EndTimer();
+      std::cout << "populate elapsed time=" << timer.GetElapsedMilliSeconds()
+        << "ms" << std::endl;
+    }
 
-  virtual void StartPopulate() = 0;
+    virtual void StartPopulate() = 0;
 
- private:
-  BenchmarkPopulator(const BenchmarkPopulator &);
-  BenchmarkPopulator& operator=(const BenchmarkPopulator &);
+  private:
+    BenchmarkPopulator(const BenchmarkPopulator &);
+    BenchmarkPopulator &operator=(const BenchmarkPopulator &);
 
- protected:
-  StorageManager *storage_manager_;
-};
+  protected:
+    StorageManager *storage_manager_;
+  };
 }
 
 #endif

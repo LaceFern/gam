@@ -14,9 +14,9 @@ static uint32_t seed = 123456;
  *  possible. */
 template<class Key>
 class MurmurHasher {
- public:
-  size_t operator()(const Key& k) const {
-    return MurmurHash2((const char*) &k, sizeof(k), seed);
+public:
+  size_t operator()(const Key &k) const {
+    return MurmurHash2((const char *)&k, sizeof(k), seed);
   }
 };
 
@@ -24,8 +24,8 @@ class MurmurHasher {
  *  std::string. */
 template<>
 class MurmurHasher<std::string> {
- public:
-  size_t operator()(const std::string& k) const {
+public:
+  size_t operator()(const std::string &k) const {
     return MurmurHash2(k.c_str(), k.size(), seed);
   }
 };

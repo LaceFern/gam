@@ -12,7 +12,7 @@
 TEST_CASE("bracket find empty table", "[bracket]") {
     IntIntTable table;
     auto ref = table[10];
-    REQUIRE_THROWS_AS((void) ((int) ref), std::out_of_range);
+    REQUIRE_THROWS_AS((void)((int)ref), std::out_of_range);
 }
 
 TEST_CASE("bracket find filled table", "[bracket]") {
