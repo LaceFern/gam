@@ -604,7 +604,7 @@ int main(int argc, char *argv[]) {
   conf.worker_port = port_worker;
   long size = ((long)BLOCK_SIZE) * STEPS * no_thread * 4;
   conf.size = size < conf.size ? conf.size : size;
-  printf("This size!!!!!! %d\n", conf.size);
+  printf("This size!!!!!! %lld\n", conf.size);
 
   conf.cache_th = cache_th;
 

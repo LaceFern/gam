@@ -51,6 +51,17 @@
     "streambuf": "cpp",
     "system_error": "cpp",
     "tuple": "cpp",
-    "exception": "cpp"
+    "exception": "cpp",
+    "string_view": "cpp",
+    "chrono": "cpp",
+    "algorithm": "cpp",
+    "array": "cpp",
+    "new": "cpp",
+    "initializer_list": "cpp",
+    "utility": "cpp",
+    "stdexcept": "cpp",
+    "numbers": "cpp",
+    "queue": "cpp",
+    "functional": "cpp"
   }
 }

@@ -116,7 +116,7 @@ void Master::ProcessRequest(Client *client, WorkRequest *wr) {
       int n = 0;
       while (!unsynced_workers.empty()) {
         Client *lc = unsynced_workers.front();
-        n += sprintf(buf + n, "%u:%d:%ld:%ld", lc->GetQP(), lc->GetWorkerId(),
+        n += sprintf(buf + n, "%u:%d:%lld:%lld", lc->GetQP(), lc->GetWorkerId(),
           lc->GetTotalMem(), lc->GetFreeMem());
         unsynced_workers.pop();
       }
@@ -152,7 +152,7 @@ void Master::ProcessRequest(Client *client, WorkRequest *wr) {
     for (auto entry : widCliMapWorker) {
       //if(entry.first == client->GetWorkerId()) continue;
       Client *lc = entry.second;
-      n += sprintf(buf + n, "%u:%d:%ld:%ld:", lc->GetQP(), lc->GetWorkerId(),
+      n += sprintf(buf + n, "%u:%d:%lld:%lld:", lc->GetQP(), lc->GetWorkerId(),
         lc->GetTotalMem(), lc->GetFreeMem());
       i++;
     }
