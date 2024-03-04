@@ -111,6 +111,7 @@ class agent_stats{
 
     int ignore_tag_flag = 0;
     std::mutex qt_mtx;
+    std::mutex st_mtx;
 
   public:
     int num_4_sys_thread = 1;
@@ -190,57 +191,57 @@ class agent_stats{
 
     void add_starting_point_4st(GAddr gaddr){
       if(start_flag && is_valid_gaddr(gaddr)){
-        std::lock_guard<std::mutex> lock(qt_mtx);
+        std::lock_guard<std::mutex> lock(st_mtx);
         starting_point_4_sys_thread.push_back(std::chrono::system_clock::now());
       }
     }
     void add_starting_point_4st(GAddr gaddr, std::chrono::time_point<std::chrono::system_clock> point){
       if(start_flag && is_valid_gaddr(gaddr)){
-        std::lock_guard<std::mutex> lock(qt_mtx);
+        std::lock_guard<std::mutex> lock(st_mtx);
         starting_point_4_sys_thread.push_back(point);
       }
     }
     void del_starting_point_4st(GAddr gaddr){
       if(start_flag && is_valid_gaddr(gaddr)){
-        std::lock_guard<std::mutex> lock(qt_mtx);
+        std::lock_guard<std::mutex> lock(st_mtx);
         starting_point_4_sys_thread.pop_back();
       }
     }
     void add_ending_point_4st(GAddr gaddr, const string& tag){
       if(start_flag && is_valid_gaddr(gaddr)){
-        std::lock_guard<std::mutex> lock(qt_mtx);
+        std::lock_guard<std::mutex> lock(st_mtx);
         ending_point_4_sys_thread.push_back(std::chrono::system_clock::now());
         time_tag_4_sys_thread.emplace_back(tag);
       }
     }
     void add_time_tag_4st(GAddr gaddr, string tag){
       if(start_flag && is_valid_gaddr(gaddr)){
-        std::lock_guard<std::mutex> lock(qt_mtx);
+        std::lock_guard<std::mutex> lock(st_mtx);
         time_tag_4_sys_thread.push_back(tag);
       }
     }
     void add_ending_point_4st(GAddr gaddr){
       if(start_flag && is_valid_gaddr(gaddr)){
-        std::lock_guard<std::mutex> lock(qt_mtx);
+        std::lock_guard<std::mutex> lock(st_mtx);
         ending_point_4_sys_thread.push_back(std::chrono::system_clock::now());
       } 
     }
 
     
     void add_starting_point_4debug(GAddr gaddr){
-      if(start_flag && is_valid_gaddr(gaddr)) starting_point_4_debug.push_back(std::chrono::system_clock::now());
+      // if(start_flag && is_valid_gaddr(gaddr)) starting_point_4_debug.push_back(std::chrono::system_clock::now());
     }
     void add_ending_point_4debug(GAddr gaddr, const string& tag){
-      if(start_flag && is_valid_gaddr(gaddr)){
-        ending_point_4_debug.push_back(std::chrono::system_clock::now());
-        time_tag_4_debug.emplace_back(tag);
-      }
+      // if(start_flag && is_valid_gaddr(gaddr)){
+      //   ending_point_4_debug.push_back(std::chrono::system_clock::now());
+      //   time_tag_4_debug.emplace_back(tag);
+      // }
     }
     void add_time_tag_4debug(GAddr gaddr, string tag){
-      if(start_flag && is_valid_gaddr(gaddr)) time_tag_4_debug.push_back(tag);
+      // if(start_flag && is_valid_gaddr(gaddr)) time_tag_4_debug.push_back(tag);
     }
     void add_ending_point_4debug(GAddr gaddr){
-      if(start_flag && is_valid_gaddr(gaddr)) ending_point_4_debug.push_back(std::chrono::system_clock::now());
+      // if(start_flag && is_valid_gaddr(gaddr)) ending_point_4_debug.push_back(std::chrono::system_clock::now());
     }
 
 
@@ -304,33 +305,27 @@ class agent_stats{
 
 
     void add_starting_point_4debug_poll(GAddr gaddr, std::chrono::time_point<std::chrono::system_clock> point){
-      if(start_flag && is_valid_gaddr(gaddr)){
-        starting_point_4_debug_poll.push_back(point);
-      }
+      // if(start_flag && is_valid_gaddr(gaddr)){
+      //   starting_point_4_debug_poll.push_back(point);
+      // }
     }
     void add_ending_point_4debug_poll(GAddr gaddr, std::chrono::time_point<std::chrono::system_clock> point, const string& tag){
-      if(start_flag && is_valid_gaddr(gaddr)){
-        ending_point_4_debug_poll.push_back(point);
-        time_tag_4_debug_poll.emplace_back(tag);
-      }
+      // if(start_flag && is_valid_gaddr(gaddr)){
+      //   ending_point_4_debug_poll.push_back(point);
+      //   time_tag_4_debug_poll.emplace_back(tag);
+      // }
     }
 
 
     void add_starting_point_4debug_slot(std::thread::id id, std::chrono::time_point<std::chrono::system_clock> point){
-      if(start_flag) starting_point_4_debug_slot[id].push_back(point);
+      // if(start_flag) starting_point_4_debug_slot[id].push_back(point);
     }
     void add_ending_point_4debug_slot(std::thread::id id, std::chrono::time_point<std::chrono::system_clock> point, const string& tag){
-      if(start_flag){
-        ending_point_4_debug_slot[id].push_back(point);
-        time_tag_4_debug_slot[id].emplace_back(tag);
-      }
+      // if(start_flag){
+      //   ending_point_4_debug_slot[id].push_back(point);
+      //   time_tag_4_debug_slot[id].emplace_back(tag);
+      // }
     }
-    // void add_time_tag_4debug_slot(string tag){
-    //   if(start_flag) time_tag_4_debug_slot.push_back(tag);
-    // }
-    // void add_ending_point_4debug_slot(){
-    //   if(start_flag) ending_point_4_debug_slot.push_back(std::chrono::system_clock::now());
-    // }
 
 
     void print_stats(vector<string>& time_tag, 

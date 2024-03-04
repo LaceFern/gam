@@ -45,7 +45,7 @@ using namespace std;
 #define USE_COCKOOHASH
 
 //#define NOCACHE
-//#define ASYNC_RDMA_SEND
+// #define ASYNC_RDMA_SEND
 
 #define RDMA_POLL
 //#define MULTITHREAD_RECV

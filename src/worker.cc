@@ -165,6 +165,7 @@ Worker::Worker(const Conf& conf, RdmaResource* res)
 
 #ifdef ASYNC_RDMA_SEND
 void Worker::AsyncRdmaSendThread(Worker* w) {
+  epicLog(LOG_WARNING, "AsyncRdmaSendThread starts!!!");
   RDMASendData* data;
   while(true) {
     while(w->rdma_queue->pop(data)) {
