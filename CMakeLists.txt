@@ -2,11 +2,11 @@ cmake_minimum_required(VERSION 3.10)
 project(GAM)
 
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -std=c++11 -DNDEBUG -rdynamic")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -std=c++14 -DNDEBUG -rdynamic")
 
 option(DHT OFF)
 
@@ -27,6 +27,8 @@ include_directories("${CMAKE_SOURCE_DIR}/lib/libcuckoo/cityhash-1.1.1/src")
 include_directories("${CMAKE_SOURCE_DIR}/include/custom_include")
 # include hdr_histogram headers
 include_directories(${CMAKE_SOURCE_DIR}/lib/HdrHistogram/include)
+# include atomic_queue headers
+include_directories(${CMAKE_SOURCE_DIR}/lib/atomic_queue/include)
 
 set(LIBRARIES ${LIBRARIES} ibverbs pthread boost_thread boost_system hdr_histogram_static)
 

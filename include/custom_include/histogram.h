@@ -16,6 +16,8 @@ public:
 
     void record(int64_t value, int64_t count = 0);
 
+    void record_atomic(int64_t value, int64_t count = 0);
+
 private:
     hdr_histogram *latency_hist;
     double scale_value{ 1 };

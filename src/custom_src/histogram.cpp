@@ -35,3 +35,11 @@ void Histogram::record(int64_t value, int64_t count) {
     value = value * scale_value;
     hdr_record_values(latency_hist, value, count);
 }
+
+void Histogram::record_atomic(int64_t value, int64_t count) {
+    if (count == 0) {
+        count = 1;
+    }
+    value = value * scale_value;
+    hdr_record_values_atomic(latency_hist, value, count);
+}
