@@ -62,6 +62,9 @@
     "stdexcept": "cpp",
     "numbers": "cpp",
     "queue": "cpp",
-    "functional": "cpp"
+    "functional": "cpp",
+    "any": "cpp",
+    "memory": "cpp",
+    "random": "cpp"
   }
 }

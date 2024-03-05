@@ -2,7 +2,7 @@
   "configurations": [
     {
       "name": "Linux",
-      "includePath": ["${default}"],
+      "includePath": ["${workspaceFolder}/**"],
       "compilerPath": "/usr/bin/gcc"
     }
   ],

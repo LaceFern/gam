@@ -23,7 +23,12 @@ include_directories("${CMAKE_SOURCE_DIR}/lib/libcuckoo/src")
 # include cityhash headers
 include_directories("${CMAKE_SOURCE_DIR}/lib/libcuckoo/cityhash-1.1.1/src")
 
-set(LIBRARIES ${LIBRARIES} ibverbs pthread boost_thread boost_system)
+# include custom headers
+include_directories("${CMAKE_SOURCE_DIR}/include/custom_include")
+# include hdr_histogram headers
+include_directories(${CMAKE_SOURCE_DIR}/lib/HdrHistogram/include)
+
+set(LIBRARIES ${LIBRARIES} ibverbs pthread boost_thread boost_system hdr_histogram_static)
 
 
 file(GLOB GAMSOURCESLIST ${CMAKE_SOURCE_DIR}/src/*.cc)
@@ -53,7 +58,10 @@ set(GAMSOURCE
         ${CMAKE_SOURCE_DIR}/src/pending_request.cc
         ${CMAKE_SOURCE_DIR}/src/MurmurHash.cc
         ${CMAKE_SOURCE_DIR}/src/logging.cc
+        ${CMAKE_SOURCE_DIR}/src/custom_src/histogram.cpp
 )
+
+add_subdirectory(${CMAKE_SOURCE_DIR}/lib/HdrHistogram)
 
 if(NOT EXISTS "${CMAKE_SOURCE_DIR}/lib/libcuckoo/cityhash-1.1.1/src/.libs/libcityhash.a")
     add_custom_command(OUTPUT LIBCUCKOO
