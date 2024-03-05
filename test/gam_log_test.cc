@@ -359,7 +359,7 @@ int main(int argc, char **argv) {
   bool is_compute = atoi(argv[arg_is_compute]);
   double remote_ratio = atof(argv[arg_remote_ratio]);
   long long benchmark_size = atol(argv[arg_benchmark_size]);
-  printf("%ld %d %f %d %d\n", benchmark_size, num_comp_nodes, remote_ratio, is_master, is_compute);
+  printf("%lld %d %f %d %d\n", benchmark_size, num_comp_nodes, remote_ratio, is_master, is_compute);
   printf("Num Nodes: %d, Num Threads: %d\n", num_nodes, num_threads);
 #ifndef single_thread_test
   if (argc != arg_log1 + num_threads) {
@@ -373,7 +373,7 @@ int main(int argc, char **argv) {
     int *fd = new int[num_threads];
     for (int i = 0; i < num_threads; ++i) {
       fd[i] = open(argv[arg_log1 + i], O_RDONLY);
-      if (fd < 0) {
+      if (fd[i] < 0) {
         printf("fail to open log file\n");
         return 1;
       }
@@ -429,7 +429,7 @@ int main(int argc, char **argv) {
 
       for (int i = 0; i < num_threads; ++i) {
         args[i].pass = pass;
-        printf("args has len: %d\n", args[i].len);
+        printf("args has len: %ld\n", args[i].len);
         if (args[i].len) {
           if (pthread_create(&thread[i], NULL, (void *(*)(void *)) do_log, &args[i])) {
             printf("Error creating thread %d\n", i);
