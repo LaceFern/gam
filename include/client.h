@@ -75,6 +75,11 @@ class Client {
       return ctx->Send(buf, len, id, signaled);
     }
 
+    inline ssize_t Send(const void* buf, WorkRequest* wr, size_t len,  unsigned int id = 0,
+        bool signaled = false) {
+      return ctx->Send(buf, wr, len, id, signaled);
+    }
+
     inline struct profile_return Send_profile(const void* buf, size_t len, unsigned int id = 0,
                       bool signaled = false) {
       return ctx->Send_profile(buf, len, id, signaled);

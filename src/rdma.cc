@@ -749,6 +749,132 @@ ssize_t RdmaContext::Rdma(ibv_wr_opcode op, const void* src, size_t len,
   }
   return ret;
 }
+ 
+ssize_t RdmaContext::Rdma(ibv_wr_opcode op, const void* src, size_t len, WorkRequest* wr_4_agent_stat,
+                          unsigned int id, bool signaled, void* dest,
+                          uint32_t imm, uint64_t oldval, uint64_t newval) {
+  epicLog(LOG_DEBUG, "op = %d, src = %lx, len = %d, id = %d, signaled = %d, dest = %lx, imm = %u, oldval = %lu, newval = %lu\nsrc = %s",
+      op, src, len, id, signaled, dest, imm, oldval, newval, src);
+
+
+  int ret = len;
+  struct ibv_sge sge_list = { };
+  struct ibv_send_wr wr = { };
+
+  if (pending_msg >= max_pending_msg) {
+    //add the send request to the waiting queue
+    agent_stats_inst.add_rdma_busy_count(wr_4_agent_stat->addr);
+    epicLog(LOG_INFO, "Rdma device is busy; will try later");
+    pending_requests.push(RdmaRequest { op, src, len, id, signaled, dest, imm, oldval, newval });
+    epicAssert(
+               pending_requests.back().op == op && pending_requests.back().src == src
+            && pending_requests.back().len == len
+            && pending_requests.back().id == id
+            && pending_requests.back().signaled == signaled
+            && pending_requests.back().dest == dest
+            && pending_requests.back().imm == imm
+            && pending_requests.back().oldval == oldval
+            && pending_requests.back().newval == newval);
+
+    return -1;
+  }
+
+  if (op == IBV_WR_SEND) {
+    if (unlikely(!IsRegistered(src) && len > MAX_RDMA_INLINE_SIZE)) {
+      if (len > MAX_REQUEST_SIZE) {
+        epicLog(LOG_WARNING, "len = %d, MAX_REQUEST_SIZE = %d, src = %s\n", len, MAX_REQUEST_SIZE, src);
+        epicAssert(false);
+      }
+      char* sbuf = GetFreeSlot_();
+      epicAssert(sbuf);
+      memcpy(sbuf, src, len);
+      zfree((void*) src);
+      sge_list.addr = (uintptr_t) sbuf;
+      pending_send_msg++;
+    } else {
+      if (IsRegistered(src)) {
+        pending_send_msg++;
+        epicLog(LOG_DEBUG, "Registered mem");
+      }
+      sge_list.addr = (uintptr_t) src;
+    }
+    sge_list.lkey = send_buf->lkey;
+  } else if (op == IBV_WR_RDMA_WRITE || op == IBV_WR_RDMA_WRITE_WITH_IMM) {
+    sge_list.addr = (uintptr_t) src;
+    sge_list.lkey = resource->bmr->lkey;
+    wr.wr.rdma.remote_addr = (uintptr_t) dest;
+    wr.wr.rdma.rkey = rkey;
+    if (op == IBV_WR_RDMA_WRITE_WITH_IMM) {
+      wr.imm_data = htonl(imm);
+    }
+  } else if (op == IBV_WR_RDMA_READ) {
+    sge_list.addr = (uintptr_t) dest;
+    sge_list.lkey = resource->bmr->lkey;
+    wr.wr.rdma.remote_addr = (uintptr_t) src;
+    wr.wr.rdma.rkey = rkey;
+  } else {
+    epicLog(LOG_WARNING, "unsupported RDMA OP");
+    return -1;
+  }
+
+  sge_list.length = len;
+
+  wr.opcode = op;
+  wr.wr_id = -1;
+  wr.sg_list = &sge_list;
+  wr.num_sge = len == 0 ? 0 : 1;
+  wr.next = nullptr;
+  wr.send_flags = 0;
+  if (len <= MAX_RDMA_INLINE_SIZE)
+    wr.send_flags = IBV_SEND_INLINE;
+
+  pending_msg++;
+  uint16_t curr_to_signaled_send_msg = pending_send_msg - to_signaled_send_msg;
+  uint16_t curr_to_signaled_w_r_msg = pending_msg - pending_send_msg - to_signaled_w_r_msg;
+
+  if (unlikely(curr_to_signaled_send_msg + curr_to_signaled_w_r_msg == max_unsignaled_msg
+          || signaled)) {  //we signal msg for every max_unsignaled_msg
+    wr.send_flags |= IBV_SEND_SIGNALED;
+    if (wr.opcode == IBV_WR_SEND) {
+      epicLog(LOG_INFO, "signaled %s\n", (char* )sge_list.addr);
+    } else {
+      epicLog(LOG_INFO, "signaled, op = %d", wr.opcode);
+    }
+
+    to_signaled_send_msg += curr_to_signaled_send_msg;
+    epicAssert(to_signaled_send_msg == pending_send_msg);
+    to_signaled_w_r_msg += curr_to_signaled_w_r_msg;
+    epicAssert(to_signaled_send_msg + to_signaled_w_r_msg == pending_msg);
+    epicAssert(curr_to_signaled_send_msg + curr_to_signaled_w_r_msg <= max_unsignaled_msg);
+
+    /*
+     * higher to lower: send_msg(16), w_r_msg(16), workid(32)
+     */
+    /* 
+     * FIXME: only such work requests have their wr_id set, but it seems
+     * that the wr_id of each completed work request will be checked
+     * against to see if there are any pending invalidate WRs.
+     */
+    wr.wr_id = (id & HALF_BITS)
+        + ((uint64_t) (curr_to_signaled_send_msg & QUARTER_BITS) << 48)
+        + ((uint64_t) (curr_to_signaled_w_r_msg & QUARTER_BITS) << 32);
+  }
+  epicLog(LOG_DEBUG,
+          "Detail of this send command: wr_id = %d, num_sge = %d, op = %d, flags = %d, imm_date = %d\n",
+          wr.wr_id, wr.num_sge, wr.opcode, wr.send_flags, wr.imm_data);
+  struct ibv_send_wr *bad_wr;
+  if (ibv_post_send(qp, &wr, &bad_wr)) {
+    epicLog(LOG_WARNING, "ibv_post_send failed (%d:%s)\n", errno, strerror(errno));
+    return -2;
+  }
+  if (op == IBV_WR_SEND && !IsRegistered((void *) sge_list.addr)) {
+    epicAssert(wr.send_flags & IBV_SEND_INLINE);
+    zfree((void*) sge_list.addr);
+  }
+  return ret;
+}
+
+
 
 struct profile_return RdmaContext::Rdma_profile(ibv_wr_opcode op, const void* src, size_t len,
                           unsigned int id, bool signaled, void* dest,
@@ -888,6 +1014,17 @@ ssize_t RdmaContext::Send(const void* ptr, size_t len, unsigned int id,
 #endif
   //lock(); //we already lock when getting the send buf
   ssize_t ret = Rdma(IBV_WR_SEND, ptr, len, id, signaled);
+  unlock();
+  return ret;
+}
+
+ssize_t RdmaContext::Send(const void* ptr, WorkRequest* wr, size_t len, unsigned int id,
+                          bool signaled) {
+#ifdef ASYNC_RDMA_SEND
+  lock();
+#endif
+  //lock(); //we already lock when getting the send buf
+  ssize_t ret = Rdma(IBV_WR_SEND, ptr, len, wr, id, signaled);
   unlock();
   return ret;
 }

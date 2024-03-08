@@ -118,7 +118,7 @@ void Worker::ProcessRemoteReadCache(Client* client, WorkRequest* wr) {
       } else {
         //deadlock: this node wants to give up the ownership
         //meanwhile, another node wants to read
-        epicLog(LOG_INFO, "!!!deadlock detected!!!\n");
+        // epicLog(LOG_INFO, "!!!deadlock detected!!!\n");
         epicAssert(cline->state == CACHE_TO_INVALID);
         deadlock = true;
       }
@@ -404,7 +404,7 @@ void Worker::ProcessRemoteWrite(Client* client, WorkRequest* wr) {
           epicLog(LOG_DEBUG, "write the data to destination");
           epicAssert(BLOCK_ALIGNED(wr->addr) || wr->size < BLOCK_SIZE);
           client->Write(wr->ptr, laddr, wr->size);
-          epicLog(LOG_INFO, "deadlock detected");
+          // epicLog(LOG_INFO, "deadlock detected");
         }
 #ifdef SELECTIVE_CACHING
       }
@@ -534,12 +534,12 @@ void Worker::ProcessRemoteWriteCache(Client* client, WorkRequest* wr) {
       if ((INVALIDATE == wr->op || INVALIDATE_FORWARD == wr->op)
           && cline->state == CACHE_TO_DIRTY) {
         //deadlock case 1
-        epicLog(LOG_INFO, "!!!deadlock detected!!!");
+        // epicLog(LOG_INFO, "!!!deadlock detected!!!");
         deadlock = true;
       } else {
         if (cline->state == CACHE_TO_INVALID) {
           //deadlock case 2
-          epicLog(LOG_INFO, "!!!deadlock detected!!!");
+          // epicLog(LOG_INFO, "!!!deadlock detected!!!");
           deadlock = true;
         } else {
           AddToServeRemoteRequest(wr->addr, client, wr);
@@ -587,7 +587,7 @@ void Worker::ProcessRemoteWriteCache(Client* client, WorkRequest* wr) {
           cache.unlock(to_lock);
           return;
         } else {
-          epicLog(LOG_WARNING, "Deadlock detected");
+          // epicLog(LOG_WARNING, "Deadlock detected");
         }
       }
     }

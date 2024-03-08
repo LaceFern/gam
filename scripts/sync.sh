@@ -4,6 +4,9 @@ make -j
 cd ~/DSM_prj/gam_20240222/test_cc_highpara
 make clean
 make -j
+cd ~/DSM_prj/gam_20240222/test_cc_highpara_zipf
+make clean
+make -j
 scp -r /home/zxy/DSM_prj/gam_20240222  zxy@192.168.189.13:/home/zxy/DSM_prj/
 scp -r /home/zxy/DSM_prj/gam_20240222  zxy@192.168.189.12:/home/zxy/DSM_prj/
 scp -r /home/zxy/DSM_prj/gam_20240222  zxy@192.168.189.11:/home/zxy/DSM_prj/

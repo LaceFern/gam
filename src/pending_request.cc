@@ -601,7 +601,7 @@ void Worker::ProcessPendingInvalidateForward(Client* cli, WorkRequest* wr) {
       //and change the processing from WRITE_PERMISSION_ONLY to WRITE
       if (DIR_UNSHARED == directory.GetState(entry)) {
         lcli->Write(parent->ptr, laddr, parent->size);
-        epicLog(LOG_INFO, "deadlock detected");
+        // epicLog(LOG_INFO, "deadlock detected");
         epicLog(LOG_DEBUG, "write the data to destination");
       }
     }

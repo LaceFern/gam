@@ -664,7 +664,8 @@ unsigned long long Worker::SubmitRequest(Client* cli, WorkRequest* wr, int flag,
       }
       networkLatencyMap[new_ret.wr_id] = new_ret.time_stamp;
     } else {
-      if ((ret = cli->Send(sbuf, len)) != len) {
+      // if ((ret = cli->Send(sbuf, len)) != len) {
+      if ((ret = cli->Send(sbuf, wr, len)) != len) {
         epicAssert(ret == -1);
         epicLog(LOG_INFO, "sent failed: slots are busy");
       }

@@ -113,6 +113,8 @@ class agent_stats{
     std::mutex qt_mtx;
     std::mutex st_mtx;
 
+    int rdma_busy_count = 0;
+
   public:
     int num_4_sys_thread = 1;
 
@@ -124,6 +126,12 @@ class agent_stats{
     // void enqueue_starting_point(){
     //   starting_point_queue.push(std::chrono::system_clock::now());
     // }
+
+    void add_rdma_busy_count(GAddr gaddr){
+      if(start_flag && is_valid_gaddr(gaddr)){
+        rdma_busy_count++;
+      }
+    }
 
     void put_valid_qpn(uint32_t qpn){
       if(start_flag){
@@ -383,6 +391,58 @@ class agent_stats{
       }
     }
 
+
+    void print_stats(FILE *resFileOut,
+      vector<string>& time_tag, 
+      vector<std::chrono::time_point<std::chrono::system_clock>> starting_point,
+      vector<std::chrono::time_point<std::chrono::system_clock>> ending_point){
+      if(time_tag.size() > 0){
+
+        if(ignore_tag_flag == 1){
+          double sum = 0;
+          int count = 0;
+          for(int i = 0; i < time_tag.size(); i++){
+            auto duration = std::chrono::duration_cast<std::chrono::microseconds>(ending_point[i] - starting_point[i]);
+            auto duration_us = double(duration.count());
+            sum += duration_us;
+            count += 1;
+          }
+          fprintf(resFileOut, "%lf; ignore_tag: num = %d, AVG latency = %lf us\n", sum / count, count, sum / count);
+        }
+
+        std::set<std::string> unique_tag(time_tag.begin(), time_tag.end());
+        vector<double> sum_time_duration(unique_tag.size());
+        vector<int> count_time_duration(unique_tag.size());
+
+        // printf("checkpoint 0: size of time_tag = %d\n", time_tag.size());
+        // printf("checkpoint 0: size of starting_point = %d\n", starting_point.size());
+        // printf("checkpoint 0: size of ending_point = %d\n", ending_point.size());
+
+        for(int i = 0; i < time_tag.size(); i++){
+          auto duration = std::chrono::duration_cast<std::chrono::microseconds>(ending_point[i] - starting_point[i]);
+          auto duration_us = double(duration.count());
+
+          // printf("checkpoint 1: i = %d, duration_us = %lf, time_tag = %s\n", i, duration_us, time_tag[i].c_str());
+
+          auto it = std::find(unique_tag.begin(), unique_tag.end(), time_tag[i]);
+          auto tag_index = std::distance(unique_tag.begin(), it);
+          sum_time_duration[tag_index] += duration_us;
+          count_time_duration[tag_index] += 1;
+        }
+
+        int i = 0;
+        for (const auto& element : unique_tag) {
+            fprintf(resFileOut, "%lf; %s: num = %d, AVG latency = %lf us\n", sum_time_duration[i] / count_time_duration[i], element.c_str(), count_time_duration[i], sum_time_duration[i] / count_time_duration[i]);
+            i++;
+        }
+        fprintf(resFileOut, "\n");
+      }
+      else{
+        fprintf(resFileOut, "No duration\n");
+        fprintf(resFileOut, "\n");
+      }
+    }
+
     void print_valid_stats(vector<string>& time_tag, 
       vector<std::chrono::time_point<std::chrono::system_clock>> starting_point,
       vector<std::chrono::time_point<std::chrono::system_clock>> ending_point){
@@ -427,6 +487,7 @@ class agent_stats{
       ignore_tag_flag = 1;
       print_stats(time_tag_4_queue_thread, starting_point_4_queue_thread, ending_point_4_queue_thread);
       ignore_tag_flag = 0;
+      printf("rdma_busy_count = %d\n", rdma_busy_count);
 
       // printf("debug_agent_duration (API latency):\n");
       // print_stats(time_tag_4_debug, starting_point_4_debug, ending_point_4_debug);
@@ -464,6 +525,26 @@ class agent_stats{
       // printf("debug_agent_duration (valid_ratio=%lf):\n", valid_ratio);
       // print_valid_stats(time_tag_4_debug, starting_point_4_debug, ending_point_4_debug);
     }
+
+    void print_agent_stats(FILE *resFileOut){
+      fprintf(resFileOut, "app_thread_duration:\n");
+      print_stats(resFileOut, time_tag_4_app_thread, starting_point_4_app_thread, ending_point_4_app_thread);
+      fprintf(resFileOut, "sys_thread_duration:\n");
+      print_stats(resFileOut, time_tag_4_sys_thread, starting_point_4_sys_thread, ending_point_4_sys_thread);
+      fprintf(resFileOut, "queue_agent_duration:\n");
+      ignore_tag_flag = 1;
+      print_stats(resFileOut, time_tag_4_queue_thread, starting_point_4_queue_thread, ending_point_4_queue_thread);
+      ignore_tag_flag = 0;
+
+      fprintf(resFileOut, "debug_q_agent_duration (all packets avg waiting time):\n");
+      ignore_tag_flag = 1;
+      for(int i = 0; i < num_4_sys_thread; i++){
+        fprintf(resFileOut, "sys_thread_id = %d:\n", i);
+        print_stats(resFileOut, time_tag_4_debug_q[i], starting_point_4_debug_q[i], ending_point_4_debug_q[i]);
+      }
+      ignore_tag_flag = 0;
+    }
+
 }
 extern agent_stats_inst;
 
@@ -628,6 +709,134 @@ class my_stats{
     void print_agent_stats(){
       agent_stats_inst.print_agent_stats();
     }
+    void print_agent_stats(FILE *resFileOut){
+      agent_stats_inst.print_agent_stats(resFileOut);
+    }
+
+    void print_userop_stats(FILE *resFileOut){
+      lock_guard<mutex> lock(myMutex);
+      
+      // print average latency, p50 latency, p99 latency for
+      // (WL+W,NO-CC), (WL+W,CC), (RL+R,NO-CC), (RL+R,CC)
+      vector<double> RLR_NOCC_latency;
+      vector<double> RLR_CC_latency;
+      vector<double> WLW_NOCC_latency;
+      vector<double> WLW_CC_latency;
+
+      vector<double> R_NOCC_latency;
+      vector<double> R_CC_latency;
+
+      int thread_num = allthread_stats.size();
+      for(int i = 0; i < thread_num; i++){
+        int latency_num = allthread_stats[i].size();
+        for(int j = 0; j < latency_num; j++){
+          userop_stats userop_stats_inst = allthread_stats[i][j];
+          if(userop_stats_inst.userop_type == "RL+R"){
+            if(userop_stats_inst.cache_coherence_type == "NO-CC"){
+              RLR_NOCC_latency.push_back(userop_stats_inst.userop_latency_us);
+            }
+            else{
+              RLR_CC_latency.push_back(userop_stats_inst.userop_latency_us);
+            }
+          }
+          else if(userop_stats_inst.userop_type == "WL+W"){
+            if(userop_stats_inst.cache_coherence_type == "NO-CC"){
+              WLW_NOCC_latency.push_back(userop_stats_inst.userop_latency_us);
+            }
+            else{
+              WLW_CC_latency.push_back(userop_stats_inst.userop_latency_us);
+            }
+          }
+
+          else if(userop_stats_inst.userop_type == "R"){
+            if(userop_stats_inst.cache_coherence_type == "NO-CC"){
+              R_NOCC_latency.push_back(userop_stats_inst.userop_latency_us);
+            }
+            else{
+              R_CC_latency.push_back(userop_stats_inst.userop_latency_us);
+            }
+          }
+        }
+      }
+      
+
+      sort(RLR_NOCC_latency.begin(), RLR_NOCC_latency.end());
+      sort(RLR_CC_latency.begin(), RLR_CC_latency.end());
+      sort(WLW_NOCC_latency.begin(), WLW_NOCC_latency.end());
+      sort(WLW_CC_latency.begin(), WLW_CC_latency.end());
+
+      sort(R_NOCC_latency.begin(), R_NOCC_latency.end());
+      sort(R_CC_latency.begin(), R_CC_latency.end());
+
+      if(RLR_NOCC_latency.size() > 0){
+        fprintf(resFileOut, "RLR_NOCC_latency:num=%d\tAVG=%lf\tP50=%lf\tP99=%lf\n", 
+        static_cast<int>(RLR_NOCC_latency.size()),
+        calculate_average_latency(RLR_NOCC_latency),
+        calculate_P50_latency(RLR_NOCC_latency),
+        calculate_P99_latency(RLR_NOCC_latency));
+      }
+      else{
+        fprintf(resFileOut, "NO RLR_NOCC_latency\n");
+      }
+
+      if(WLW_NOCC_latency.size() > 0){
+        fprintf(resFileOut, "WLW_NOCC_latency:num=%d\tAVG=%lf\tP50=%lf\tP99=%lf\n", 
+        static_cast<int>(WLW_NOCC_latency.size()),
+        calculate_average_latency(WLW_NOCC_latency),
+        calculate_P50_latency(WLW_NOCC_latency),
+        calculate_P99_latency(WLW_NOCC_latency));
+      }
+      else{
+        fprintf(resFileOut, "NO WLW_NOCC_latency\n");
+      }
+
+      if(R_NOCC_latency.size() > 0){
+        fprintf(resFileOut, "R_NOCC_latency:num=%d\tAVG=%lf\tP50=%lf\tP99=%lf\n", 
+        static_cast<int>(R_NOCC_latency.size()),
+        calculate_average_latency(R_NOCC_latency),
+        calculate_P50_latency(R_NOCC_latency),
+        calculate_P99_latency(R_NOCC_latency));
+      }
+      else{
+        fprintf(resFileOut, "NO R_NOCC_latency\n");
+      }
+
+      if(RLR_CC_latency.size() > 0){
+        fprintf(resFileOut, "RLR_CC_latency:num=%d\tAVG=%lf\tP50=%lf\tP99=%lf\n", 
+        static_cast<int>(RLR_CC_latency.size()),
+        calculate_average_latency(RLR_CC_latency),
+        calculate_P50_latency(RLR_CC_latency),
+        calculate_P99_latency(RLR_CC_latency));
+      }
+      else{
+        fprintf(resFileOut, "NO RLR_CC_latency\n");
+      }
+
+      if(WLW_CC_latency.size() > 0){
+        fprintf(resFileOut, "WLW_CC_latency:num=%d\tAVG=%lf\tP50=%lf\tP99=%lf\n",
+        static_cast<int>(WLW_CC_latency.size()), 
+        calculate_average_latency(WLW_CC_latency),
+        calculate_P50_latency(WLW_CC_latency),
+        calculate_P99_latency(WLW_CC_latency));
+      }
+      else{
+        fprintf(resFileOut, "NO WLW_CC_latency\n");
+      }
+
+      if(R_CC_latency.size() > 0){
+        fprintf(resFileOut, "R_CC_latency:num=%d\tAVG=%lf\tP50=%lf\tP99=%lf\n", 
+        static_cast<int>(R_CC_latency.size()),
+        calculate_average_latency(R_CC_latency),
+        calculate_P50_latency(R_CC_latency),
+        calculate_P99_latency(R_CC_latency));
+      }
+      else{
+        fprintf(resFileOut, "NO R_CC_latency\n");
+      }
+      fprintf(resFileOut, "\n");
+    }
+
+
 
 };
 /******** MY CODE ENDS ********/

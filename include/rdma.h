@@ -13,6 +13,7 @@
 #include <atomic>
 #include <mutex>
 
+#include "workrequest.h"
 #include "lockwrapper.h"
 #include "settings.h"
 #include "log.h"
@@ -158,12 +159,20 @@ class RdmaContext {
 
   char *msg;
 
+  ssize_t Rdma(ibv_wr_opcode op, const void* src, size_t len, WorkRequest* wr_4_agent_stat, unsigned int id =
+                   0,
+               bool signaled =
+               false,
+               void* dest = nullptr, uint32_t imm = 0, uint64_t oldval = 0,
+               uint64_t newval = 0);
+
   ssize_t Rdma(ibv_wr_opcode op, const void* src, size_t len, unsigned int id =
                    0,
                bool signaled =
                false,
                void* dest = nullptr, uint32_t imm = 0, uint64_t oldval = 0,
                uint64_t newval = 0);
+
   struct profile_return Rdma_profile(ibv_wr_opcode op, const void* src, size_t len, unsigned int id =
   0,
                bool signaled =
@@ -214,6 +223,9 @@ class RdmaContext {
   char* GetFreeSlot();bool IsRegistered(const void* addr);
 
   ssize_t Send(const void* ptr, size_t len, unsigned int id = 0, bool signaled =
+                   false);
+
+ssize_t Send(const void* ptr, WorkRequest* wr, size_t len, unsigned int id = 0, bool signaled =
                    false);
   struct profile_return Send_profile(const void* ptr, size_t len, unsigned int id = 0, bool signaled =
   false);
