@@ -84,6 +84,8 @@ struct entry_4_wq {
   ibv_wc wc;
   int queue_size;
   int sys_thread_id;
+  int byte_len;
+  std::chrono::time_point<std::chrono::system_clock> parse_starting_point;
 };
 /******** MY CODE ENDS ********/
 /***********************************/
@@ -321,6 +323,7 @@ class Worker : public Server {
   int ProcessLocalMFence(WorkRequest* wr);
   int ProcessLocalSFence(WorkRequest* wr);
   void ProcessRequest(Client* client, WorkRequest* wr);
+  void ProcessRequest(Client* client, WorkRequest* wr, entry_4_wq entry);
   void ProcessRemoteMemStat(Client* client, WorkRequest* wr);
   void ProcessRemoteMalloc(Client* client, WorkRequest* wr);
   void ProcessRemoteMallocReply(Client* client, WorkRequest* wr);

@@ -540,6 +540,8 @@ int Cache::Lock(WorkRequest* wr) {
       agent_stats_inst.add_time_tag_4at(wr->addr, "request node: call WLock -> submit cache_Miss request");
     }
     wr->is_cache_hit_ = false;
+    agent_stats_inst.add_ending_point_4at_detail(wr->addr, "request node: cache.RLock -> before new WorkRequest");
+    agent_stats_inst.add_starting_point_4at_detail(wr->addr);
     WorkRequest* lwr = new WorkRequest(*wr);
     //we hide the fact that it is whether a lock op or read/write from the remote side
     //as lock is completely maintained locally
@@ -576,6 +578,10 @@ int Cache::Lock(WorkRequest* wr) {
     num_request_send += 1;
   }
   int ret = wr->counter;
+
+  agent_stats_inst.add_ending_point_4at_detail(wr->addr, "request node: new WorkRequest -> before unlock&Evict");
+  agent_stats_inst.add_starting_point_4at_detail(wr->addr);
+
   unlock(i);
   wr->unlock();
 #ifdef USE_LRU

@@ -1,6 +1,9 @@
 // Copyright (c) 2018 The GAM Authors 
 
 void Worker::ProcessRemoteRead(Client* client, WorkRequest* wr) {
+  GAddr tmp_gaddr = wr->addr;
+  agent_stats_inst.add_starting_point_4st_detail(tmp_gaddr);
+  
   epicAssert(IsLocal(wr->addr));
 #ifdef SELECTIVE_CACHING
   void* laddr = ToLocal(TOBLOCK(wr->addr));
@@ -60,6 +63,9 @@ void Worker::ProcessRemoteRead(Client* client, WorkRequest* wr) {
     wr = nullptr;
   } else {
     epicAssert(!directory.IsBlockLocked(entry));
+
+    agent_stats_inst.add_ending_point_4st_detail(tmp_gaddr, "home node: ProcessRemoteRead -> before new WorkRequest");
+    agent_stats_inst.add_starting_point_4st_detail(tmp_gaddr);
     WorkRequest* lwr = new WorkRequest(*wr);
     lwr->counter = 0;
     lwr->op = READ_FORWARD;
@@ -81,9 +87,13 @@ void Worker::ProcessRemoteRead(Client* client, WorkRequest* wr) {
     //intermediate state
     directory.ToToShared(entry);
     SubmitRequest(cli, lwr, ADD_TO_PENDING | REQUEST_SEND);
+    agent_stats_inst.add_ending_point_4st_detail(tmp_gaddr, "home node: new WorkRequest -> before unlock");
 #endif
   }
+  
+  agent_stats_inst.add_starting_point_4st_detail(tmp_gaddr);
   directory.unlock(laddr);
+  agent_stats_inst.add_ending_point_4st_detail(tmp_gaddr, "home node: unlock -> READ case ends");
 }
 
 void Worker::ProcessRemoteReadCache(Client* client, WorkRequest* wr) {

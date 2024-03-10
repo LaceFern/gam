@@ -640,27 +640,21 @@ void Run_request(GAlloc* alloc, GAddr data[], GAddr access[],
         case 0:{
           userop_stats_inst.userop_type = "RL+R";
 
-          agent_stats_inst.add_starting_point_4debug(to_access_breakdown);
           agent_stats_inst.add_starting_point_4at(to_access_breakdown);
+          agent_stats_inst.add_starting_point_4at_detail(to_access_breakdown);
+          agent_stats_inst.add_time_tag_4at_detail(to_access_breakdown, "request node: RLock -> before ProcessLocalRequest");
           alloc->RLock(userop_stats_inst, to_access_breakdown, item_size);
           agent_stats_inst.add_ending_point_4at(to_access_breakdown, "request node: wake up -> RLock returns");
-          agent_stats_inst.add_ending_point_4debug(to_access_breakdown, "request node: call RLock -> RLock returns");
 
-          agent_stats_inst.add_starting_point_4debug(to_access_breakdown);
           memset(buf, 0, item_size);
-          agent_stats_inst.add_ending_point_4debug(to_access_breakdown, "request node: call memset -> memset returns");
 
-          agent_stats_inst.add_starting_point_4debug(to_access_breakdown);
           agent_stats_inst.add_starting_point_4at(to_access_breakdown);
           ret = alloc->Read(to_access_breakdown, buf, item_size);
           agent_stats_inst.add_ending_point_4at(to_access_breakdown, "request node: call Read -> Read returns");
-          agent_stats_inst.add_ending_point_4debug(to_access_breakdown, "request node: call Read -> Read returns");
 
-          agent_stats_inst.add_starting_point_4debug(to_access_breakdown);
           agent_stats_inst.add_starting_point_4at(to_access_breakdown);
           alloc->UnLock(to_access_breakdown, item_size);
           agent_stats_inst.add_ending_point_4at(to_access_breakdown, "request node: call UnLock -> UnLock returns");
-          agent_stats_inst.add_ending_point_4debug(to_access_breakdown, "request node: call UnLock -> UnLock returns");
 
           read_access++;
           break;}

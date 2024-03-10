@@ -20,6 +20,10 @@
 #include "chars.h"
 
 void Worker::ProcessPendingRead(Client* cli, WorkRequest* wr) {
+
+  GAddr tmp_gaddr = wr->addr;
+  agent_stats_inst.add_starting_point_4st_detail(tmp_gaddr);
+
   epicAssert(wr->parent);
   epicAssert(
       (IsLocal(wr->addr) && wr->op == FETCH_AND_SHARED)
@@ -117,6 +121,9 @@ void Worker::ProcessPendingRead(Client* cli, WorkRequest* wr) {
     epicAssert(false);
   }
 
+  agent_stats_inst.add_ending_point_4st_detail(tmp_gaddr, "??? node: ProcessPendingRequest -> before Notify");
+  agent_stats_inst.add_starting_point_4st_detail(tmp_gaddr);
+
   if (--parent->counter == 0) {  //read all the data
     parent->unlock();
     Notify(parent);
@@ -127,6 +134,8 @@ void Worker::ProcessPendingRead(Client* cli, WorkRequest* wr) {
   ProcessToServeRequest(wr);
   delete wr;
   wr = nullptr;
+
+  agent_stats_inst.add_ending_point_4st_detail(tmp_gaddr, "??? node: Notify -> ProcessRequest ends");
 }
 
 void Worker::ProcessPendingReadForward(Client* cli, WorkRequest* wr) {
@@ -706,7 +715,12 @@ void Worker::ProcessRequest(Client* cli, unsigned int work_id, entry_4_wq& entry
 #endif
   epicLog(LOG_DEBUG, "callback function work_id = %u, reply from %d", work_id,
           cli->GetWorkerId());
+
   WorkRequest* wr = GetPendingWork(work_id);
+
+  GAddr tmp_gaddr = wr->addr;
+  agent_stats_inst.add_starting_point_4st_detail(tmp_gaddr, entry.parse_starting_point);
+  agent_stats_inst.add_ending_point_4st_detail(tmp_gaddr, "??? node: parse packet -> before ProcessPendingRequest");
 
   string s = "IBV_WC_RECV_RDMA_WITH_IMM waiting " + to_string(entry.queue_size);
   agent_stats_inst.add_starting_point_4qt(wr->addr, entry.starting_point);
@@ -718,16 +732,16 @@ void Worker::ProcessRequest(Client* cli, unsigned int work_id, entry_4_wq& entry
   agent_stats_inst.add_starting_point_4debug_poll(wr->addr, entry.poll_starting_point);
   agent_stats_inst.add_ending_point_4debug_poll(wr->addr, entry.poll_ending_point, s);
 
-  GAddr tmp_addr = wr->addr;
+  // GAddr tmp_addr = wr->addr;
 
   // agent_stats_inst.add_starting_point_4st(tmp_addr);
-  agent_stats_inst.add_starting_point_4st(tmp_addr, agent_stats_inst.parse_starting_point);
+  agent_stats_inst.add_starting_point_4st(tmp_gaddr, entry.parse_starting_point);
   // agent_stats_inst.add_starting_point_4st(tmp_addr, agent_stats_inst.poll_starting_point);
 
   epicAssert(wr);
   epicAssert(wr->id == work_id);
   ProcessPendingRequest(cli, wr);
 
-  s = "??? node: poll CQ -> process IBV_WC_RECV_RDMA_WITH_IMM, byte_len = " + to_string(agent_stats_inst.byte_len);
-  agent_stats_inst.add_ending_point_4st(tmp_addr, s);
+  s = "??? node: poll CQ -> process IBV_WC_RECV_RDMA_WITH_IMM, byte_len = " + to_string(entry.byte_len);
+  agent_stats_inst.add_ending_point_4st(tmp_gaddr, s);
 }

@@ -323,6 +323,8 @@ int WorkerHandle::SendRequest(WorkRequest* wr, userop_stats& userop_stats_inst) 
       worker->GetWorkerId(), *wr->notify_buf, wr->op, wr->flag, wr->status,
       wr->addr, wr->size, wr->fd);
   long start_time = get_time();
+  agent_stats_inst.add_ending_point_4at_detail(wr->addr);
+  agent_stats_inst.add_starting_point_4at_detail(wr->addr);
   int ret = worker->ProcessLocalRequest(wr);  //not complete due to remote or previously-sent similar requests
   agent_stats_inst.add_ending_point_4at(wr->addr);
 

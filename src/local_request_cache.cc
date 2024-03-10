@@ -480,7 +480,10 @@ int Worker::ProcessLocalRLock(WorkRequest* wr) {
     }
   } else {
     //if there are remote requests
+    agent_stats_inst.add_ending_point_4at_detail(wr->addr, "request node: ProcessLocalRequest -> before cache.RLock");
+    agent_stats_inst.add_starting_point_4at_detail(wr->addr);
     int ret = cache.RLock(wr);
+    agent_stats_inst.add_ending_point_4at_detail(wr->addr, "request node: unlock&Evict -> before return REMOTE_REQUEST");
     if (ret) {
       return REMOTE_REQUEST;
     }
