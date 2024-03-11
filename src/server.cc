@@ -113,7 +113,7 @@ void Server::ProcessRdmaRequest(entry_4_wq& entry) {
         } else {
           epicLog(LOG_DEBUG, "After deserialize this should be processed, %lld, %lld", wr->size, wr->free);
 
-          ProcessRequest(cli, wr);
+          ProcessRequest(cli, wr, entry);
 
           string s = "IBV_WC_RECV waiting " + to_string(entry.queue_size);
           agent_stats_inst.add_starting_point_4qt(wr->addr, entry.starting_point);

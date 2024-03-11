@@ -323,7 +323,7 @@ class Worker : public Server {
   int ProcessLocalMFence(WorkRequest* wr);
   int ProcessLocalSFence(WorkRequest* wr);
   void ProcessRequest(Client* client, WorkRequest* wr);
-  void ProcessRequest(Client* client, WorkRequest* wr, entry_4_wq entry);
+  void ProcessRequest(Client* client, WorkRequest* wr, entry_4_wq &entry);
   void ProcessRemoteMemStat(Client* client, WorkRequest* wr);
   void ProcessRemoteMalloc(Client* client, WorkRequest* wr);
   void ProcessRemoteMallocReply(Client* client, WorkRequest* wr);

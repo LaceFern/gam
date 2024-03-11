@@ -551,9 +551,9 @@ class agent_stats{
     void print_agent_stats(FILE* resFileOut = nullptr){
       // printf("byte_len only accurate when sys thread = 1 because byte_len is tracked by only one global variable (maybe add byte_len into entry elements can solve this problem.)\n");
       output("app_thread_duration:\n", resFileOut);
-      print_stats(time_tag_4_app_thread, starting_point_4_app_thread, ending_point_4_app_thread);
+      print_stats(time_tag_4_app_thread, starting_point_4_app_thread, ending_point_4_app_thread, resFileOut);
       output("sys_thread_duration:\n", resFileOut);
-      print_stats(time_tag_4_sys_thread, starting_point_4_sys_thread, ending_point_4_sys_thread);
+      print_stats(time_tag_4_sys_thread, starting_point_4_sys_thread, ending_point_4_sys_thread, resFileOut);
       // printf("queue_agent_duration:\n");
       // ignore_tag_flag = 1;
       // print_stats(time_tag_4_queue_thread, starting_point_4_queue_thread, ending_point_4_queue_thread);
@@ -561,9 +561,9 @@ class agent_stats{
       // printf("rdma_busy_count = %d\n", rdma_busy_count);
 
       output("app_thread_detail_duration:\n", resFileOut);
-      print_stats(time_tag_4_app_thread_detail, starting_point_4_app_thread_detail, ending_point_4_app_thread_detail);
+      print_stats(time_tag_4_app_thread_detail, starting_point_4_app_thread_detail, ending_point_4_app_thread_detail, resFileOut);
       output("sys_thread_detail_duration:\n", resFileOut);
-      print_stats(time_tag_4_sys_thread_detail, starting_point_4_sys_thread_detail, ending_point_4_sys_thread_detail);
+      print_stats(time_tag_4_sys_thread_detail, starting_point_4_sys_thread_detail, ending_point_4_sys_thread_detail, resFileOut);
 
       // printf("debug_agent_duration (API latency):\n");
       // print_stats(time_tag_4_debug, starting_point_4_debug, ending_point_4_debug);

@@ -36,6 +36,7 @@ public:
   void Broadcast(const char* buf, size_t len);
 
   void ProcessRequest(Client* client, WorkRequest* wr);
+  void ProcessRequest(Client* client, WorkRequest* wr, entry_4_wq& entry);
   //some post process after accepting a TCP connection (e.g., send the worker list)
   int PostAcceptWorker(int, void*);
   //inline int PostConnectMaster(int fd, void* data) {return 0;} //not used

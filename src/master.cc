@@ -95,6 +95,10 @@ Master::~Master() {
   st = nullptr;
 }
 
+void Master::ProcessRequest(Client* client, WorkRequest* wr, entry_4_wq& entry) {
+  ProcessRequest(client, wr);
+}
+
 void Master::ProcessRequest(Client* client, WorkRequest* wr) {
   epicAssert(wr->wid == client->GetWorkerId());
   switch (wr->op) {

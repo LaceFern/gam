@@ -1323,7 +1323,7 @@ int main(int argc, char* argv[]) {
   if (is_master) {
     ofstream result;
     result.open(result_file, ios::app);
-    result << no_node << "," << agent_stats_inst.num_4_sys_thread << "," << no_thread << "," << remote_ratio << ","
+    result << "\n\n" << no_node << "," << agent_stats_inst.num_4_sys_thread << "," << no_thread << "," << remote_ratio << ","
            << shared_ratio << "," << read_ratio << "," << space_locality << ","
            << time_locality << "," << op_type << "," << memory_type << ","
            << item_size << "," << t_thr << "," << a_thr << "," << a_lat << ","
@@ -1357,8 +1357,14 @@ int main(int argc, char* argv[]) {
 
   /***********************************/
   /******** MY CODE STARTS ********/
-  my_stats_inst.print_userop_stats();
-  my_stats_inst.print_agent_stats();
+  // my_stats_inst.print_userop_stats();
+  // my_stats_inst.print_agent_stats();
+  char resFile[128];
+  sprintf(resFile, result_file);
+  FILE *resFileOut = fopen(resFile, "a");
+  my_stats_inst.print_userop_stats(resFileOut);
+  my_stats_inst.print_agent_stats(resFileOut);
+  fclose(resFileOut);
   /******** MY CODE ENDS ********/
   /***********************************/
 

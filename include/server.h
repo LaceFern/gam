@@ -87,6 +87,7 @@ class Server {
       return 0;
     }
     virtual void ProcessRequest(Client* client, WorkRequest* wr) = 0;
+    virtual void ProcessRequest(Client* client, WorkRequest* wr, entry_4_wq& entry) = 0;
     virtual void ProcessRequest(Client* client, unsigned int id) {}
     virtual void CompletionCheck(unsigned int id) {}
 

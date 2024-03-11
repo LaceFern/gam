@@ -351,7 +351,7 @@ void Worker::ProcessRequest(Client* client, WorkRequest* wr) {
 
 
 
-void Worker::ProcessRequest(Client* client, WorkRequest* wr, entry_4_wq entry) {
+void Worker::ProcessRequest(Client* client, WorkRequest* wr, entry_4_wq& entry) {
   epicLog(LOG_DEBUG, "process remote request %d from worker %d", wr->op,
       client->GetWorkerId());
   epicAssert(wr->wid == 0 || wr->wid == client->GetWorkerId());
