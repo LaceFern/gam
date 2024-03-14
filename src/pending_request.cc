@@ -698,3 +698,21 @@ void Worker::ProcessRequest(Client *cli, unsigned int work_id) {
   epicAssert(wr->id == work_id);
   ProcessPendingRequest(cli, wr);
 }
+
+MULTI_SYS_THREAD_OP Worker::ProcessRequestWithOpRes(Client *cli, unsigned int work_id) {
+#ifdef NOCACHE
+  epicLog(LOG_WARNING, "shouldn't come here");
+  return;
+#endif
+  epicLog(LOG_DEBUG, "callback function work_id = %u, reply from %d", work_id,
+    cli->GetWorkerId());
+  WorkRequest *wr = GetPendingWork(work_id);
+  epicAssert(wr);
+  epicAssert(wr->id == work_id);
+  ProcessPendingRequest(cli, wr);
+  if (agent_stats_inst.is_valid_gaddr(wr->addr)) {
+    return MULTI_SYS_THREAD_OP::PROCESS_PENDING_IN_HOME_OR_REQ_NODE;
+  }
+  return MULTI_SYS_THREAD_OP::NONE;
+}
+

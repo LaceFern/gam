@@ -31,16 +31,17 @@ Client *Server::NewClient(bool isMaster, const char *rdmaConn) {
   }
 }
 
-void Server::ProcessRdmaRequest(ibv_wc &wc) {
+MULTI_SYS_THREAD_OP Server::ProcessRdmaRequest(ibv_wc &wc) {
   void *ctx;
   Client *cli;
   uint32_t immdata, id;
+  MULTI_SYS_THREAD_OP res_op = MULTI_SYS_THREAD_OP::NONE;
 
   cli = FindClient(wc.qp_num);
   if (unlikely(!cli)) {
     epicLog(LOG_WARNING, "cannot find the corresponding client for qp %d\n",
       wc.qp_num);
-    return;
+    return res_op;
   }
 
   epicLog(LOG_DEBUG, "THe client is: %d %d %d\n", cli->GetWorkerId(), cli->GetFreeMem(), cli->GetTotalMem());
@@ -48,7 +49,7 @@ void Server::ProcessRdmaRequest(ibv_wc &wc) {
     epicLog(LOG_WARNING, "Completion with error, wr_id = %d (%d:%s:%d:%d)", wc.wr_id,
       wc.status, ibv_wc_status_str(wc.status), wc.vendor_err, wc.qp_num);
     epicAssert(false);
-    return;
+    return res_op;
   }
   epicLog(LOG_DEBUG, "Completion without error, wr_id = %d op = %d (%d:%s:%d:%d)", wc.opcode, wc.wr_id,
     wc.status, ibv_wc_status_str(wc.status), wc.vendor_err, wc.qp_num);
@@ -101,6 +102,15 @@ void Server::ProcessRdmaRequest(ibv_wc &wc) {
       } else {
         epicLog(LOG_DEBUG, "After deserialize this should be processed, %lld, %lld", wr->size, wr->free);
         ProcessRequest(cli, wr);
+        if (agent_stats_inst.is_valid_gaddr(wr->addr)) {
+          if (wr->op == READ_FORWARD || wr->op == FETCH_AND_SHARED || wr->op == INVALIDATE || wr->op == FETCH_AND_INVALIDATE
+            || wr->op == WRITE_FORWARD || wr->op == INVALIDATE_FORWARD || wr->op == WRITE_PERMISSION_ONLY_FORWARD) {
+            res_op = MULTI_SYS_THREAD_OP::PROCESS_IN_CACHE_NODE;
+          } else {
+            res_op = MULTI_SYS_THREAD_OP::PROCESS_IN_HOME_NODE;
+          }
+
+        }
       }
       consumed_len += len;
       if (consumed_len < wc.byte_len) {
@@ -137,7 +147,7 @@ void Server::ProcessRdmaRequest(ibv_wc &wc) {
     char *data = cli->RecvComp(wc);
 
     epicAssert(wc.wc_flags & IBV_WC_WITH_IMM);
-    ProcessRequest(cli, ntohl(wc.imm_data));
+    res_op = ProcessRequestWithOpRes(cli, ntohl(wc.imm_data));
     //resource->ClearSlot(wc.wr_id);
     int n = resource->PostRecvSlot(wc.wr_id);
     //epicAssert(n == 1);
@@ -147,6 +157,7 @@ void Server::ProcessRdmaRequest(ibv_wc &wc) {
     epicLog(LOG_WARNING, "unknown opcode received %d\n", wc.opcode);
     break;
   }
+  return res_op;
 }
 
 void Server::ProcessRdmaRequest() {

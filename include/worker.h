@@ -30,6 +30,7 @@
 #include "lockwrapper.h"
 #include "util.h"
 #include "logging.h"
+#include "agent_stat.h"
 
 #define REQUEST_WRITE_IMM 1
 #define REQUEST_SEND 1 << 1
@@ -295,6 +296,7 @@ public:
   void ProcessRemoteEvictShared(Client *client, WorkRequest *wr);
   void ProcessRemoteEvictDirty(Client *client, WorkRequest *wr);
   void ProcessRequest(Client *client, unsigned int work_id);
+  MULTI_SYS_THREAD_OP ProcessRequestWithOpRes(Client *client, unsigned int work_id);
   void ProcessPendingRequest(Client *cli, WorkRequest *wr);
   void ProcessPendingRead(Client *cli, WorkRequest *wr);
   void ProcessPendingReadForward(Client *cli, WorkRequest *wr);
@@ -439,6 +441,8 @@ public:
   int Notify(WorkRequest *wr);
 
   static void StartService(Worker *w);
+  static void StartMasterService(Worker *w, uint64_t sys_thread_num);
+  static void StartSlaveService(Worker *w, SPSC_QUEUE *poll_queue, uint64_t sys_thread_id, uint64_t *stop_flag);
   static void AsyncRdmaSendThread(Worker *w);
 
   ~Worker();

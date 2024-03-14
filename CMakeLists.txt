@@ -61,6 +61,7 @@ set(GAMSOURCE
         ${CMAKE_SOURCE_DIR}/src/MurmurHash.cc
         ${CMAKE_SOURCE_DIR}/src/logging.cc
         ${CMAKE_SOURCE_DIR}/src/custom_src/histogram.cpp
+        ${CMAKE_SOURCE_DIR}/src/custom_src/agent_stat.cpp
 )
 
 add_subdirectory(${CMAKE_SOURCE_DIR}/lib/HdrHistogram)

@@ -14,6 +14,7 @@
 #include "hashtable.h"
 #include "locked_unordered_map.h"
 #include "map.h"
+#include "agent_stat.h"
 #define CDF_BUCKET_NUM 512
 class ServerFactory;
 class Server;
@@ -70,7 +71,7 @@ public:
   }
 
   void ProcessRdmaRequest();
-  void ProcessRdmaRequest(ibv_wc &wc);
+  MULTI_SYS_THREAD_OP ProcessRdmaRequest(ibv_wc &wc);
   virtual int PostAcceptWorker(int, void *) {
     return 0;
   }
@@ -79,6 +80,10 @@ public:
   }
   virtual void ProcessRequest(Client *client, WorkRequest *wr) = 0;
   virtual void ProcessRequest(Client *client, unsigned int id) {}
+  virtual MULTI_SYS_THREAD_OP ProcessRequestWithOpRes(Client *client, unsigned int id) {
+    return MULTI_SYS_THREAD_OP::NONE;
+  }
+
   virtual void CompletionCheck(unsigned int id) {}
 
   const string &GetIP() const {

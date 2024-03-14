@@ -46,6 +46,7 @@ inline string get_local_ip(const string iface = "") {
 
 long get_time();
 uint64_t rdtsc();
+uint64_t rdtscp();
 
 #define atomic_add(v, i) __sync_fetch_and_add((v), (i))
 #define atomic_read(v) __sync_fetch_and_add((v), (0))

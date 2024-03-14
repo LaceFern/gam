@@ -241,6 +241,65 @@ void Worker::StartService(Worker *w) {
   aeDeleteEventLoop(w->el);
 }
 
+void Worker::StartMasterService(Worker *w, uint64_t sys_thread_num) {
+  epicLog(LOG_DEBUG, "Worker Master Start service!!!");
+  aeEventLoop *eventLoop = w->el;
+  //start epoll
+  eventLoop->stop = 0;
+  int ne = 0;
+  ibv_wc wc[MAX_CQ_EVENTS];
+  ibv_cq *cq = w->resource->GetCompQueue();
+
+  uint64_t stop_flag = 0;
+
+  std::vector<SPSC_QUEUE *>queues(sys_thread_num);
+  std::vector<std::thread> slave_threads(sys_thread_num);
+  for (size_t i = 0;i < sys_thread_num;i++) {
+    queues[i] = new SPSC_QUEUE(MAX_WORKER_PENDING_MSG);
+    slave_threads[i] = std::thread(StartSlaveService, w, queues[i], i, &stop_flag);
+  }
+
+  size_t now_index = 0;
+  while (likely(!eventLoop->stop)) {
+    while (!(ne = ibv_poll_cq(cq, MAX_CQ_EVENTS, wc)))
+      ;
+    if (ne < 0) {
+      epicLog(LOG_WARNING, "poll CQ failed: %d:%s", errno, strerror(errno));
+    }
+    epicLog(LOG_DEBUG, "get completion %d event", ne);
+    for (int i = 0; i < ne; ++i) {
+      queues[now_index % sys_thread_num]->push(queue_entry{ wc[i], rdtsc(), 0 });
+      now_index++;
+    }
+  }
+
+  stop_flag = 1;
+  for (size_t i = 0; i < sys_thread_num;i++) {
+    slave_threads[i].join();
+    delete queues[i];
+  }
+
+  //end the service
+  aeDeleteEventLoop(w->el);
+
+}
+
+void Worker::StartSlaveService(Worker *w, SPSC_QUEUE *poll_queue, uint64_t sys_thread_id, uint64_t *stop_flag) {
+  epicLog(LOG_DEBUG, "Worker Slave %d Start service!!!", sys_thread_id);
+  while (*stop_flag == 0) {
+    queue_entry entry = poll_queue->pop();
+    uint64_t waiting_time = rdtscp() - entry.starting_point;
+    (void)waiting_time;
+    ibv_wc &wc = entry.wc;
+    agent_stats_inst.start_record_multi_sys_thread(sys_thread_id);
+    MULTI_SYS_THREAD_OP res_op = w->ProcessRdmaRequest(entry.wc);
+    if (res_op != MULTI_SYS_THREAD_OP::NONE) {
+      agent_stats_inst.record_poll_thread_with_op(waiting_time, POLL_OP::WAITING_IN_SYSTHREAD_QUEUE);
+      agent_stats_inst.stop_record_multi_sys_thread_with_op(sys_thread_id, res_op);
+    }
+  }
+}
+
 /*
  * we use the socket to get the existing workers
  * - guarantee a consistent join sequence of workers

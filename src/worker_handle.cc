@@ -93,6 +93,9 @@ int WorkerHandle::SendRequest(WorkRequest *wr) {
     wr->addr, wr->size, wr->fd);
   long start_time = get_time();
   int ret = worker->ProcessLocalRequest(wr);  //not complete due to remote or previously-sent similar requests
+
+  agent_stats_inst.stop_record_app_thread_with_op(wr->addr, APP_THREAD_OP::AFTER_PROCESS_LOCAL_REQUEST);
+  agent_stats_inst.start_record_app_thread(wr->addr);
   if (ret) {  //not complete due to remote or previously-sent similar requests
     if (wr->flag & ASYNC) {
       return SUCCESS;
@@ -113,6 +116,8 @@ int WorkerHandle::SendRequest(WorkRequest *wr) {
 #else
       epicLog(LOG_DEBUG, "Waiting for remote reply");
       while (*notify_buf != 2);
+      agent_stats_inst.stop_record_app_thread_with_op(wr->addr, APP_THREAD_OP::WAIT_ASYNC_FINISH);
+      agent_stats_inst.start_record_app_thread(wr->addr);
       long end_time = get_time();
       worker->cdf_cnt_remote[latency_to_bkt((end_time - start_time) / 1000)]++;
       //if(wr->op == READ) {

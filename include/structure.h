@@ -46,7 +46,8 @@ struct Conf {
   int worker_port = 12346;
   std::string worker_bindaddr;
   std::string worker_ip = "localhost";
-  Size size = 1024 * 1024L * 512;  //per-server size of memory pre-allocated
+  // Size size = 1024 * 1024L * 512;  //per-server size of memory pre-allocated
+  Size size = 1024 * 1024L * 1024;  //pre allocate 1GB size
   Size ghost_th = 1024 * 1024;
   double cache_th = 0.15;  //if free mem is below this threshold, we start to allocate memory from remote nodes
   int unsynced_th = 1;
@@ -59,6 +60,8 @@ struct Conf {
   int timeout = 10;  //ms
   int eviction_period = 100;  //ms
 };
+
+#define MAX_SYS_THREAD 12
 
 typedef int PostProcessFunc(int, void *);
 
