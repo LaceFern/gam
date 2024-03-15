@@ -196,17 +196,10 @@ void Init(GAlloc *alloc, GAddr data[], GAddr access[], bool shared[], int id,
       }
 #endif
     }
-
-    /***********************************/
-    /******** MY CODE STARTS ********/
     for (int i = STEPS; i < STEPS + breakdown_times; i++) {
       data[i] = alloc->AlignedMalloc(BLOCK_SIZE);
       alloc->Put(i, &data[i], addr_size);
     }
-    /******** MY CODE ENDS ********/
-    /***********************************/
-
-
   } else {
     for (int i = 0; i < STEPS; i++) {
       //we prioritize the shared ratio over other parameters
@@ -240,17 +233,12 @@ void Init(GAlloc *alloc, GAddr data[], GAddr access[], bool shared[], int id,
         shared[i] = false;
       }
     }
-
-    /***********************************/
-    /******** MY CODE STARTS ********/
     for (int i = STEPS; i < STEPS + breakdown_times; i++) {
       GAddr addr;
       int ret = alloc->Get(i, &addr);
       epicAssert(ret == addr_size);
       data[i] = addr;
     }
-    /******** MY CODE ENDS ********/
-    /***********************************/
   }
   //access[0] = data[0];
   epicLog(LOG_WARNING, "checkpoint 2");
@@ -285,15 +273,9 @@ void Init(GAlloc *alloc, GAddr data[], GAddr access[], bool shared[], int id,
 #endif
   }
   epicLog(LOG_WARNING, "checkpoint 3");
-
-
-  /***********************************/
-  /******** MY CODE STARTS ********/
-  // needs sequential access!!!!!!!!!
   for (int i = 0; i < breakdown_times; i++) {
     GAddr next;
     GAddr n = data[STEPS + i];
-    // next = GADD(n, GetRandom(0, items_per_block, seedp) * item_size); // one item in the block
     next = n;
     access[ITERATION + i] = next;
 
@@ -303,11 +285,6 @@ void Init(GAlloc *alloc, GAddr data[], GAddr access[], bool shared[], int id,
       agent_stats_inst.app_thread_target_thread_id = std::this_thread::get_id();
     }
   }
-  /******** MY CODE ENDS ********/
-  /***********************************/
-
-
-
   epicLog(LOG_WARNING, "end init");
 }
 
