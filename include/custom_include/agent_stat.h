@@ -94,8 +94,6 @@ public:
 
     uint64_t sys_thread_num = 1;
     uint64_t lcores_num_per_numa = 12;
-    std::thread::id app_thread_target_thread_id;
-    std::thread::id poll_thread_target_thread_id;
     explicit agent_stats() {
         // TODO
         app_thread_stats = new Histogram(1, 1000000, 3, 10);

@@ -134,6 +134,14 @@ MULTI_SYS_THREAD_OP Server::ProcessRdmaRequest(ibv_wc &wc) {
         epicAssert(false);
       }
       ProcessRequest(cli, wr);
+      if (agent_stats_inst.is_valid_gaddr(wr->addr)) {
+        if (wr->op == READ_FORWARD || wr->op == FETCH_AND_SHARED || wr->op == INVALIDATE || wr->op == FETCH_AND_INVALIDATE
+          || wr->op == WRITE_FORWARD || wr->op == INVALIDATE_FORWARD || wr->op == WRITE_PERMISSION_ONLY_FORWARD) {
+          res_op = MULTI_SYS_THREAD_OP::PROCESS_IN_CACHE_NODE;
+        } else {
+          res_op = MULTI_SYS_THREAD_OP::PROCESS_IN_HOME_NODE;
+        }
+      }
     }
 #endif
     //resource->ClearSlot(wc.wr_id);
@@ -155,9 +163,9 @@ MULTI_SYS_THREAD_OP Server::ProcessRdmaRequest(ibv_wc &wc) {
   default:
     epicLog(LOG_WARNING, "unknown opcode received %d\n", wc.opcode);
     break;
-    }
-  return res_op;
   }
+  return res_op;
+}
 
 void Server::ProcessRdmaRequest() {
 #ifdef RDMA_POLL

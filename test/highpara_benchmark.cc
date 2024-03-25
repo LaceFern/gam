@@ -281,8 +281,6 @@ void Init(GAlloc *alloc, GAddr data[], GAddr access[], bool shared[], int id,
 
     if (id == 0) {
       agent_stats_inst.push_valid_gaddr(next);
-      // cxz add 
-      agent_stats_inst.app_thread_target_thread_id = std::this_thread::get_id();
     }
   }
   epicLog(LOG_WARNING, "end init");
