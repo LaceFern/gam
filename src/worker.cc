@@ -18,6 +18,7 @@
 #include "zmalloc.h"
 #include "kernel.h"
 #include "chars.h"
+#include "numautil.h"
 
 #ifdef DHT
 #include "../dht/kv.h"
@@ -142,7 +143,10 @@ Worker::Worker(const Conf &conf, RdmaResource *res)
   new thread(startEventLoop, el);
   sleep(2);  //wait for initialization complete
 #endif
-  this->st = new thread(StartService, this);
+  // this->st = new thread(StartService, this);
+  this->st = new thread(StartMasterService, this, agent_stats_inst.sys_thread_num);
+  bind_to_core(*this->st, 0, agent_stats_inst.lcores_num_per_numa - 1);
+
 #if defined(ASYNC_RDMA_SEND)
   new thread(AsyncRdmaSendThread, this);
 #endif
@@ -257,6 +261,8 @@ void Worker::StartMasterService(Worker *w, uint64_t sys_thread_num) {
   for (size_t i = 0;i < sys_thread_num;i++) {
     queues[i] = new SPSC_QUEUE(MAX_WORKER_PENDING_MSG);
     slave_threads[i] = std::thread(StartSlaveService, w, queues[i], i, &stop_flag);
+    // bind to lcore(lcores_num_per_numa - 1 used for master system thread)
+    bind_to_core(slave_threads[i], 0, agent_stats_inst.lcores_num_per_numa - 2 - i);
   }
 
   size_t now_index = 0;
@@ -294,8 +300,8 @@ void Worker::StartSlaveService(Worker *w, SPSC_QUEUE *poll_queue, uint64_t sys_t
     agent_stats_inst.start_record_multi_sys_thread(sys_thread_id);
     MULTI_SYS_THREAD_OP res_op = w->ProcessRdmaRequest(entry.wc);
     if (res_op != MULTI_SYS_THREAD_OP::NONE) {
-      agent_stats_inst.record_poll_thread_with_op(waiting_time, POLL_OP::WAITING_IN_SYSTHREAD_QUEUE);
       agent_stats_inst.stop_record_multi_sys_thread_with_op(sys_thread_id, res_op);
+      agent_stats_inst.record_poll_thread_with_op(waiting_time, POLL_OP::WAITING_IN_SYSTHREAD_QUEUE);
     }
   }
 }

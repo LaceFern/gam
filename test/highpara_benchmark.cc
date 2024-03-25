@@ -60,7 +60,7 @@ string ip_worker = get_local_ip("eth0");
 int port_master = 12345;
 int port_worker = 12346;
 
-const char *result_file = "result.csv";
+const char *result_directory = "gam_result";
 
 //exp parameters
 //long FENCE_PERIOD = 1000;
@@ -755,6 +755,8 @@ void Benchmark(int id) {
   if (id == 0) {
     agent_stats_inst.print_app_thread_stat();
     agent_stats_inst.print_poll_thread_stat();
+    agent_stats_inst.print_multi_sys_thread_stat();
+    agent_stats_inst.save_stat_to_file(std::string(result_directory), agent_stats_inst.sys_thread_num, no_thread);
   }
   // #ifndef LOCAL_MEMORY
   //   //make sure all the requests are complete
@@ -786,8 +788,8 @@ int main(int argc, char *argv[]) {
       is_master = atoi(argv[++i]);
     } else if (strcmp(argv[i], "--no_node") == 0) {
       no_node = atoi(argv[++i]);  //0..100
-    } else if (strcmp(argv[i], "--result_file") == 0) {
-      result_file = argv[++i];  //0..100
+    } else if (strcmp(argv[i], "--result_dir") == 0) {
+      result_directory = argv[++i];  //0..100
     } else if (strcmp(argv[i], "--item_size") == 0) {
       item_size = atoi(argv[++i]);
       items_per_block = BLOCK_SIZE / item_size;
@@ -859,7 +861,7 @@ int main(int argc, char *argv[]) {
     is_master == 1 ? "true" : "false", no_thread, no_node);
   printf(
     "no_node = %d, no_thread = %d, remote_ratio: %d, shared_ratio: %d, read_ratio: %d, "
-    "space_locality: %d, time_locality: %d, op_type = %s, memory_type = %s, item_size = %d, cache_th = %f, result_file = %s\n",
+    "space_locality: %d, time_locality: %d, op_type = %s, memory_type = %s, item_size = %d, cache_th = %f, result_directory = %s\n",
     no_node,
     no_thread,
     remote_ratio,
@@ -873,7 +875,7 @@ int main(int argc, char *argv[]) {
       "rlock/wlock" :
       (op_type == 2 ? "rlock+read/wlock+write" : "try_rlock/try_wlock")),
     memory_type == 0 ? "local memory" : "global memory", item_size, cache_th,
-    result_file);
+    result_directory);
 
   //srand(1);
 
@@ -950,6 +952,7 @@ int main(int argc, char *argv[]) {
   thread ths[no_thread];
   for (int i = 0; i < no_thread; i++) {
     ths[i] = thread(Benchmark, i);
+    bind_to_core(ths[i], 1, i);
   }
   for (int i = 0; i < no_thread; i++) {
     ths[i].join();
@@ -991,13 +994,6 @@ int main(int argc, char *argv[]) {
   a_lat /= no_node;
 
   if (is_master) {
-    ofstream result;
-    result.open(result_file, ios::app);
-    result << no_node << "," << agent_stats_inst.sys_thread_num << "," << no_thread << "," << remote_ratio << ","
-      << shared_ratio << "," << read_ratio << "," << space_locality << ","
-      << time_locality << "," << op_type << "," << memory_type << ","
-      << item_size << "," << t_thr << "," << a_thr << "," << a_lat << ","
-      << cache_th << "\n";
     epicLog(
       LOG_WARNING,
       "results for all the nodes: "
@@ -1007,7 +1003,6 @@ int main(int argc, char *argv[]) {
       no_node, agent_stats_inst.sys_thread_num, no_thread, remote_ratio, shared_ratio, read_ratio,
       space_locality, time_locality, op_type, memory_type, item_size, t_thr,
       a_thr, a_lat, cache_th);
-    result.close();
   }
 
   // #ifdef STATS_COLLECTION

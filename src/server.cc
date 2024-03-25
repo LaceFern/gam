@@ -109,7 +109,6 @@ MULTI_SYS_THREAD_OP Server::ProcessRdmaRequest(ibv_wc &wc) {
           } else {
             res_op = MULTI_SYS_THREAD_OP::PROCESS_IN_HOME_NODE;
           }
-
         }
       }
       consumed_len += len;
@@ -156,9 +155,9 @@ MULTI_SYS_THREAD_OP Server::ProcessRdmaRequest(ibv_wc &wc) {
   default:
     epicLog(LOG_WARNING, "unknown opcode received %d\n", wc.opcode);
     break;
-  }
+    }
   return res_op;
-}
+  }
 
 void Server::ProcessRdmaRequest() {
 #ifdef RDMA_POLL

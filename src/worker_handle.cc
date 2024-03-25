@@ -94,7 +94,20 @@ int WorkerHandle::SendRequest(WorkRequest *wr) {
   long start_time = get_time();
   int ret = worker->ProcessLocalRequest(wr);  //not complete due to remote or previously-sent similar requests
 
-  agent_stats_inst.stop_record_app_thread_with_op(wr->addr, APP_THREAD_OP::AFTER_PROCESS_LOCAL_REQUEST);
+
+  if (wr->op == RLOCK || wr->op == WLOCK) {
+    agent_stats_inst.stop_record_app_thread_with_op(wr->addr, APP_THREAD_OP::AFTER_PROCESS_LOCAL_REQUEST_LOCK);
+  } else if (wr->op == UNLOCK) {
+    agent_stats_inst.stop_record_app_thread_with_op(wr->addr, APP_THREAD_OP::AFTER_PROCESS_LOCAL_REQUEST_UNLOCK);
+  } else if (wr->op == READ) {
+    agent_stats_inst.stop_record_app_thread_with_op(wr->addr, APP_THREAD_OP::AFTER_PROCESS_LOCAL_REQUEST_READ);
+  } else if (wr->op == WRITE) {
+    agent_stats_inst.stop_record_app_thread_with_op(wr->addr, APP_THREAD_OP::AFTER_PROCESS_LOCAL_REQUEST_WRITE);
+  } else {
+    agent_stats_inst.stop_record_app_thread_with_op(wr->addr, APP_THREAD_OP::AFTER_PROCESS_LOCAL_REQUEST_OTHER);
+  }
+
+
   agent_stats_inst.start_record_app_thread(wr->addr);
   if (ret) {  //not complete due to remote or previously-sent similar requests
     if (wr->flag & ASYNC) {

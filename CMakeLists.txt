@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -std=c++14 -DNDEBUG -rdynamic")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -std=c++17 -DNDEBUG -rdynamic")
 
 option(DHT OFF)
 
@@ -30,7 +30,7 @@ include_directories(${CMAKE_SOURCE_DIR}/lib/HdrHistogram/include)
 # include atomic_queue headers
 include_directories(${CMAKE_SOURCE_DIR}/lib/atomic_queue/include)
 
-set(LIBRARIES ${LIBRARIES} ibverbs pthread boost_thread boost_system hdr_histogram_static)
+set(LIBRARIES ${LIBRARIES} ibverbs pthread boost_thread boost_system hdr_histogram_static numa stdc++fs)
 
 
 file(GLOB GAMSOURCESLIST ${CMAKE_SOURCE_DIR}/src/*.cc)
@@ -62,9 +62,12 @@ set(GAMSOURCE
         ${CMAKE_SOURCE_DIR}/src/logging.cc
         ${CMAKE_SOURCE_DIR}/src/custom_src/histogram.cpp
         ${CMAKE_SOURCE_DIR}/src/custom_src/agent_stat.cpp
+        ${CMAKE_SOURCE_DIR}/src/custom_src/numautil.cpp
 )
 
 add_subdirectory(${CMAKE_SOURCE_DIR}/lib/HdrHistogram)
+
+add_library(galloc ${GAMSOURCE})
 
 if(NOT EXISTS "${CMAKE_SOURCE_DIR}/lib/libcuckoo/cityhash-1.1.1/src/.libs/libcityhash.a")
     add_custom_command(OUTPUT LIBCUCKOO
@@ -80,7 +83,6 @@ if(NOT EXISTS "${CMAKE_SOURCE_DIR}/lib/libcuckoo/cityhash-1.1.1/src/.libs/libcit
 endif()
 
 
-add_library(galloc ${GAMSOURCE})
 
 
 file(GLOB TESTSOURCESLIST ${CMAKE_SOURCE_DIR}/test/*.cc)
