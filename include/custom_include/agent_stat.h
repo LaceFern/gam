@@ -96,32 +96,32 @@ public:
     uint64_t lcores_num_per_numa = 12;
     explicit agent_stats() {
         // TODO
-        app_thread_stats = new Histogram(1, 1000000, 3, 10);
-        app_thread_op_stats[APP_THREAD_OP::AFTER_PROCESS_LOCAL_REQUEST_LOCK] = new Histogram(1, 1000000, 3, 10);
-        app_thread_op_stats[APP_THREAD_OP::AFTER_PROCESS_LOCAL_REQUEST_UNLOCK] = new Histogram(1, 1000000, 3, 10);
-        app_thread_op_stats[APP_THREAD_OP::AFTER_PROCESS_LOCAL_REQUEST_READ] = new Histogram(1, 1000000, 3, 10);
-        app_thread_op_stats[APP_THREAD_OP::AFTER_PROCESS_LOCAL_REQUEST_WRITE] = new Histogram(1, 1000000, 3, 10);
-        app_thread_op_stats[APP_THREAD_OP::AFTER_PROCESS_LOCAL_REQUEST_OTHER] = new Histogram(1, 1000000, 3, 10);
+        app_thread_stats = new Histogram(1, 10000000, 3, 10);
+        app_thread_op_stats[APP_THREAD_OP::AFTER_PROCESS_LOCAL_REQUEST_LOCK] = new Histogram(1, 10000000, 3, 10);
+        app_thread_op_stats[APP_THREAD_OP::AFTER_PROCESS_LOCAL_REQUEST_UNLOCK] = new Histogram(1, 10000000, 3, 10);
+        app_thread_op_stats[APP_THREAD_OP::AFTER_PROCESS_LOCAL_REQUEST_READ] = new Histogram(1, 10000000, 3, 10);
+        app_thread_op_stats[APP_THREAD_OP::AFTER_PROCESS_LOCAL_REQUEST_WRITE] = new Histogram(1, 10000000, 3, 10);
+        app_thread_op_stats[APP_THREAD_OP::AFTER_PROCESS_LOCAL_REQUEST_OTHER] = new Histogram(1, 10000000, 3, 10);
 
-        app_thread_op_stats[APP_THREAD_OP::WAIT_ASYNC_FINISH] = new Histogram(1, 1000000, 3, 10);
-        app_thread_op_stats[APP_THREAD_OP::WAKEUP_2_READ_RETURN] = new Histogram(1, 1000000, 3, 10);
-        app_thread_op_stats[APP_THREAD_OP::WAKEUP_2_WRITE_RETURN] = new Histogram(1, 1000000, 3, 10);
-        app_thread_op_stats[APP_THREAD_OP::WAKEUP_2_RLOCK_RETURN] = new Histogram(1, 1000000, 3, 10);
-        app_thread_op_stats[APP_THREAD_OP::WAKEUP_2_WLOCK_RETURN] = new Histogram(1, 1000000, 3, 10);
-        app_thread_op_stats[APP_THREAD_OP::WAKEUP_2_UNLOCK_RETURN] = new Histogram(1, 1000000, 3, 10);
-        app_thread_op_stats[APP_THREAD_OP::MEMSET] = new Histogram(1, 1000000, 3, 10);
+        app_thread_op_stats[APP_THREAD_OP::WAIT_ASYNC_FINISH] = new Histogram(1, 10000000, 3, 10);
+        app_thread_op_stats[APP_THREAD_OP::WAKEUP_2_READ_RETURN] = new Histogram(1, 10000000, 3, 10);
+        app_thread_op_stats[APP_THREAD_OP::WAKEUP_2_WRITE_RETURN] = new Histogram(1, 10000000, 3, 10);
+        app_thread_op_stats[APP_THREAD_OP::WAKEUP_2_RLOCK_RETURN] = new Histogram(1, 10000000, 3, 10);
+        app_thread_op_stats[APP_THREAD_OP::WAKEUP_2_WLOCK_RETURN] = new Histogram(1, 10000000, 3, 10);
+        app_thread_op_stats[APP_THREAD_OP::WAKEUP_2_UNLOCK_RETURN] = new Histogram(1, 10000000, 3, 10);
+        app_thread_op_stats[APP_THREAD_OP::MEMSET] = new Histogram(1, 10000000, 3, 10);
 
-        sys_thread_stats = new Histogram(1, 1000000, 3, 10);
+        sys_thread_stats = new Histogram(1, 10000000, 3, 10);
 
         for (int i = 0; i < MAX_SYS_THREAD; i++) {
-            multi_sys_thread_stats[i] = new Histogram(1, 1000000, 3, 10);
-            multi_sys_thread_op_stats[i][MULTI_SYS_THREAD_OP::PROCESS_IN_HOME_NODE] = new Histogram(1, 1000000, 3, 10);
-            multi_sys_thread_op_stats[i][MULTI_SYS_THREAD_OP::PROCESS_PENDING_IN_HOME_OR_REQ_NODE] = new Histogram(1, 1000000, 3, 10);
-            multi_sys_thread_op_stats[i][MULTI_SYS_THREAD_OP::PROCESS_IN_CACHE_NODE] = new Histogram(1, 1000000, 3, 10);
+            multi_sys_thread_stats[i] = new Histogram(1, 10000000, 3, 10);
+            multi_sys_thread_op_stats[i][MULTI_SYS_THREAD_OP::PROCESS_IN_HOME_NODE] = new Histogram(1, 10000000, 3, 10);
+            multi_sys_thread_op_stats[i][MULTI_SYS_THREAD_OP::PROCESS_PENDING_IN_HOME_OR_REQ_NODE] = new Histogram(1, 10000000, 3, 10);
+            multi_sys_thread_op_stats[i][MULTI_SYS_THREAD_OP::PROCESS_IN_CACHE_NODE] = new Histogram(1, 10000000, 3, 10);
         }
 
-        poll_thread_stats = new Histogram(1, 1000000, 3, 10);
-        poll_thread_op_stats[POLL_OP::WAITING_IN_SYSTHREAD_QUEUE] = new Histogram(1, 1000000, 3, 10);
+        poll_thread_stats = new Histogram(1, 10000000, 3, 10);
+        poll_thread_op_stats[POLL_OP::WAITING_IN_SYSTHREAD_QUEUE] = new Histogram(1, 10000000, 3, 10);
 
         std::vector<size_t>numa_node_list = get_lcores_for_numa_node(0);
         lcores_num_per_numa = numa_node_list.size();
