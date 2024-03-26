@@ -693,10 +693,10 @@ void Benchmark(int id) {
   alloc->Put(sync_id, &sync_id, sizeof(int));
   for (int i = 1; i <= no_node; i++) {
     for (int j = 0; j < no_thread; j++) {
-      epicLog(LOG_WARNING, "waiting for node %d, thread %d", i, j);
+      epicLog(LOG_INFO, "waiting for node %d, thread %d", i, j);
       alloc->Get(SYNC_RUN_BASE + no_node * i + j, &sync_id);
       epicAssert(sync_id == SYNC_RUN_BASE + no_node * i + j);
-      epicLog(LOG_WARNING, "get sync_id %d from node %d, thread %d", sync_id, i, j);
+      epicLog(LOG_INFO, "get sync_id %d from node %d, thread %d", sync_id, i, j);
     }
   }
 
@@ -710,10 +710,10 @@ void Benchmark(int id) {
   alloc->Put(sync_id, &sync_id, sizeof(int));
   for (int i = 1; i <= no_node; i++) {
     for (int j = 0; j < no_thread; j++) {
-      epicLog(LOG_WARNING, "waiting for node %d, thread %d", i, j);
+      epicLog(LOG_INFO, "waiting for node %d, thread %d", i, j);
       alloc->Get(SYNC_RUN_BASE + no_node * i + j, &sync_id);
       epicAssert(sync_id == SYNC_RUN_BASE + no_node * i + j);
-      epicLog(LOG_WARNING, "get sync_id %d from node %d, thread %d", sync_id, i, j);
+      epicLog(LOG_INFO, "get sync_id %d from node %d, thread %d", sync_id, i, j);
     }
   }
 
@@ -726,10 +726,10 @@ void Benchmark(int id) {
   alloc->Put(sync_id, &sync_id, sizeof(int));
   for (int i = 1; i <= no_node; i++) {
     for (int j = 0; j < no_thread; j++) {
-      epicLog(LOG_WARNING, "waiting for node %d, thread %d", i, j);
+      epicLog(LOG_INFO, "waiting for node %d, thread %d", i, j);
       alloc->Get(SYNC_RUN_BASE + no_node * i + j, &sync_id);
       epicAssert(sync_id == SYNC_RUN_BASE + no_node * i + j);
-      epicLog(LOG_WARNING, "get sync_id %d from node %d, thread %d", sync_id, i, j);
+      epicLog(LOG_INFO, "get sync_id %d from node %d, thread %d", sync_id, i, j);
     }
   }
 

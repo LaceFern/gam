@@ -101,7 +101,7 @@ MULTI_SYS_THREAD_OP Server::ProcessRdmaRequest(ibv_wc &wc) {
         epicLog(LOG_WARNING, "de-serialize the work request failed\n");
       } else {
         epicLog(LOG_DEBUG, "After deserialize this should be processed, %lld, %lld", wr->size, wr->free);
-        ProcessRequest(cli, wr);
+        // need check before ProcessRequest, because ProcessRequest will delete wr!
         if (agent_stats_inst.is_valid_gaddr(wr->addr)) {
           if (wr->op == READ_FORWARD || wr->op == FETCH_AND_SHARED || wr->op == INVALIDATE || wr->op == FETCH_AND_INVALIDATE
             || wr->op == WRITE_FORWARD || wr->op == INVALIDATE_FORWARD || wr->op == WRITE_PERMISSION_ONLY_FORWARD) {
@@ -110,6 +110,7 @@ MULTI_SYS_THREAD_OP Server::ProcessRdmaRequest(ibv_wc &wc) {
             res_op = MULTI_SYS_THREAD_OP::PROCESS_IN_HOME_NODE;
           }
         }
+        ProcessRequest(cli, wr);
       }
       consumed_len += len;
       if (consumed_len < wc.byte_len) {
@@ -133,7 +134,7 @@ MULTI_SYS_THREAD_OP Server::ProcessRdmaRequest(ibv_wc &wc) {
         epicLog(LOG_WARNING, "len = %d, wc.byte_len = %d, data = %s", len, wc.byte_len, data);
         epicAssert(false);
       }
-      ProcessRequest(cli, wr);
+      // need check before ProcessRequest, because ProcessRequest will delete wr!
       if (agent_stats_inst.is_valid_gaddr(wr->addr)) {
         if (wr->op == READ_FORWARD || wr->op == FETCH_AND_SHARED || wr->op == INVALIDATE || wr->op == FETCH_AND_INVALIDATE
           || wr->op == WRITE_FORWARD || wr->op == INVALIDATE_FORWARD || wr->op == WRITE_PERMISSION_ONLY_FORWARD) {
@@ -142,6 +143,7 @@ MULTI_SYS_THREAD_OP Server::ProcessRdmaRequest(ibv_wc &wc) {
           res_op = MULTI_SYS_THREAD_OP::PROCESS_IN_HOME_NODE;
         }
       }
+      ProcessRequest(cli, wr);
     }
 #endif
     //resource->ClearSlot(wc.wr_id);
