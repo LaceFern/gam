@@ -37,7 +37,7 @@ using namespace std;
 #define USE_CITYHASH
 //#define USE_MURMURHASH
 
-#define MERGE_RDMA_REQUESTS
+// #define MERGE_RDMA_REQUESTS
 //#define USE_PTHREAD_COND
 
 //#define USE_HUGEPAGE
