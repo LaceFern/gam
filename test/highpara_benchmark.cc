@@ -367,7 +367,8 @@ void Run_request(GAlloc *alloc, GAddr data[], GAddr access[],
 
   int count_4_nobreakdown = 0;
   int count_4_breakdown = 0;
-  int thres_4_nobreakdown = ITERATION / (breakdown_times + 1) + 1;
+  // edited by cxz, multi 0.75 is used for let app thread 0 stop early than other app thread, so that we can get the "congestion" result
+  int thres_4_nobreakdown = 0.75 * (ITERATION / (breakdown_times + 1)) + 1;
 
   GAddr to_access = access[0];  //access starting point
   char buf[item_size];
@@ -375,7 +376,7 @@ void Run_request(GAlloc *alloc, GAddr data[], GAddr access[],
   int j = 0;
 
   long start = get_time();
-  for (int i = 0; i < ITERATION; i++) {
+  for (int i = 0; i < ITERATION && count_4_breakdown < breakdown_times; i++) {
 
 
     /***********************************/

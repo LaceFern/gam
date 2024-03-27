@@ -272,9 +272,12 @@ void Worker::StartMasterService(Worker *w, uint64_t sys_thread_num) {
     if (ne < 0) {
       epicLog(LOG_WARNING, "poll CQ failed: %d:%s", errno, strerror(errno));
     }
+    uint64_t now_time_tsc = rdtsc();
     epicLog(LOG_DEBUG, "get completion %d event", ne);
     for (int i = 0; i < ne; ++i) {
-      queues[now_index % sys_thread_num]->push(queue_entry{ wc[i], rdtsc(), 0 });
+      while (!queues[now_index % sys_thread_num]->try_push(queue_entry{ wc[i], now_time_tsc, 0 })) {
+        now_index++;
+      }
       now_index++;
     }
   }
@@ -302,6 +305,13 @@ void Worker::StartSlaveService(Worker *w, SPSC_QUEUE *poll_queue, uint64_t sys_t
     if (res_op != MULTI_SYS_THREAD_OP::NONE) {
       agent_stats_inst.stop_record_multi_sys_thread_with_op(sys_thread_id, res_op);
       agent_stats_inst.record_poll_thread_with_op(waiting_time, POLL_OP::WAITING_IN_SYSTHREAD_QUEUE);
+      // if (res_op == MULTI_SYS_THREAD_OP::PROCESS_IN_HOME_NODE) {
+      //   std::vector<int> pending_msg_numbers = w->get_all_client_pending_msg_number();
+      //   for (size_t i = 0;i < pending_msg_numbers.size();i++) {
+      //     printf("%d ", pending_msg_numbers[i]);
+      //   }
+      //   printf("\n");
+      // }
     }
   }
 }
