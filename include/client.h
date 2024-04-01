@@ -117,6 +117,10 @@ public:
     epicLog(LOG_INFO, "unlock client %d", GetWorkerId());
   }
 
+  inline int get_pending_msg_number() {
+    return ctx->get_pending_msg_number();
+  }
+
   ~Client();
 };
 #endif

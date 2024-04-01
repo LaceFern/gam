@@ -242,6 +242,10 @@ public:
   ssize_t Cas(raddr src, uint64_t oldval, uint64_t newval, unsigned int id = 0,
     bool signaled = false);
 
+  int get_pending_msg_number() {
+    return pending_msg.load();
+  }
+
   ~RdmaContext();
 };
 

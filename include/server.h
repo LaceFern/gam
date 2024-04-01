@@ -94,6 +94,14 @@ public:
     return conf->worker_port;
   }
 
+  inline std::vector<int> get_all_client_pending_msg_number() {
+    std::vector<int> res;
+    for (auto &item : widCliMapWorker) {
+      res.push_back(item.second->get_pending_msg_number());
+    }
+    return res;
+  }
+
   virtual ~Server() {
     aeDeleteEventLoop(el);
   }
