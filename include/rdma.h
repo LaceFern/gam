@@ -33,7 +33,12 @@ typedef void *raddr;  //raddr means registered addr
 #define HALF_BITS 0xffffffff
 #define QUARTER_BITS 0xffff
 
+#ifdef USE_HUGEPAGE
+#define RECV_SLOT_STEP (2*1024*1024/MAX_REQUEST_SIZE)
+#else
 #define RECV_SLOT_STEP 100
+#endif
+
 #define BPOS(s) (s/RECV_SLOT_STEP)
 #define BOFF(s) ((s%RECV_SLOT_STEP)*MAX_REQUEST_SIZE)
 #define RMINUS(a, b, rz) ((a) >= (b) ? (a) - (b) : (a) + (rz) - (b))

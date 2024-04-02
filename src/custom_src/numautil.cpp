@@ -144,3 +144,6 @@ void *get_huge_mem(uint32_t numa_node, size_t size) {
     return shm_buf;
 }
 
+void free_huge_mem(void *addr) {
+    shmdt(addr);
+}

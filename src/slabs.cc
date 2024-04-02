@@ -28,7 +28,7 @@
 #include "settings.h"
 #include "log.h"
 #include "kernel.h"
-
+#include "numautil.h"
 /*
  * Figures out which slab class (chunk size) is required to store an item of
  * a given size.
@@ -58,12 +58,14 @@ void *SlabAllocator::mmap_malloc(size_t size) {
     epicLog(LOG_WARNING, "aligned the size from %lu to %lu", old_size, size);
   }
 #ifdef USE_HUGEPAGE
-  ret = mmap(fixed_base, size, PROT_READ | PROT_WRITE,
-    MAP_PRIVATE | MAP_ANON | MAP_HUGETLB | MAP_NORESERVE, -1, 0);
+  // mmap can't assign memory on nic socket!
+  // ret = mmap(fixed_base, size, PROT_READ | PROT_WRITE,
+  //   MAP_PRIVATE | MAP_ANON | MAP_HUGETLB | MAP_NORESERVE, -1, 0);
+  ret = get_huge_mem(NIC_SOCKET, size);
 #else
   ret = mmap(fixed_base, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON | MAP_NORESERVE, -1, 0);
 #endif
-  if (ret == MAP_FAILED) {
+  if (ret == MAP_FAILED || ret == nullptr) {
     perror("map failed");
     return NULL;
   }
@@ -629,6 +631,11 @@ void SlabAllocator::slabs_adjust_mem_requested(unsigned int id, size_t old,
 }
 
 SlabAllocator::~SlabAllocator() {
-  if (mem_base)
+  if (mem_base) {
+#ifdef USE_HUGEPAGE
+    free_huge_mem(mem_base);
+#else
     mmap_free(mem_base);
+#endif
+  }
 }
