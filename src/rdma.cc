@@ -15,6 +15,7 @@
 #include "log.h"
 #include "kernel.h"
 #include "workrequest.h"
+#include "numautil.h"
 
 static int page_size = 4096;
 int MAX_RDMA_INLINE_SIZE = 256;
@@ -134,7 +135,9 @@ RdmaResource::~RdmaResource() {
   ibv_close_device(this->context);
   for (ibv_mr *mr : comm_buf) {
     ibv_dereg_mr(mr);
+#ifndef USE_HUGEPAGE
     zfree(mr->addr);
+#endif
   }
 }
 
@@ -173,7 +176,11 @@ int RdmaResource::RegCommSlot(int slot) {
     int i = slots.size();
     for (; i < slot_inuse; i += RECV_SLOT_STEP) {
       int sz = roundup(RECV_SLOT_STEP * MAX_REQUEST_SIZE, page_size);
+#ifdef USE_HUGEPAGE
+      void *buf = get_huge_mem(NIC_SOCKET, sz);
+#else 
       void *buf = zmalloc(sz);
+#endif
       struct ibv_mr *mr = ibv_reg_mr(
         this->pd,
         buf,
@@ -398,7 +405,12 @@ RdmaContext::RdmaContext(RdmaResource *res, bool master)
     max_pending_msg > HW_MAX_PENDING ? HW_MAX_PENDING : max_pending_msg;
   int max_buf_size = IsMaster() ? MASTER_BUFFER_SIZE : WORKER_BUFFER_SIZE;
 
+#ifdef USE_HUGEPAGE
+  // use socket 0 for nic socket
+  void *buf = get_huge_mem(NIC_SOCKET, roundup(max_buf_size, page_size));
+#else
   void *buf = zmalloc(roundup(max_buf_size, page_size));
+#endif  
   if (unlikely(!buf)) {
     epicLog(LOG_WARNING, "Unable to allocate memeory\n");
     goto send_buf_err;
@@ -1166,6 +1178,8 @@ char *RdmaContext::RecvComp(ibv_wc &wc) {
 RdmaContext::~RdmaContext() {
   ibv_destroy_qp(qp);
   ibv_dereg_mr(send_buf);
+#ifndef USE_HUGEPAGE
   zfree(send_buf->addr);
+#endif
   zfree(msg);
 }

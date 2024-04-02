@@ -39,8 +39,8 @@ using namespace std;
 
 // #define MERGE_RDMA_REQUESTS
 //#define USE_PTHREAD_COND
-
-//#define USE_HUGEPAGE
+#define NIC_SOCKET 0
+// #define USE_HUGEPAGE
 
 #define USE_COCKOOHASH
 
