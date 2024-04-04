@@ -129,6 +129,19 @@ void Worker::ProcessPendingRead(Client *cli, WorkRequest *wr) {
   wr = nullptr;
 }
 
+void Worker::ProcessPendingReadP2P(Client *cli, WorkRequest *wr) {
+  epicAssert(wr->op == READ_P2P);
+  epicAssert(wr->parent);
+
+  WorkRequest *parent = wr->parent;
+  --parent->counter;
+  epicAssert(parent->counter == 0);
+  Notify(parent);
+  this->sb.sb_free((char *)wr->ptr - CACHE_LINE_PREFIX);
+  delete wr;
+  wr = nullptr;
+}
+
 void Worker::ProcessPendingReadForward(Client *cli, WorkRequest *wr) {
 #ifdef SELECTIVE_CACHING
   epicAssert(!(wr->flag & NOT_CACHE));
@@ -650,6 +663,10 @@ void Worker::ProcessPendingRequest(Client *cli, WorkRequest *wr) {
   case READ:
   case FETCH_AND_SHARED: {
     ProcessPendingRead(cli, wr);
+    break;
+  }
+  case READ_P2P: {
+    ProcessPendingReadP2P(cli, wr);
     break;
   }
   case READ_FORWARD: {

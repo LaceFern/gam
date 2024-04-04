@@ -32,6 +32,7 @@ enum class APP_THREAD_OP {
     AFTER_PROCESS_LOCAL_REQUEST_LOCK,
     AFTER_PROCESS_LOCAL_REQUEST_UNLOCK,
     AFTER_PROCESS_LOCAL_REQUEST_READ,
+    AFTER_PROCESS_LOCAL_REQUEST_READP2P,
     AFTER_PROCESS_LOCAL_REQUEST_WRITE,
     AFTER_PROCESS_LOCAL_REQUEST_OTHER,
     WAIT_ASYNC_FINISH,
@@ -100,6 +101,7 @@ public:
         app_thread_op_stats[APP_THREAD_OP::AFTER_PROCESS_LOCAL_REQUEST_LOCK] = new Histogram(1, 10000000, 3, 10);
         app_thread_op_stats[APP_THREAD_OP::AFTER_PROCESS_LOCAL_REQUEST_UNLOCK] = new Histogram(1, 10000000, 3, 10);
         app_thread_op_stats[APP_THREAD_OP::AFTER_PROCESS_LOCAL_REQUEST_READ] = new Histogram(1, 10000000, 3, 10);
+        app_thread_op_stats[APP_THREAD_OP::AFTER_PROCESS_LOCAL_REQUEST_READP2P] = new Histogram(1, 10000000, 3, 10);
         app_thread_op_stats[APP_THREAD_OP::AFTER_PROCESS_LOCAL_REQUEST_WRITE] = new Histogram(1, 10000000, 3, 10);
         app_thread_op_stats[APP_THREAD_OP::AFTER_PROCESS_LOCAL_REQUEST_OTHER] = new Histogram(1, 10000000, 3, 10);
 
@@ -139,6 +141,8 @@ public:
         app_thread_op_stats[APP_THREAD_OP::AFTER_PROCESS_LOCAL_REQUEST_UNLOCK]->print(stdout, 5);
         std::cout << "\nAFTER_PROCESS_LOCAL_REQUEST_READ: " << std::endl;
         app_thread_op_stats[APP_THREAD_OP::AFTER_PROCESS_LOCAL_REQUEST_READ]->print(stdout, 5);
+        std::cout << "\nAFTER_PROCESS_LOCAL_REQUEST_READP2P: " << std::endl;
+        app_thread_op_stats[APP_THREAD_OP::AFTER_PROCESS_LOCAL_REQUEST_READP2P]->print(stdout, 5);
         std::cout << "\nAFTER_PROCESS_LOCAL_REQUEST_WRITE: " << std::endl;
         app_thread_op_stats[APP_THREAD_OP::AFTER_PROCESS_LOCAL_REQUEST_WRITE]->print(stdout, 5);
         std::cout << "\nAFTER_PROCESS_LOCAL_REQUEST_OTHER: " << std::endl;
@@ -204,6 +208,12 @@ public:
         file = fopen(filePath.c_str(), "w");
         assert(file != nullptr);
         app_thread_op_stats[APP_THREAD_OP::AFTER_PROCESS_LOCAL_REQUEST_READ]->print(file, 5);
+        fclose(file);
+
+        filePath = result_directory / std::experimental::filesystem::path("AFTER_PROCESS_LOCAL_REQUEST_READP2P" + common_suffix);
+        file = fopen(filePath.c_str(), "w");
+        assert(file != nullptr);
+        app_thread_op_stats[APP_THREAD_OP::AFTER_PROCESS_LOCAL_REQUEST_READP2P]->print(file, 5);
         fclose(file);
 
         filePath = result_directory / std::experimental::filesystem::path("AFTER_PROCESS_LOCAL_REQUEST_WRITE" + common_suffix);

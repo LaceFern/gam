@@ -148,6 +148,7 @@ private:
   ibv_mr *send_buf;  //send buf
   int slot_head;
   int slot_tail;bool full;  //to differentiate between all free and all occupied slot_head == slot_tail
+  std::string remote_ip;
 
   uint64_t vaddr = 0; /* for remote rdma read/write */
   uint32_t rkey = 0;
@@ -249,6 +250,10 @@ public:
 
   int get_pending_msg_number() {
     return pending_msg.load();
+  }
+
+  std::string get_remote_ip() {
+    return remote_ip;
   }
 
   ~RdmaContext();

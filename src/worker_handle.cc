@@ -101,6 +101,8 @@ int WorkerHandle::SendRequest(WorkRequest *wr) {
     agent_stats_inst.stop_record_app_thread_with_op(wr->addr, APP_THREAD_OP::AFTER_PROCESS_LOCAL_REQUEST_UNLOCK);
   } else if (wr->op == READ) {
     agent_stats_inst.stop_record_app_thread_with_op(wr->addr, APP_THREAD_OP::AFTER_PROCESS_LOCAL_REQUEST_READ);
+  } else if (wr->op == READ_P2P) {
+    agent_stats_inst.stop_record_app_thread_with_op(wr->addr, APP_THREAD_OP::AFTER_PROCESS_LOCAL_REQUEST_READP2P);
   } else if (wr->op == WRITE) {
     agent_stats_inst.stop_record_app_thread_with_op(wr->addr, APP_THREAD_OP::AFTER_PROCESS_LOCAL_REQUEST_WRITE);
   } else {

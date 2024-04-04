@@ -177,6 +177,34 @@ int Worker::ProcessLocalRead(WorkRequest *wr) {
   return SUCCESS;
 }
 
+int Worker::ProcessLocalReadP2P(WorkRequest *wr) {
+  epicAssert(wr->addr);
+  epicAssert(!(wr->flag & ASYNC));
+
+  //just a hard code !!!
+  Client *cli = GetClientByIP("10.0.0.8");
+  if (cli == nullptr) {
+    epicLog(LOG_WARNING, "Cannot find the client by IP");
+    epicAssert(false);
+  }
+
+  wr->lock();
+  WorkRequest *lwr = new WorkRequest(*wr);
+  void *new_addr = this->sb.sb_aligned_calloc(1, BLOCK_SIZE + CACHE_LINE_PREFIX);
+  lwr->counter = 0;
+  lwr->op = READ_P2P;
+  lwr->ptr = new_addr;
+  lwr->size = BLOCK_SIZE;
+
+  wr->counter++;
+  lwr->parent = wr;
+  this->SubmitRequest(cli, lwr, ADD_TO_PENDING | REQUEST_SEND);
+
+  int ret = wr->counter;
+  wr->unlock();
+  return ret;
+}
+
 int Worker::ProcessLocalWrite(WorkRequest *wr) {
   epicAssert(wr->addr);
   Fence *fence = fences_.at(wr->fd);

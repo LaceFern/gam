@@ -271,6 +271,11 @@ void Worker::ProcessRequest(Client *client, WorkRequest *wr) {
     ProcessRemoteRead(client, wr);
     break;
   }
+  case READ_P2P:
+  {
+    ProcessRemoteReadP2P(client, wr);
+    break;
+  }
   case READ_FORWARD:
   case FETCH_AND_SHARED:
   {

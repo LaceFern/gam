@@ -136,7 +136,7 @@ MULTI_SYS_THREAD_OP Server::ProcessRdmaRequest(ibv_wc &wc) {
       }
       // need check before ProcessRequest, because ProcessRequest will delete wr!
       if (agent_stats_inst.is_valid_gaddr(wr->addr)) {
-        if (wr->op == READ_FORWARD || wr->op == FETCH_AND_SHARED || wr->op == INVALIDATE || wr->op == FETCH_AND_INVALIDATE
+        if (wr->op == READ_FORWARD || wr->op == READ_P2P || wr->op == FETCH_AND_SHARED || wr->op == INVALIDATE || wr->op == FETCH_AND_INVALIDATE
           || wr->op == WRITE_FORWARD || wr->op == INVALIDATE_FORWARD || wr->op == WRITE_PERMISSION_ONLY_FORWARD) {
           res_op = MULTI_SYS_THREAD_OP::PROCESS_IN_CACHE_NODE;
         } else {

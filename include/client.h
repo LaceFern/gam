@@ -121,6 +121,10 @@ public:
     return ctx->get_pending_msg_number();
   }
 
+  inline std::string get_remote_ip() {
+    return ctx->get_remote_ip();
+  }
+
   ~Client();
 };
 #endif

@@ -589,6 +589,17 @@ Client *Worker::GetClient(GAddr addr) {
   return cli;
 }
 
+Client *Worker::GetClientByIP(std::string remote_ip) {
+  Client *cli = nullptr;
+  for (auto &entry : widCliMapWorker) {
+    if (entry.second->get_remote_ip() == remote_ip) {
+      cli = entry.second;
+      break;
+    }
+  }
+  return cli;
+}
+
 unsigned long long Worker::SubmitRequest(Client *cli, WorkRequest *wr, int flag,
   void *dest, void *src, Size size,
   uint32_t imm) {

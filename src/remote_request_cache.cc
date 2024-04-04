@@ -86,6 +86,16 @@ void Worker::ProcessRemoteRead(Client *client, WorkRequest *wr) {
   directory.unlock(laddr);
 }
 
+void Worker::ProcessRemoteReadP2P(Client *client, WorkRequest *wr) {
+  epicAssert(BLOCK_ALIGNED(wr->addr) || wr->size < BLOCK_SIZE);
+  // just a hack!
+  // printf("P2P: %p %p %lld %d\n", wr->ptr, this->base,
+  //   wr->size, wr->id);
+  client->WriteWithImm(wr->ptr, this->base, wr->size, wr->id);
+  delete wr;
+  wr = nullptr;
+}
+
 void Worker::ProcessRemoteReadCache(Client *client, WorkRequest *wr) {
   Work op_orin = wr->op;
   bool deadlock = false;

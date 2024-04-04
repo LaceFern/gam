@@ -458,7 +458,13 @@ void Run_request(GAlloc *alloc, GAddr data[], GAddr access[],
               // #endif
               //           epicAssert(item_size == ret);
               //           break;}
-
+        case 4: {
+          agent_stats_inst.start_record_app_thread(to_access_breakdown);
+          ret = alloc->ReadP2P(to_access_breakdown, buf, item_size);
+          agent_stats_inst.stop_record_app_thread_with_op(to_access_breakdown, APP_THREAD_OP::WAKEUP_2_READ_RETURN);
+          read_access++;
+          break;
+        }
         default: {
           break;
         }

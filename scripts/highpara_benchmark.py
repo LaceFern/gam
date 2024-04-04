@@ -22,22 +22,24 @@ requester_ip = "10.0.0.7"
 cache_machine = "192.168.189.14"
 cache_ip = "10.0.0.8"
 
-# other_machine = ["192.168.189.8", "192.168.189.9", "192.168.189.10", "192.168.189.11", "192.168.189.12"]
-# other_ip = ["10.0.0.2", "10.0.0.3", "10.0.0.4", "10.0.0.5", "10.0.0.6"]
-other_machine = []
-other_ip = []
+# other_machine = []
+# other_ip = []
+other_machine = ["192.168.189.8", "192.168.189.9", "192.168.189.10", "192.168.189.11", "192.168.189.12"]
+other_ip = ["10.0.0.2", "10.0.0.3", "10.0.0.4", "10.0.0.5", "10.0.0.6"]
 # other_machine = ["192.168.189.8", "192.168.189.9", "192.168.189.10"]
 # other_ip = ["10.0.0.2", "10.0.0.3", "10.0.0.4"]
 
 
 
-output_directory = "/home/cxz/gam_result_tmp"
+output_directory = "/home/cxz/gam_result_tmp_8"
 
 program_name = "highpara_benchmark"
 
 bench_thread = [8]
-sys_thread = [1]
+sys_thread = [1,2,4,8]
 
+# RLock is 0, READ_P2P is 4
+request_type = 0
 
 def make_and_clean(ssh, extra_flag=""):
     stdin, stdout, stderr = ssh.exec_command(
@@ -80,10 +82,10 @@ def master_run(ssh, program, bench_thread, sys_thread, output_dir, node_num):
 def requester_run(ssh, program, bench_thread, sys_thread, output_dir, node_num):
     stdin, stdout, stderr = ssh.exec_command(
         "cd {0}/build && ./{1} "
-        "--no_sys_thread {2} --is_cache 0 --cache_rw 0 --is_request 1 --request_rw 0 --is_master 0 " 
+        "--no_sys_thread {2} --is_cache 0 --cache_rw 0 --is_request 1 --request_rw {8} --is_master 0 " 
         "--ip_master {3} --ip_worker {4} --no_node {7} --port_worker 1234 --port_master 1231 "
         "--cache_th 2 --result_dir {5} --no_thread {6} --remote_ratio 0 --shared_ratio 100 "
-        "--read_ratio 50 --space_locality 0 --time_locality 0 --op_type 2".format(base, program, sys_thread, master_ip, requester_ip, output_dir, bench_thread, node_num)
+        "--read_ratio 50 --space_locality 0 --time_locality 0 --op_type 2".format(base, program, sys_thread, master_ip, requester_ip, output_dir, bench_thread, node_num, request_type)
     )
     str1 = stdout.read().decode('utf-8')
     str2 = stderr.read().decode('utf-8')

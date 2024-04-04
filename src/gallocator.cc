@@ -127,6 +127,22 @@ int GAlloc::Read(const GAddr addr, const Size offset, void *buf,
 #endif
 }
 
+int GAlloc::ReadP2P(const GAddr addr, void *buf, const Size count, Flag flag) {
+  WorkRequest wr{};
+  wr.op = READ_P2P;
+  wr.flag = flag;
+  wr.size = count;
+  wr.addr = GADD(addr, 0);
+  wr.ptr = buf;
+
+  if (wh->SendRequest(&wr)) {
+    epicLog(LOG_WARNING, "readp2p failed");
+    return 0;
+  } else {
+    return wr.size;
+  }
+}
+
 #ifdef GFUNC_SUPPORT
 int GAlloc::Write(const GAddr addr, void *buf, const Size count, GFunc *func,
   uint64_t arg, Flag flag) {

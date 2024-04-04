@@ -109,6 +109,7 @@ class Worker: public Server {
   }
 #endif
   Client *master;
+  std::map<std::string, Client *>ip_to_clients;
   //unordered_map<int, int> pipes; //worker pipe fd to app thread pipe fd
   atomic<unsigned int> wr_psn;  //we assume the pending works will not exceed INT_MAX
 
@@ -277,6 +278,7 @@ public:
   int ProcessLocalFree(WorkRequest *wr);
   int ProcessLocalWrite(WorkRequest *wr);
   int ProcessLocalRead(WorkRequest *wr);
+  int ProcessLocalReadP2P(WorkRequest *wr);
   int ProcessLocalWLock(WorkRequest *wr);
   int ProcessLocalRLock(WorkRequest *wr);
   int ProcessLocalUnLock(WorkRequest *wr);
@@ -288,6 +290,7 @@ public:
   void ProcessRemoteMallocReply(Client *client, WorkRequest *wr);
   void ProcessRemoteGetReply(Client *client, WorkRequest *wr);
   void ProcessRemoteRead(Client *client, WorkRequest *wr);
+  void ProcessRemoteReadP2P(Client *client, WorkRequest *wr);
   void ProcessRemoteReadCache(Client *client, WorkRequest *wr);
   void ProcessRemoteReadReply(Client *client, WorkRequest *wr);
   void ProcessRemoteWrite(Client *client, WorkRequest *wr);
@@ -299,6 +302,7 @@ public:
   MULTI_SYS_THREAD_OP ProcessRequestWithOpRes(Client *client, unsigned int work_id);
   void ProcessPendingRequest(Client *cli, WorkRequest *wr);
   void ProcessPendingRead(Client *cli, WorkRequest *wr);
+  void ProcessPendingReadP2P(Client *cli, WorkRequest *wr);
   void ProcessPendingReadForward(Client *cli, WorkRequest *wr);
   void ProcessPendingWrite(Client *cli, WorkRequest *wr);
   void ProcessPendingWriteForward(Client *cli, WorkRequest *wr);
@@ -329,6 +333,7 @@ public:
    * otherwise, return the client for the worker maintaining the addr
    */
   Client *GetClient(GAddr addr = Gnullptr);
+  Client *GetClientByIP(std::string remote_ip);
   size_t GetWorkersSize();
   inline bool IsLocal(GAddr addr) {
     return WID(addr) == GetWorkerId();

@@ -562,7 +562,24 @@ int RdmaContext::SetRemoteConnParam(const char *conn) {
       return 1;
     }
   }
-
+  auto hexCharToInt = [](char c) -> int {
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+    return -1;
+    };
+  // parse remote ip from gid_str;
+  char *ipv4Bytes = gid_str + 24;
+  std::stringstream ss;
+  for (int i = 0; i < 8; i += 2) {
+    int high_4bits = hexCharToInt(ipv4Bytes[i]);
+    int low_4bits = hexCharToInt(ipv4Bytes[i + 1]);
+    ss << ((high_4bits << 4) + low_4bits);
+    if (i < 6) {
+      ss << ".";
+    }
+  }
+  remote_ip = ss.str();
   resource->PostRecv(max_pending_msg);
   return 0;
 }

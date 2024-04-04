@@ -268,6 +268,8 @@ int Worker::ProcessLocalRequest(WorkRequest *wr) {
     ret = ProcessLocalFree(wr);
   } else if (READ == wr->op) {
     ret = ProcessLocalRead(wr);
+  } else if (READ_P2P == wr->op) {
+    ret = ProcessLocalReadP2P(wr);
   } else if (WRITE == wr->op) {
     ret = ProcessLocalWrite(wr);
   } else if (MFENCE == wr->op) {

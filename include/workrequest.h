@@ -22,6 +22,8 @@
 enum Work {
   MALLOC = 1,
   READ,
+  // READ_P2P add by cxz, to measure 2 nodes P2P read latency
+  READ_P2P,
   FETCH_AND_SHARED,
   READ_FORWARD,
   WRITE,

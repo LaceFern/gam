@@ -104,6 +104,7 @@ int WorkRequest::Ser(char *buf, int &len) {
 #endif
     break;
   case READ:
+  case READ_P2P:
   case FETCH_AND_SHARED:
   case FETCH_AND_INVALIDATE:
   case INVALIDATE:
@@ -247,6 +248,7 @@ int WorkRequest::Deser(const char *buf, int &len) {
     break;
   }
   case READ:
+  case READ_P2P:
   case FETCH_AND_SHARED:
   case FETCH_AND_INVALIDATE:
   case INVALIDATE:
