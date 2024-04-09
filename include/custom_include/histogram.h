@@ -1,5 +1,8 @@
 #include <hdr/hdr_histogram.h>
-
+#include <string>
+#include <sstream>
+#include <vector>
+#include <regex>
 class Histogram {
 public:
     explicit Histogram(int64_t lowest, int64_t highest, int sigfigs, double scale = 1);
@@ -13,6 +16,8 @@ public:
     void print(FILE *stream, int32_t ticks);
 
     void print_csv(FILE *stream, int32_t ticks);
+
+    std::string get_pretty_print(int32_t ticks);
 
     void record(int64_t value, int64_t count = 0);
 

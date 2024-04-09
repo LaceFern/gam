@@ -849,6 +849,9 @@ int main(int argc, char *argv[]) {
   printf("My CC configuration is: ");
   printf("is_home = %d, is_cache = %d, cache_rw = %d, is_request = %d, request_rw = %d, breakdown_times = %d\n",
     is_master, is_cache, cache_rw, is_request, request_rw, breakdown_times);
+  agent_stats_inst.is_cache_node = is_cache;
+  agent_stats_inst.is_request_node = is_request;
+  agent_stats_inst.is_master_node = is_master;
   /******** MY CODE ENDS ********/
   /***********************************/
 
@@ -1008,6 +1011,26 @@ int main(int argc, char *argv[]) {
       no_node, agent_stats_inst.sys_thread_num, no_thread, remote_ratio, shared_ratio, read_ratio,
       space_locality, time_locality, op_type, memory_type, item_size, t_thr,
       a_thr, a_lat, cache_th);
+
+    if (!std::experimental::filesystem::exists(result_directory)) {
+      if (!std::experimental::filesystem::create_directory(result_directory)) {
+        std::cerr << "Error creating folder " << result_directory << std::endl;
+        exit(1);
+      }
+    }
+
+    std::experimental::filesystem::path dir(result_directory);
+    std::experimental::filesystem::path filePath = dir / std::experimental::filesystem::path("end_to_end.txt");
+    FILE *file = fopen(filePath.c_str(), "a");
+    assert(file != nullptr);
+    fprintf(
+      file,
+      "%d\t%ld\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%ld\t%ld\t%ld\t%f\n",
+      no_node, agent_stats_inst.sys_thread_num, no_thread, remote_ratio, shared_ratio, read_ratio,
+      space_locality, time_locality, op_type, memory_type, item_size,
+      t_thr, a_thr, a_lat, cache_th);
+    fclose(file);
+
   }
 
   // #ifdef STATS_COLLECTION

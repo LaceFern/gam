@@ -98,6 +98,8 @@
     "variant": "cpp",
     "strstream": "cpp",
     "cfenv": "cpp",
-    "filesystem": "cpp"
+    "filesystem": "cpp",
+    "regex": "cpp",
+    "shared_mutex": "cpp"
   }
 }
