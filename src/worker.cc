@@ -302,7 +302,7 @@ void Worker::StartSlaveService(Worker *w, SPSC_QUEUE *poll_queue, uint64_t sys_t
     ibv_wc &wc = entry.wc;
     agent_stats_inst.start_record_multi_sys_thread(sys_thread_id);
     MULTI_SYS_THREAD_OP res_op = w->ProcessRdmaRequest(entry.wc);
-    if (res_op != MULTI_SYS_THREAD_OP::NONE) {
+    if (res_op != MULTI_SYS_THREAD_OP::NONE && agent_stats_inst.is_start()) {
       agent_stats_inst.stop_record_multi_sys_thread_with_op(sys_thread_id, res_op);
       agent_stats_inst.record_poll_thread_with_op(waiting_time, POLL_OP::WAITING_IN_SYSTHREAD_QUEUE);
       // if (res_op == MULTI_SYS_THREAD_OP::PROCESS_IN_HOME_NODE) {
