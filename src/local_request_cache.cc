@@ -179,10 +179,10 @@ int Worker::ProcessLocalRead(WorkRequest *wr) {
 
 int Worker::ProcessLocalReadP2P(WorkRequest *wr) {
   epicAssert(wr->addr);
-  epicAssert(!(wr->flag & ASYNC));
-
+  wr->flag &= 0xff;
+  epicAssert(wr->flag > 0 && wr->flag <= 8);
   //just a hard code !!!
-  Client *cli = GetClientByIP("10.0.0.8");
+  Client *cli = GetClientByIP("10.0.0." + to_string(wr->flag));
   if (cli == nullptr) {
     epicLog(LOG_WARNING, "Cannot find the client by IP");
     epicAssert(false);
