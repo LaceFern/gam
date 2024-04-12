@@ -325,6 +325,10 @@ public:
 
 
     bool is_valid_gaddr(GAddr gaddr) {
+        // hack for init, be carefully for don't read/write valid_gaddrs at the same time 
+        if (!start) {
+            return false;
+        }
         return valid_gaddrs.count(gaddr);
     }
 
