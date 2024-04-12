@@ -179,10 +179,10 @@ int Worker::ProcessLocalRead(WorkRequest *wr) {
 
 int Worker::ProcessLocalReadP2P(WorkRequest *wr) {
   epicAssert(wr->addr);
-  wr->flag &= 0xff;
-  epicAssert(wr->flag > 0 && wr->flag <= 8);
+  epicAssert(!(wr->flag & ASYNC));
+  epicAssert(wr->wid > 0 && wr->wid <= 8);
   //just a hard code !!!
-  Client *cli = GetClientByIP("10.0.0." + to_string(wr->flag));
+  Client *cli = GetClientByIP("10.0.0." + to_string(wr->wid));
   if (cli == nullptr) {
     epicLog(LOG_WARNING, "Cannot find the client by IP");
     epicAssert(false);
@@ -529,7 +529,7 @@ int Worker::ProcessLocalRLock(WorkRequest *wr) {
   }
 #endif
   return SUCCESS;
-}
+  }
 
 int Worker::ProcessLocalWLock(WorkRequest *wr) {
   epicAssert(wr->addr);
@@ -654,7 +654,7 @@ int Worker::ProcessLocalWLock(WorkRequest *wr) {
   }
 #endif
   return SUCCESS;
-}
+  }
 
 int Worker::ProcessLocalUnLock(WorkRequest *wr) {
   if (!(wr->flag & FENCE)) {

@@ -127,10 +127,11 @@ int GAlloc::Read(const GAddr addr, const Size offset, void *buf,
 #endif
 }
 
-int GAlloc::ReadP2P(const GAddr addr, void *buf, const Size count, Flag flag) {
+int GAlloc::ReadP2P(const GAddr addr, void *buf, const Size count, uint32_t remote_ip_flag) {
   WorkRequest wr{};
   wr.op = READ_P2P;
-  wr.flag = flag;
+  // wid is useless for this GAM verion
+  wr.wid = remote_ip_flag;
   wr.size = count;
   wr.addr = GADD(addr, 0);
   wr.ptr = buf;

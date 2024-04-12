@@ -44,7 +44,7 @@ public:
   int Read(const GAddr addr, void *buf, const Size count, Flag flag = 0);
   int Read(const GAddr addr, const Size offset, void *buf, const Size count,
     Flag flag = 0);
-  int ReadP2P(const GAddr addr, void *buf, const Size count, Flag flag = 0);
+  int ReadP2P(const GAddr addr, void *buf, const Size count, uint32_t remote_ip_flag);
   /*
    * Generally, write is non-blocking as we're using release memory consistency model
    */
