@@ -151,14 +151,24 @@ run_shared_test() {
 echo "**************************run shared test****************************"
 result_file=$bin/results/shared_ratio
 node_range="8"
-thread_range="1"
-remote_range="88"
-shared_range="0 10 20 30 40 50 60 70 80 90 100"
+thread_range="4"
+remote_range="0"
+shared_range="0"
 read_range="50" #"0 50 70 80 90 100"
 space_range="0" #"0 10 20 30 40 50 60 70 80 90 100"
 time_range="0" #"0 10 20 30 40 50 60 70 80 90 100"
-op_range="0 1 2 3"
-cache_th=0.15
+op_range="2"
+cache_th=3
+# result_file=$bin/results/shared_ratio
+# node_range="8"
+# thread_range="1"
+# remote_range="88"
+# shared_range="0 10 20 30 40 50 60 70 80 90 100"
+# read_range="50" #"0 50 70 80 90 100"
+# space_range="0" #"0 10 20 30 40 50 60 70 80 90 100"
+# time_range="0" #"0 10 20 30 40 50 60 70 80 90 100"
+# op_range="0 1 2 3"
+# cache_th=0.15
 
 for op_type in $op_range
 do
@@ -465,9 +475,9 @@ done
 
 #run_thread_test
 #run_read_test
-run_read_test_new
+# run_read_test_new
 #run_time_test
-#run_shared_test
+run_shared_test
 #run_remote_test
 #run_space_test
 #run_shared_test_noeviction

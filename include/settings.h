@@ -62,8 +62,12 @@ using namespace std;
 #define MAX_SHARED_LOCK 254 //MAX(unsigned char)-1
 #define EXCLUSIVE_LOCK_TAG 255 //MAX(unsigned char)
 
-#define BLOCK_POWER 12
-#define BLOCK_MASK 0xFFFFFFFFFFFFF000L
+// #define BLOCK_POWER 12
+// #define BLOCK_MASK 0xFFFFFFFFFFFFF000L
+// #define BLOCK_SIZE (1 << BLOCK_POWER)
+// change block size 4096 to 512
+#define BLOCK_POWER 9
+#define BLOCK_MASK 0xFFFFFFFFFFFFFE00L
 #define BLOCK_SIZE (1 << BLOCK_POWER)
 
 #define RDMA_RESOURCE_EXCEPTION 1

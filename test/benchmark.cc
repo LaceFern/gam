@@ -601,12 +601,12 @@ int main(int argc, char* argv[]) {
   conf.master_port = port_master;
   conf.worker_ip = ip_worker;
   conf.worker_port = port_worker;
-  long size = ((long) BLOCK_SIZE) * STEPS * no_thread * 4;
-  conf.size = size < conf.size ? conf.size : size;
-  printf("This size!!!!!! %d\n", conf.size);
-
+  // long size = ((long) BLOCK_SIZE) * STEPS * no_thread * 4;
+  // conf.size = size < conf.size ? conf.size : size;
+  // conf.cache_th = cache_th;
+  conf.size = 10 * 1024 * 1024L * 1024;
   conf.cache_th = cache_th;
-
+  conf.cache_th = ((long)BLOCK_SIZE) * STEPS * conf.cache_th * 1.0 / conf.size;
   GAlloc* alloc = GAllocFactory::CreateAllocator(&conf);
 
   sleep(1);
