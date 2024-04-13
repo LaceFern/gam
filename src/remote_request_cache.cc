@@ -1,6 +1,8 @@
 // Copyright (c) 2018 The GAM Authors 
 
 void Worker::ProcessRemoteRead(Client *client, WorkRequest *wr) {
+  uint64_t glb_thread_id = wr->glb_thread_id;
+  int secondhand_flag = wr->secondhand_flag;
   epicAssert(IsLocal(wr->addr));
 #ifdef SELECTIVE_CACHING
   void *laddr = ToLocal(TOBLOCK(wr->addr));
@@ -26,6 +28,7 @@ void Worker::ProcessRemoteRead(Client *client, WorkRequest *wr) {
         wr->op = READ_REPLY;
         directory.unlock(laddr);
         SubmitRequest(client, wr);
+        agent_stats_inst.update_home_send_count(glb_thread_id);
         delete wr;
         wr = nullptr;
       } else {
@@ -41,6 +44,7 @@ void Worker::ProcessRemoteRead(Client *client, WorkRequest *wr) {
     //TODO: add the write completion check
     epicAssert(BLOCK_ALIGNED(wr->addr) || wr->size < BLOCK_SIZE);
     client->WriteWithImm(wr->ptr, ToLocal(wr->addr), wr->size, wr->id);
+    agent_stats_inst.update_home_send_count(glb_thread_id);
 #ifdef SELECTIVE_CACHING
     if (!(wr->flag & NOT_CACHE)) {
 #endif
@@ -81,6 +85,7 @@ void Worker::ProcessRemoteRead(Client *client, WorkRequest *wr) {
     //intermediate state
     directory.ToToShared(entry);
     SubmitRequest(cli, lwr, ADD_TO_PENDING | REQUEST_SEND);
+    agent_stats_inst.update_home_send_count(glb_thread_id);
 #endif
   }
   directory.unlock(laddr);
@@ -97,6 +102,8 @@ void Worker::ProcessRemoteReadP2P(Client *client, WorkRequest *wr) {
 }
 
 void Worker::ProcessRemoteReadCache(Client *client, WorkRequest *wr) {
+  uint64_t glb_thread_id = wr->glb_thread_id;
+  int secondhand_flag = wr->secondhand_flag;
   Work op_orin = wr->op;
   bool deadlock = false;
 #ifndef SELECTIVE_CACHING
@@ -111,11 +118,14 @@ void Worker::ProcessRemoteReadCache(Client *client, WorkRequest *wr) {
     wr->status = READ_ERROR;
     if (FETCH_AND_SHARED == op_orin) {
       SubmitRequest(client, wr);
+      agent_stats_inst.update_cache_send_count(glb_thread_id);
     } else {  //READ_FORWARD
       SubmitRequest(client, wr);  //reply to the home node
+      agent_stats_inst.update_cache_send_count(glb_thread_id);
       Client *cli = FindClientWid(wr->pwid);
       wr->id = wr->pid;
       SubmitRequest(cli, wr);  //reply to the local node
+      agent_stats_inst.update_cache_send_count(glb_thread_id);
     }
   } else {
     if (cache.InTransitionState(cline->state)) {
@@ -142,11 +152,14 @@ void Worker::ProcessRemoteReadCache(Client *client, WorkRequest *wr) {
         wr->op = READ_REPLY;
         if (FETCH_AND_SHARED == op_orin) {
           SubmitRequest(client, wr);
+          agent_stats_inst.update_cache_send_count(glb_thread_id);
         } else {  //READ_FORWARD
           SubmitRequest(client, wr);  //reply to the home node
+          agent_stats_inst.update_cache_send_count(glb_thread_id);
           Client *cli = FindClientWid(wr->pwid);
           wr->id = wr->pid;
           SubmitRequest(cli, wr);  //reply to the local node
+          agent_stats_inst.update_cache_send_count(glb_thread_id);
         }
         delete wr;
         wr = nullptr;
@@ -174,6 +187,7 @@ void Worker::ProcessRemoteReadCache(Client *client, WorkRequest *wr) {
 #endif
       epicAssert(BLOCK_ALIGNED(wr->addr) || wr->size < BLOCK_SIZE);
       client->WriteWithImm(wr->ptr, cline->line, wr->size, wr->id);  //reply to the local home node
+      agent_stats_inst.update_cache_send_count(glb_thread_id);
     } else {  //READ_FORWARD
       Client *cli = FindClientWid(wr->pwid);
 
@@ -191,8 +205,10 @@ void Worker::ProcessRemoteReadCache(Client *client, WorkRequest *wr) {
 #else
       epicAssert(BLOCK_ALIGNED(wr->addr) || wr->size < BLOCK_SIZE);
       cli->WriteWithImm(wr->ptr, cline->line, wr->size, wr->pid);  //reply to the local node
+      agent_stats_inst.update_cache_send_count(glb_thread_id);
       client->WriteWithImm(client->ToLocal(blk), cline->line, BLOCK_SIZE,
         wr->id);  //writeback to home node
+      agent_stats_inst.update_cache_send_count(glb_thread_id);
 #endif
     }
 
@@ -212,6 +228,8 @@ void Worker::ProcessRemoteReadCache(Client *client, WorkRequest *wr) {
 }
 
 void Worker::ProcessRemoteReadReply(Client *client, WorkRequest *wr) {
+  uint64_t glb_thread_id = wr->glb_thread_id;
+  int secondhand_flag = wr->secondhand_flag;
   /*
    * READ/RLock failed case,
    * as normal successful case is through write_with_imm
@@ -277,7 +295,7 @@ void Worker::ProcessRemoteReadReply(Client *client, WorkRequest *wr) {
     exit(-1);
     break;
   }
-
+  pwr->glb_thread_id = glb_thread_id;
   ProcessToServeRequest(pwr);
   delete pwr;
   delete wr;
@@ -286,6 +304,8 @@ void Worker::ProcessRemoteReadReply(Client *client, WorkRequest *wr) {
 }
 
 void Worker::ProcessRemoteWrite(Client *client, WorkRequest *wr) {
+  uint64_t glb_thread_id = wr->glb_thread_id;
+  int secondhand_flag = wr->secondhand_flag;
   Work op_orin = wr->op;
 #ifndef SELECTIVE_CACHING
   epicAssert(wr->size == BLOCK_SIZE);
@@ -318,6 +338,7 @@ void Worker::ProcessRemoteWrite(Client *client, WorkRequest *wr) {
         wr->op = WRITE_REPLY;
         wr->counter = 0;
         SubmitRequest(client, wr);
+        agent_stats_inst.update_home_send_count(glb_thread_id);
         delete wr;
         wr = nullptr;
         directory.unlock(laddr);
@@ -366,6 +387,7 @@ void Worker::ProcessRemoteWrite(Client *client, WorkRequest *wr) {
           first = false;
         }
         SubmitRequest(cli, lwr);
+        agent_stats_inst.update_home_send_count(glb_thread_id);
         //lwr->counter++;
       }
 
@@ -423,7 +445,7 @@ void Worker::ProcessRemoteWrite(Client *client, WorkRequest *wr) {
     wr->status = SUCCESS;
     wr->counter = 0;
     SubmitRequest(client, wr);
-
+    agent_stats_inst.update_home_send_count(glb_thread_id);
 #ifdef SELECTIVE_CACHING
     if (!(wr->flag & NOT_CACHE)) {
 #endif
@@ -474,11 +496,14 @@ void Worker::ProcessRemoteWrite(Client *client, WorkRequest *wr) {
     //intermediate state
     directory.ToToDirty(entry);
     SubmitRequest(cli, lwr, ADD_TO_PENDING | REQUEST_SEND);
+    agent_stats_inst.update_home_send_count(glb_thread_id);
   }
   directory.unlock(laddr);
 }
 
 void Worker::ProcessRemoteWriteCache(Client *client, WorkRequest *wr) {
+  uint64_t glb_thread_id = wr->glb_thread_id;
+  int secondhand_flag = wr->secondhand_flag;
   epicAssert(wr->op != WRITE_PERMISSION_ONLY_FORWARD);  //this cannot happen
   Work op_orin = wr->op;
   bool deadlock = false;
@@ -499,12 +524,14 @@ void Worker::ProcessRemoteWriteCache(Client *client, WorkRequest *wr) {
       //can add it to the pending work and check it upon done
       if (wr->op == INVALIDATE) {  //INVALIDATE
         client->WriteWithImm(nullptr, nullptr, 0, wr->id);
+        agent_stats_inst.update_cache_send_count(glb_thread_id);
       } else {  //INVALIDATE_FORWARD
         //			Client* cli = FindClientWid(wr->pwid);
         //			cli->WriteWithImm(nullptr, nullptr, 0, wr->pid); //reply the new owner
         //			epicLog(LOG_DEBUG, "send to %d with pid %d", wr->pwid, wr->pid);
         //      after change the invalidate_forward strategy
         client->WriteWithImm(nullptr, nullptr, 0, wr->id);
+        agent_stats_inst.update_cache_send_count(glb_thread_id);
         epicLog(LOG_DEBUG, "send to %d with id %d", client->GetWorkerId(),
           wr->id);
       }
@@ -514,16 +541,20 @@ void Worker::ProcessRemoteWriteCache(Client *client, WorkRequest *wr) {
       wr->status = WRITE_ERROR;
       if (INVALIDATE == op_orin || FETCH_AND_INVALIDATE == op_orin) {
         SubmitRequest(client, wr);
+        agent_stats_inst.update_cache_send_count(glb_thread_id);
       } else if (INVALIDATE_FORWARD == op_orin) {
         //			Client* cli = FindClientWid(wr->pwid);
         //			wr->id = wr->pid;
         //			SubmitRequest(cli, wr);
         SubmitRequest(client, wr);
+        agent_stats_inst.update_cache_send_count(glb_thread_id);
       } else {  //WRITE_FORWARD or WRITE_PERMISSION_ONLY_FORWARD
         SubmitRequest(client, wr);
+        agent_stats_inst.update_cache_send_count(glb_thread_id);
         Client *cli = FindClientWid(wr->pwid);
         wr->id = wr->pid;
         SubmitRequest(cli, wr);
+        agent_stats_inst.update_cache_send_count(glb_thread_id);
       }
     }
     delete wr;
@@ -565,16 +596,20 @@ void Worker::ProcessRemoteWriteCache(Client *client, WorkRequest *wr) {
         wr->op = WRITE_REPLY;
         if (INVALIDATE == op_orin || FETCH_AND_INVALIDATE == op_orin) {
           SubmitRequest(client, wr);
+          agent_stats_inst.update_cache_send_count(glb_thread_id);
         } else if (INVALIDATE_FORWARD == op_orin) {
           //				Client* cli = FindClientWid(wr->pwid);
           //				wr->id = wr->pid;
           //				SubmitRequest(cli, wr);
           SubmitRequest(client, wr);
+          agent_stats_inst.update_cache_send_count(glb_thread_id);
         } else {  //WRITE_FORWARD or WRITE_PERMISSION_ONLY_FORWARD
           SubmitRequest(client, wr);
+          agent_stats_inst.update_cache_send_count(glb_thread_id);
           Client *cli = FindClientWid(wr->pwid);
           wr->id = wr->pid;
           SubmitRequest(cli, wr);
+          agent_stats_inst.update_cache_send_count(glb_thread_id);
         }
         cache.unlock(to_lock);
         delete wr;
@@ -606,6 +641,7 @@ void Worker::ProcessRemoteWriteCache(Client *client, WorkRequest *wr) {
       if (deadlock) {
         epicAssert(BLOCK_ALIGNED(wr->addr) || wr->size < BLOCK_SIZE);
         client->WriteWithImm(wr->ptr, cline->line, wr->size, wr->id);
+        agent_stats_inst.update_cache_send_count(glb_thread_id);
         delete wr;
         wr = nullptr;
       } else {
@@ -622,6 +658,7 @@ void Worker::ProcessRemoteWriteCache(Client *client, WorkRequest *wr) {
         epicAssert(BLOCK_ALIGNED(wr->addr) || wr->size < BLOCK_SIZE);
         client->WriteWithImm(wr->ptr, cline->line, wr->size, orig_id, wr->id,
           true);
+        agent_stats_inst.update_cache_send_count(glb_thread_id);
       }
 
     } else if (wr->op == INVALIDATE) {  //INVALIDATE
@@ -629,6 +666,7 @@ void Worker::ProcessRemoteWriteCache(Client *client, WorkRequest *wr) {
       num_invalid_ += 1;
       epicAssert(!cache.IsDirty(cline));
       client->WriteWithImm(nullptr, nullptr, 0, wr->id);
+      agent_stats_inst.update_cache_send_count(glb_thread_id);
       //TOOD: add below to the callback function
       if (!deadlock)
         cache.ToInvalid(cline);
@@ -642,6 +680,7 @@ void Worker::ProcessRemoteWriteCache(Client *client, WorkRequest *wr) {
       //		cli->WriteWithImm(nullptr, nullptr, 0, wr->pid); //reply the new owner
       //		epicLog(LOG_DEBUG, "send to %d with pid %d", wr->pwid, wr->pid);
       client->WriteWithImm(nullptr, nullptr, 0, wr->id);
+      agent_stats_inst.update_cache_send_count(glb_thread_id);
       epicLog(LOG_DEBUG, "send to %d with id %d", client->GetWorkerId(),
         wr->id);
       if (!deadlock)
@@ -664,8 +703,10 @@ void Worker::ProcessRemoteWriteCache(Client *client, WorkRequest *wr) {
 #endif
           epicAssert(BLOCK_ALIGNED(wr->addr) || wr->size < BLOCK_SIZE);
           cli->WriteWithImm(wr->ptr, cline->line, wr->size, wr->pid);  //reply the new owner
+          agent_stats_inst.update_cache_send_count(glb_thread_id);
           epicLog(LOG_DEBUG, "send to %d with pid %d", wr->pwid, wr->pid);
           client->WriteWithImm(nullptr, nullptr, 0, wr->id);  //transfer ownership
+          agent_stats_inst.update_cache_send_count(glb_thread_id);
 #ifdef SELECTIVE_CACHING
         }
 #endif
@@ -694,7 +735,9 @@ void Worker::ProcessRemoteWriteCache(Client *client, WorkRequest *wr) {
           epicAssert(BLOCK_ALIGNED(wr->addr) || wr->size < BLOCK_SIZE);
           cli->WriteWithImm(wr->ptr, cline->line, wr->size, wr->pid, wr->id,
             true);  //reply the new owner
+          agent_stats_inst.update_cache_send_count(glb_thread_id);
           client->WriteWithImm(nullptr, nullptr, 0, orig_id);  //transfer ownership
+          agent_stats_inst.update_cache_send_count(glb_thread_id);
 #ifdef SELECTIVE_CACHING
         }
 #endif
@@ -705,6 +748,8 @@ void Worker::ProcessRemoteWriteCache(Client *client, WorkRequest *wr) {
 }
 
 void Worker::ProcessRemoteWriteReply(Client *client, WorkRequest *wr) {
+  uint64_t glb_thread_id = wr->glb_thread_id;
+  int secondhand_flag = wr->secondhand_flag;
   WorkRequest *pwr = GetPendingWork(wr->id);
   epicAssert(pwr);
   epicAssert(pwr->id == wr->id);
@@ -793,6 +838,7 @@ void Worker::ProcessRemoteWriteReply(Client *client, WorkRequest *wr) {
         Notify(pwr->parent);
         pwr->parent = nullptr;
 
+        pwr->glb_thread_id = glb_thread_id;
         ProcessToServeRequest(pwr);
         int ret = ErasePendingWork(wr->id);
         epicAssert(ret);
@@ -836,6 +882,7 @@ void Worker::ProcessRemoteWriteReply(Client *client, WorkRequest *wr) {
       parent->unlock();
       delete pwr->parent;
       pwr->parent = nullptr;
+      pwr->glb_thread_id = glb_thread_id;
       ProcessToServeRequest(pwr);
       //TODO: verify this
       //we blindly erase the pending wr whose counter may be non-zero
@@ -880,7 +927,7 @@ void Worker::ProcessRemoteWriteReply(Client *client, WorkRequest *wr) {
         delete parent;
         parent = nullptr;
         pwr->parent = nullptr;
-
+        pwr->glb_thread_id = glb_thread_id;
         ProcessToServeRequest(pwr);
         int ret = ErasePendingWork(wr->id);
         epicAssert(ret);

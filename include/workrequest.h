@@ -129,6 +129,9 @@ typedef int Flag;
  * use union?
  */
 struct WorkRequest {
+  uint64_t glb_thread_id = GLB_INVALID;
+  int secondhand_flag = 0;
+
   unsigned int id;  //identifier of the work request
   unsigned int pid;  //identifier of the parent work request (used for FORWARD request)
   int pwid;  //identifier of the parent worker

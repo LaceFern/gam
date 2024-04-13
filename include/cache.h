@@ -101,8 +101,8 @@ class Cache {
 #endif
 
 #ifdef USE_LRU
-  int Evict(int n);
-  void Evict(CacheLine *cline);
+  int Evict(int n, uint64_t glb_thread_id = GLB_INVALID, int secondhand_flag = 0);
+  void Evict(CacheLine *cline, uint64_t glb_thread_id = GLB_INVALID, int secondhand_flag = 0);
 #endif
 
 #ifdef SELECTIVE_CACHING
@@ -336,7 +336,7 @@ public:
   void LinkLRU(CacheLine *cline);
   void UnLinkLRU(CacheLine *cline);
   void UnLinkLRU(CacheLine *cline, int pos);
-  void Evict();
+  void Evict(uint64_t glb_thread_id = GLB_INVALID, int secondhand_flag = 0);
 #endif
   /*
    * 1. check the cache

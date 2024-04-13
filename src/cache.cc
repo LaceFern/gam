@@ -9,6 +9,8 @@
 #include "kernel.h"
 
 int Cache::ReadWrite(WorkRequest *wr) {
+  uint64_t glb_thread_id = wr->glb_thread_id;
+  int secondhand_flag = wr->secondhand_flag;
   //long init_time = get_time();
 #ifdef NOCACHE
   epicLog(LOG_WARNING, "shouldn't come here");
@@ -217,6 +219,7 @@ int Cache::ReadWrite(WorkRequest *wr) {
           worker->SubmitRequest(cli, lwr, ADD_TO_PENDING | REQUEST_SEND | PROFILE_NETWORK);
 #else
           worker->SubmitRequest(cli, lwr, ADD_TO_PENDING | REQUEST_SEND);
+          agent_stats_inst.update_request_send_count(glb_thread_id);
 #endif
           num_request_send += 1;
           //long submit_end_time = get_time();
@@ -332,6 +335,7 @@ int Cache::ReadWrite(WorkRequest *wr) {
       worker->SubmitRequest(cli, lwr, ADD_TO_PENDING | REQUEST_SEND | PROFILE_NETWORK);
 #else
       worker->SubmitRequest(cli, lwr, ADD_TO_PENDING | REQUEST_SEND);
+      agent_stats_inst.update_request_send_count(glb_thread_id);
 #endif
       num_request_send += 1;
       //long submit_end_time = get_time();
@@ -360,7 +364,7 @@ int Cache::ReadWrite(WorkRequest *wr) {
   if (newcline) {
     //if (newcline && !(wr->flag & ASYNC)) {
       //long start_time = get_time();
-    Evict(newcline);
+    Evict(newcline, glb_thread_id, secondhand_flag);
     //long end_time = get_time();
     //epicLog(LOG_WARNING, "Eviction takes time %ld\n", end_time - start_time);
   }
@@ -369,6 +373,8 @@ int Cache::ReadWrite(WorkRequest *wr) {
 }
 
 int Cache::Lock(WorkRequest * wr) {
+  uint64_t glb_thread_id = wr->glb_thread_id;
+  int secondhand_flag = wr->secondhand_flag;
 #ifdef NOCACHE
   epicLog(LOG_WARNING, "shouldn't come here");
   return 0;
@@ -484,6 +490,7 @@ int Cache::Lock(WorkRequest * wr) {
         worker->SubmitRequest(cli, lwr, ADD_TO_PENDING | REQUEST_SEND | PROFILE_NETWORK);
 #else
         worker->SubmitRequest(cli, lwr, ADD_TO_PENDING | REQUEST_SEND);
+        agent_stats_inst.update_request_send_count(glb_thread_id);
 #endif
         num_request_send += 1;
 #ifdef USE_LRU
@@ -564,6 +571,7 @@ int Cache::Lock(WorkRequest * wr) {
     worker->SubmitRequest(cli, lwr, ADD_TO_PENDING | REQUEST_SEND | PROFILE_NETWORK);
 #else
     worker->SubmitRequest(cli, lwr, ADD_TO_PENDING | REQUEST_SEND);
+    agent_stats_inst.update_request_send_count(glb_thread_id);
 #endif
     num_request_send += 1;
   }
@@ -572,7 +580,7 @@ int Cache::Lock(WorkRequest * wr) {
   wr->unlock();
 #ifdef USE_LRU
   if (newcline)
-    Evict(newcline);
+    Evict(newcline, glb_thread_id, secondhand_flag);
 #endif
   return ret;
 }
@@ -730,7 +738,7 @@ void Cache::UnLinkLRU(CacheLine * cline) {
   }
 }
 
-void Cache::Evict() {
+void Cache::Evict(uint64_t glb_thread_id, int secondhand_flag) {
   epicLog(LOG_DEBUG,
     "used_bytes = %ld, max_cache_mem = %ld,  BLOCK_SIZE = %ld, th = %lf, to_evicted = %ld",
     used_bytes.load(), max_cache_mem, BLOCK_SIZE, worker->conf->cache_th, to_evicted.load());
@@ -741,7 +749,7 @@ void Cache::Evict() {
     epicLog(LOG_DEBUG,
       "tryng to evict %d, used = %ld, max_cache_mem = %ld, used > max_cache_mem = %d",
       n, used, max_cache_mem, used > max_cache_mem);
-    int ret = Evict(n);
+    int ret = Evict(n, glb_thread_id, secondhand_flag);
     if (ret < n) {
       epicLog(LOG_WARNING, "only able to evict %d, but expect to evict %d", ret, n);
     }
@@ -754,7 +762,7 @@ void Cache::Evict() {
  * return: true if we allow n more new cache lines
  * 		   false if we don't have enough free space for n more cache lines
  */
-int Cache::Evict(int n) {
+int Cache::Evict(int n, uint64_t glb_thread_id, int secondhand_flag) {
   double evict_th = 0.8;
   long long used = used_bytes - to_evicted * BLOCK_SIZE;
   if (used < 0 || used <= max_cache_mem * evict_th)
@@ -815,7 +823,7 @@ int Cache::Evict(int n) {
         continue;
       }
       epicAssert(!InTransitionState(to_evict));
-      Evict(to_evict);
+      Evict(to_evict, glb_thread_id, secondhand_flag);
       unlock(addr);
     }
   }
@@ -825,7 +833,7 @@ int Cache::Evict(int n) {
 #endif
 }
 
-void Cache::Evict(CacheLine * cline) {
+void Cache::Evict(CacheLine * cline, uint64_t glb_thread_id, int secondhand_flag) {
   epicLog(LOG_DEBUG, "evicting %lx", cline->addr);
   epicAssert(cline->addr == TOBLOCK(cline->addr));
   epicAssert(!IsBlockLocked(cline->addr));
@@ -842,6 +850,7 @@ void Cache::Evict(CacheLine * cline) {
     wr->op = ACTIVE_INVALIDATE;
     ToInvalid(cline);
     worker->SubmitRequest(cli, wr);
+    agent_stats_inst.update_request_send_count(glb_thread_id);
     delete wr;
     wr = nullptr;
   } else if (CACHE_DIRTY == state) {
@@ -852,6 +861,7 @@ void Cache::Evict(CacheLine * cline) {
     //  UnLinkLRU(cline, pos); //since we already got the lock in the parent function of Evict(CacheLine*)
     worker->SubmitRequest(worker->GetClient(wr->addr), wr,
       ADD_TO_PENDING | REQUEST_SEND);
+    agent_stats_inst.update_request_send_count(glb_thread_id);
   } else {  //invalid
     epicAssert(CACHE_INVALID == state);
     epicLog(LOG_INFO, "unexpected cache state when evicting");

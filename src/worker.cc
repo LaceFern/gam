@@ -301,7 +301,7 @@ void Worker::StartSlaveService(Worker *w, SPSC_QUEUE *poll_queue, uint64_t sys_t
     (void)waiting_time;
     ibv_wc &wc = entry.wc;
     agent_stats_inst.start_record_multi_sys_thread(sys_thread_id);
-    MULTI_SYS_THREAD_OP res_op = w->ProcessRdmaRequest(entry.wc);
+    MULTI_SYS_THREAD_OP res_op = w->ProcessRdmaRequest(entry.wc, sys_thread_id);
     if (res_op != MULTI_SYS_THREAD_OP::NONE && agent_stats_inst.is_start()) {
       agent_stats_inst.stop_record_multi_sys_thread_with_op(sys_thread_id, res_op);
       agent_stats_inst.record_poll_thread_with_op(waiting_time, POLL_OP::WAITING_IN_SYSTHREAD_QUEUE);
@@ -312,6 +312,9 @@ void Worker::StartSlaveService(Worker *w, SPSC_QUEUE *poll_queue, uint64_t sys_t
       //   }
       //   printf("\n");
       // }
+    }
+    if(agent_stats_inst.is_start()){
+      agent_stats_inst.record_poll_thread_with_op(waiting_time, POLL_OP::WAITING_NOT_TARGET);
     }
   }
 }
@@ -417,6 +420,7 @@ int Worker::LocalRequestChecker(struct aeEventLoop *eventLoop, long long id,
  * wr: the just-finished pending workrequest
  */
 void Worker::ProcessToServeRequest(WorkRequest *wr) {
+  uint64_t glb_thread_id = wr->glb_thread_id;
   GAddr block = TOBLOCK(wr->addr);
   LOCK_MICRO(to_serve_local_requests, block);
   //process these pending local requests due to in transition state
@@ -497,6 +501,9 @@ void Worker::ProcessToServeRequest(WorkRequest *wr) {
         to_serve.first->GetWorkerId() != 0
         && to_serve.first->GetWorkerId() != GetWorkerId());
       to_serve.second->flag |= TO_SERVE;
+      // to_serve.second->glb_thread_id is out of time and need refresh
+      to_serve.second->glb_thread_id = glb_thread_id;
+      to_serve.second->secondhand_flag = 1;
       ProcessRequest(to_serve.first, to_serve.second);
       lq.pop();
     }

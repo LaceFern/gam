@@ -445,6 +445,8 @@ void Worker::ProcessPendingWrite(Client *cli, WorkRequest *wr) {
 }
 
 void Worker::ProcessPendingWriteForward(Client *cli, WorkRequest *wr) {
+  uint64_t glb_thread_id = wr->glb_thread_id;
+
   epicAssert(wr->parent);
   epicAssert(IsLocal(wr->addr));  //I'm the home node
   WorkRequest *parent = wr->parent;
@@ -484,8 +486,9 @@ void Worker::ProcessPendingWriteForward(Client *cli, WorkRequest *wr) {
     directory.unlock(laddr);
 
     //TOOD: add completion check
+    agent_stats_inst.update_home_send_count(glb_thread_id);
     lcli->WriteWithImm(nullptr, nullptr, 0, wr->pid);  //ack the ownership change
-
+    
 #ifdef SELECTIVE_CACHING
   }
 #endif
@@ -513,6 +516,7 @@ void Worker::ProcessPendingEvictDirty(Client *cil, WorkRequest *wr) {
 }
 
 void Worker::ProcessPendingInvalidateForward(Client *cli, WorkRequest *wr) {
+  uint64_t glb_thread_id = wr->glb_thread_id;
   WorkRequest *parent = wr->parent;
   epicAssert(parent);
   epicAssert(TOBLOCK(parent->addr) == wr->addr);
@@ -557,6 +561,7 @@ void Worker::ProcessPendingInvalidateForward(Client *cli, WorkRequest *wr) {
       //comment below as counter is not initialized and not used in the write/invalidforward
       //parent->counter--;
       //epicAssert(parent->counter == 0);
+      agent_stats_inst.update_home_send_count(glb_thread_id);
       SubmitRequest(pcli, parent);
       parent->unlock();
       delete parent;
@@ -638,6 +643,7 @@ void Worker::ProcessPendingInvalidateForward(Client *cli, WorkRequest *wr) {
     parent->op = WRITE_REPLY;
     parent->status = SUCCESS;
     parent->counter = 0;
+    agent_stats_inst.update_home_send_count(glb_thread_id);
     SubmitRequest(lcli, parent);
     parent->unlock();
 
@@ -659,9 +665,14 @@ void Worker::ProcessPendingInvalidateForward(Client *cli, WorkRequest *wr) {
 void Worker::ProcessPendingRequest(Client *cli, WorkRequest *wr) {
   epicLog(LOG_DEBUG, "process pending request %d from worker %d", wr->op,
     cli->GetWorkerId());
+
+  uint64_t glb_thread_id = wr->glb_thread_id;
+
   switch (wr->op) {
   case READ:
   case FETCH_AND_SHARED: {
+    if(wr->op == READ) agent_stats_inst.update_request_recv_count(glb_thread_id);
+    else if(wr->op == FETCH_AND_SHARED) agent_stats_inst.update_home_recv_count(glb_thread_id);
     ProcessPendingRead(cli, wr);
     break;
   }
@@ -670,6 +681,7 @@ void Worker::ProcessPendingRequest(Client *cli, WorkRequest *wr) {
     break;
   }
   case READ_FORWARD: {
+    agent_stats_inst.update_home_recv_count(glb_thread_id);
     ProcessPendingReadForward(cli, wr);
     break;
   }
@@ -677,19 +689,24 @@ void Worker::ProcessPendingRequest(Client *cli, WorkRequest *wr) {
   case INVALIDATE:
   case WRITE:
   case WRITE_PERMISSION_ONLY: {
+    if(wr->op == FETCH_AND_INVALIDATE || wr->op == INVALIDATE) agent_stats_inst.update_home_recv_count(glb_thread_id);
+    else if(wr->op == WRITE || wr->op == WRITE_PERMISSION_ONLY) agent_stats_inst.update_request_recv_count(glb_thread_id);
     ProcessPendingWrite(cli, wr);
     break;
   }
   case WRITE_FORWARD:  //Case 4 in home node
-  {
+  { 
+    agent_stats_inst.update_home_recv_count(glb_thread_id);
     ProcessPendingWriteForward(cli, wr);
     break;
   }
   case WRITE_BACK: {
+    agent_stats_inst.update_home_recv_count(glb_thread_id);
     ProcessPendingEvictDirty(cli, wr);
     break;
   }
   case INVALIDATE_FORWARD: {
+    agent_stats_inst.update_home_recv_count(glb_thread_id);
     ProcessPendingInvalidateForward(cli, wr);
     break;
   }
@@ -716,7 +733,7 @@ void Worker::ProcessRequest(Client *cli, unsigned int work_id) {
   ProcessPendingRequest(cli, wr);
 }
 
-MULTI_SYS_THREAD_OP Worker::ProcessRequestWithOpRes(Client *cli, unsigned int work_id) {
+MULTI_SYS_THREAD_OP Worker::ProcessRequestWithOpRes(Client *cli, unsigned int work_id, uint64_t sys_thread_id) {
 #ifdef NOCACHE
   epicLog(LOG_WARNING, "shouldn't come here");
   return;
@@ -724,6 +741,7 @@ MULTI_SYS_THREAD_OP Worker::ProcessRequestWithOpRes(Client *cli, unsigned int wo
   epicLog(LOG_DEBUG, "callback function work_id = %u, reply from %d", work_id,
     cli->GetWorkerId());
   WorkRequest *wr = GetPendingWork(work_id);
+  wr->glb_thread_id = sys_thread_id;
   epicAssert(wr);
   epicAssert(wr->id == work_id);
   ProcessPendingRequest(cli, wr);

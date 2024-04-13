@@ -194,6 +194,7 @@ void Worker::ProcessRemoteEvictShared(Client *client, WorkRequest *wr) {
 }
 
 void Worker::ProcessRemoteEvictDirty(Client *client, WorkRequest *wr) {
+  uint64_t glb_thread_id = wr->glb_thread_id;
   void *laddr = ToLocal(wr->addr);
   directory.lock(laddr);
   DirEntry *entry = directory.GetEntry(laddr);
@@ -208,6 +209,7 @@ void Worker::ProcessRemoteEvictDirty(Client *client, WorkRequest *wr) {
   directory.Clear(entry, client->ToGlobal(wr->ptr));
   directory.unlock(laddr);
   client->WriteWithImm(nullptr, nullptr, 0, wr->id);
+  agent_stats_inst.update_home_send_count(glb_thread_id);
   delete wr;
   wr = nullptr;
 }
@@ -216,6 +218,10 @@ void Worker::ProcessRequest(Client *client, WorkRequest *wr) {
   epicLog(LOG_DEBUG, "process remote request %d from worker %d", wr->op,
     client->GetWorkerId());
   epicAssert(wr->wid == 0 || wr->wid == client->GetWorkerId());
+
+  /*zxy Todo: distinguish wr from first hand or second hand (ProcessToServeRequest)*/
+  uint64_t glb_thread_id = wr->glb_thread_id;
+  int secondhand_flag = wr->secondhand_flag;
 
   switch (wr->op) {
 
@@ -268,6 +274,7 @@ void Worker::ProcessRequest(Client *client, WorkRequest *wr) {
   }
   case READ:
   {
+    if(secondhand_flag == 0) agent_stats_inst.update_home_recv_count(glb_thread_id);
     ProcessRemoteRead(client, wr);
     break;
   }
@@ -279,17 +286,21 @@ void Worker::ProcessRequest(Client *client, WorkRequest *wr) {
   case READ_FORWARD:
   case FETCH_AND_SHARED:
   {
+    if(secondhand_flag == 0) agent_stats_inst.update_cache_recv_count(glb_thread_id);
     ProcessRemoteReadCache(client, wr);
     break;
   }
   case READ_REPLY:
   {
+    /*zxy Todo: distinguish READ_REPLY in detail more*/
+    if(secondhand_flag == 0) agent_stats_inst.update_home_recv_count(glb_thread_id);
     ProcessRemoteReadReply(client, wr);
     break;
   }
   case WRITE:
   case WRITE_PERMISSION_ONLY:
   {
+    if(secondhand_flag == 0) agent_stats_inst.update_home_recv_count(glb_thread_id);
     ProcessRemoteWrite(client, wr);
     break;
   }
@@ -299,21 +310,26 @@ void Worker::ProcessRequest(Client *client, WorkRequest *wr) {
   case INVALIDATE_FORWARD:
   case WRITE_PERMISSION_ONLY_FORWARD:
   {
+    if(secondhand_flag == 0) agent_stats_inst.update_cache_recv_count(glb_thread_id);
     ProcessRemoteWriteCache(client, wr);
     break;
   }
   case WRITE_REPLY:
   {
+    /*zxy Todo: distinguish WRITE_REPLY in detail more*/
+    if(secondhand_flag == 0) agent_stats_inst.update_home_recv_count(glb_thread_id);
     ProcessRemoteWriteReply(client, wr);
     break;
   }
   case ACTIVE_INVALIDATE:
   {
+    if(secondhand_flag == 0) agent_stats_inst.update_home_recv_count(glb_thread_id);
     ProcessRemoteEvictShared(client, wr);
     break;
   }
   case WRITE_BACK:
   {
+    if(secondhand_flag == 0) agent_stats_inst.update_home_recv_count(glb_thread_id);
     ProcessRemoteEvictDirty(client, wr);
     break;
   }

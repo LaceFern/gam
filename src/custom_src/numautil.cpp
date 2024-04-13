@@ -36,6 +36,13 @@ void bind_to_core(std::thread &thread, size_t numa_node,
             "performance.\n",
             numa_local_index, numa_node, lcore_vec.size());
         exit(1);
+        // printf("Requested binding to core 0");
+
+        // const std::vector<size_t> lcore_vec = get_lcores_for_numa_node(0);
+        // const size_t global_index = lcore_vec.at(numa_local_index - lcore_vec.size());
+        // CPU_SET(global_index, &cpuset);
+        // int rc = pthread_setaffinity_np(thread.native_handle(), sizeof(cpu_set_t), &cpuset);
+        // assert(rc == 0);
     }
 
     const size_t global_index = lcore_vec.at(numa_local_index);

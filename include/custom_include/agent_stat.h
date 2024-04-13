@@ -9,12 +9,16 @@
 #include <experimental/filesystem>
 #include <fstream>
 
+#include <cstdio>
+#include <regex>
 
 #include "util.h"
 #include "structure.h"
 #include "histogram.h"
 #include "atomic_queue/atomic_queue.h"
 #include "numautil.h"
+
+
 
 using GAddr = uint64_t;
 
@@ -53,11 +57,13 @@ enum class MULTI_SYS_THREAD_OP {
     PROCESS_IN_HOME_NODE, // home node receive request node, and forward to cache node
     PROCESS_PENDING_IN_HOME_OR_REQ_NODE, // home node and request node receive rdma_write_with_imm response from cache node
     PROCESS_IN_CACHE_NODE, // process in cache node
+    PROCESS_NOT_TARGET,
 };
 
 enum class POLL_OP {
     NONE,
     WAITING_IN_SYSTHREAD_QUEUE,
+    WAITING_NOT_TARGET,
 };
 
 
@@ -91,7 +97,53 @@ private:
 
     std::atomic<int> start;
 
+    volatile int thread_init[48] = {0};
+    std::mutex init_mtx;
+
+    // only sys threads recv packets
+    int home_recv_count[MAX_SYS_THREAD] = {0};
+    int request_recv_count[MAX_SYS_THREAD] = {0};
+    int cache_recv_count[MAX_SYS_THREAD] = {0};
+
+    // both app threads and sys threads send packets, app thread id follows sys thread id
+    int home_send_count[MAX_GLB_THREAD] = {0};
+    int request_send_count[MAX_GLB_THREAD] = {0};
+    int cache_send_count[MAX_GLB_THREAD] = {0};
+
 public:
+
+    inline void update_home_send_count(uint64_t thread_id) {
+        if(start && thread_id != GLB_INVALID) home_send_count[thread_id]++;
+    }
+    inline void update_request_send_count(uint64_t thread_id) {
+        if(start && thread_id != GLB_INVALID) request_send_count[thread_id]++;
+    }
+    inline void update_cache_send_count(uint64_t thread_id) {
+        if(start && thread_id != GLB_INVALID) cache_send_count[thread_id]++;
+    }
+
+    inline void update_home_recv_count(uint64_t thread_id) {
+        if(start && thread_id != GLB_INVALID) home_recv_count[thread_id]++;
+    }
+    inline void update_request_recv_count(uint64_t thread_id) {
+        if(start && thread_id != GLB_INVALID) request_recv_count[thread_id]++;
+    }
+    inline void update_cache_recv_count(uint64_t thread_id) {
+        if(start && thread_id != GLB_INVALID) cache_recv_count[thread_id]++;
+    }
+
+    void set1_thread_init_flag(int id){
+        std::lock_guard<std::mutex> lock(init_mtx);
+        thread_init[id] = 1;
+    }
+    int read_thread_init_flag(int id){
+        std::lock_guard<std::mutex> lock(init_mtx);
+        return thread_init[id];
+    }
+
+    int is_request = 0;
+    int is_cache = 0;
+    int is_home = 0;
 
     uint64_t sys_thread_num = 1;
     uint64_t lcores_num_per_numa = 12;
@@ -124,6 +176,7 @@ public:
 
         poll_thread_stats = new Histogram(1, 10000000, 3, 10);
         poll_thread_op_stats[POLL_OP::WAITING_IN_SYSTHREAD_QUEUE] = new Histogram(1, 10000000, 3, 10);
+        poll_thread_op_stats[POLL_OP::WAITING_NOT_TARGET] = new Histogram(1, 10000000, 3, 10);
 
         std::vector<size_t>numa_node_list = get_lcores_for_numa_node(0);
         lcores_num_per_numa = numa_node_list.size();
@@ -178,11 +231,75 @@ public:
     void print_poll_thread_stat() {
         std::cout << "\nWAITING_IN_SYSTHREAD_QUEUE: " << std::endl;
         poll_thread_op_stats[POLL_OP::WAITING_IN_SYSTHREAD_QUEUE]->print(stdout, 5);
+        std::cout << "\nWAITING_NOT_TARGET: " << std::endl;
+        poll_thread_op_stats[POLL_OP::WAITING_NOT_TARGET]->print(stdout, 5);
+    }
+
+
+    void save_clean_stat(std::string result_dir, std::string Tag){
+        std::string common_suffix = ".txt";
+        double result_99 = -1;
+        double result_avg = -1;
+        double result_count = -1;
+        
+        std::ifstream file;
+        std::string file_name = result_dir + "/" + Tag + common_suffix;
+        file.open(file_name);
+        if (!file.is_open()) {
+            std::cerr << "Error: Unable to open file" << file_name << std::endl;
+        }
+
+        std::string line;
+        std::getline(file, line); // Skip first line
+        std::getline(file, line); // Skip second line
+
+        while (std::getline(file, line)) {
+            if (line[0] != '#') {
+                std::istringstream iss(line);
+                std::string word;
+                std::vector<std::string> wordlist;
+
+                while (iss >> word) {
+                    wordlist.push_back(word);
+                }
+
+                double value = std::stod(wordlist[0]);
+                double percentile = std::stod(wordlist[1]);
+
+                if (percentile >= 0.99 && result_99 == -1) {
+                    result_99 = value;
+                }
+            } else {
+                std::smatch match;
+                if (std::regex_search(line, match, std::regex(R"(\bMean\s*=\s*([-+]?\d*\.\d+|\d+))"))) {
+                    result_avg = std::stod(match[1]);
+                }
+                if (std::regex_search(line, match, std::regex(R"(\bTotal count\s*=\s*([-+]?\d*\.\d+|\d+))"))) {
+                    result_count = std::stod(match[1]);
+                }
+            }
+        }
+        file.close();
+
+        int ret = remove(file_name.c_str());
+        if (ret != 0) {
+            std::cerr << "Error: Unable to delete file " << file_name << std::endl;
+        }
+
+        std::ofstream result;
+        std::string result_name = result_dir + "/" + "clean_" + Tag + common_suffix;
+        result.open(result_name, ios::app);
+        if (!result.is_open()) {
+            std::cerr << "Error: Unable to open file " << result_name << std::endl;
+        }
+        result << result_count << "\t" << result_avg << "\t" << result_99 << "\n";
+        result.close();
     }
 
 
     void save_stat_to_file(std::string result_dir, size_t sys_threads, size_t bench_threads) {
-        std::string common_suffix = "_S" + to_string(sys_threads) + "_B" + to_string(bench_threads) + ".txt";
+        std::string common_suffix = ".txt";
+        // std::string common_suffix = "_S" + to_string(sys_threads) + "_B" + to_string(bench_threads) + ".txt";
         if (!std::experimental::filesystem::exists(result_dir)) {
             if (!std::experimental::filesystem::create_directory(result_dir)) {
                 std::cerr << "Error creating folder " << result_dir << std::endl;
@@ -191,115 +308,187 @@ public:
         }
         FILE *file;
         std::experimental::filesystem::path result_directory(result_dir);
+        std::experimental::filesystem::path filePath;
+        if(is_request){
+            filePath = result_directory / std::experimental::filesystem::path("AFTER_PROCESS_LOCAL_REQUEST_LOCK" + common_suffix);
+            file = fopen(filePath.c_str(), "w");
+            assert(file != nullptr);
+            app_thread_op_stats[APP_THREAD_OP::AFTER_PROCESS_LOCAL_REQUEST_LOCK]->print(file, 5);
+            fclose(file);
+            save_clean_stat(result_dir, "AFTER_PROCESS_LOCAL_REQUEST_LOCK");
 
-        std::experimental::filesystem::path filePath = result_directory / std::experimental::filesystem::path("AFTER_PROCESS_LOCAL_REQUEST_LOCK" + common_suffix);
+            filePath = result_directory / std::experimental::filesystem::path("AFTER_PROCESS_LOCAL_REQUEST_UNLOCK" + common_suffix);
+            file = fopen(filePath.c_str(), "w");
+            assert(file != nullptr);
+            app_thread_op_stats[APP_THREAD_OP::AFTER_PROCESS_LOCAL_REQUEST_UNLOCK]->print(file, 5);
+            fclose(file);
+            save_clean_stat(result_dir, "AFTER_PROCESS_LOCAL_REQUEST_UNLOCK");
+
+            filePath = result_directory / std::experimental::filesystem::path("AFTER_PROCESS_LOCAL_REQUEST_READ" + common_suffix);
+            file = fopen(filePath.c_str(), "w");
+            assert(file != nullptr);
+            app_thread_op_stats[APP_THREAD_OP::AFTER_PROCESS_LOCAL_REQUEST_READ]->print(file, 5);
+            fclose(file);
+            save_clean_stat(result_dir, "AFTER_PROCESS_LOCAL_REQUEST_READ");
+
+            filePath = result_directory / std::experimental::filesystem::path("AFTER_PROCESS_LOCAL_REQUEST_READP2P" + common_suffix);
+            file = fopen(filePath.c_str(), "w");
+            assert(file != nullptr);
+            app_thread_op_stats[APP_THREAD_OP::AFTER_PROCESS_LOCAL_REQUEST_READP2P]->print(file, 5);
+            fclose(file);
+            save_clean_stat(result_dir, "AFTER_PROCESS_LOCAL_REQUEST_READP2P");
+
+            filePath = result_directory / std::experimental::filesystem::path("AFTER_PROCESS_LOCAL_REQUEST_WRITE" + common_suffix);
+            file = fopen(filePath.c_str(), "w");
+            assert(file != nullptr);
+            app_thread_op_stats[APP_THREAD_OP::AFTER_PROCESS_LOCAL_REQUEST_WRITE]->print(file, 5);
+            fclose(file);
+            save_clean_stat(result_dir, "AFTER_PROCESS_LOCAL_REQUEST_WRITE");
+
+            filePath = result_directory / std::experimental::filesystem::path("AFTER_PROCESS_LOCAL_REQUEST_OTHER" + common_suffix);
+            file = fopen(filePath.c_str(), "w");
+            assert(file != nullptr);
+            app_thread_op_stats[APP_THREAD_OP::AFTER_PROCESS_LOCAL_REQUEST_OTHER]->print(file, 5);
+            fclose(file);
+            save_clean_stat(result_dir, "AFTER_PROCESS_LOCAL_REQUEST_OTHER");
+
+            filePath = result_directory / std::experimental::filesystem::path("WAIT_ASYNC_FINISH" + common_suffix);
+            file = fopen(filePath.c_str(), "w");
+            assert(file != nullptr);
+            app_thread_op_stats[APP_THREAD_OP::WAIT_ASYNC_FINISH]->print(file, 5);
+            fclose(file);
+            save_clean_stat(result_dir, "WAIT_ASYNC_FINISH");
+
+            filePath = result_directory / std::experimental::filesystem::path("WAKEUP_2_READ_RETURN" + common_suffix);
+            file = fopen(filePath.c_str(), "w");
+            assert(file != nullptr);
+            app_thread_op_stats[APP_THREAD_OP::WAKEUP_2_READ_RETURN]->print(file, 5);
+            fclose(file);
+            save_clean_stat(result_dir, "WAKEUP_2_READ_RETURN");
+
+            filePath = result_directory / std::experimental::filesystem::path("WAKEUP_2_WRITE_RETURN" + common_suffix);
+            file = fopen(filePath.c_str(), "w");
+            assert(file != nullptr);
+            app_thread_op_stats[APP_THREAD_OP::WAKEUP_2_WRITE_RETURN]->print(file, 5);
+            fclose(file);
+            save_clean_stat(result_dir, "WAKEUP_2_WRITE_RETURN");
+
+            filePath = result_directory / std::experimental::filesystem::path("WAKEUP_2_RLOCK_RETURN" + common_suffix);
+            file = fopen(filePath.c_str(), "w");
+            assert(file != nullptr);
+            app_thread_op_stats[APP_THREAD_OP::WAKEUP_2_RLOCK_RETURN]->print(file, 5);
+            fclose(file);
+            save_clean_stat(result_dir, "WAKEUP_2_RLOCK_RETURN");
+
+            filePath = result_directory / std::experimental::filesystem::path("WAKEUP_2_WLOCK_RETURN" + common_suffix);
+            file = fopen(filePath.c_str(), "w");
+            assert(file != nullptr);
+            app_thread_op_stats[APP_THREAD_OP::WAKEUP_2_WLOCK_RETURN]->print(file, 5);
+            fclose(file);
+            save_clean_stat(result_dir, "WAKEUP_2_WLOCK_RETURN");
+
+            filePath = result_directory / std::experimental::filesystem::path("WAKEUP_2_UNLOCK_RETURN" + common_suffix);
+            file = fopen(filePath.c_str(), "w");
+            assert(file != nullptr);
+            app_thread_op_stats[APP_THREAD_OP::WAKEUP_2_UNLOCK_RETURN]->print(file, 5);
+            fclose(file);
+            save_clean_stat(result_dir, "WAKEUP_2_UNLOCK_RETURN");
+
+            filePath = result_directory / std::experimental::filesystem::path("MEMSET" + common_suffix);
+            file = fopen(filePath.c_str(), "w");
+            assert(file != nullptr);
+            app_thread_op_stats[APP_THREAD_OP::MEMSET]->print(file, 5);
+            fclose(file);
+            save_clean_stat(result_dir, "MEMSET");
+        }
+
+        if(is_request || is_cache || is_home){
+            filePath = result_directory / std::experimental::filesystem::path("WAITING_IN_SYSTHREAD_QUEUE" + common_suffix);
+            file = fopen(filePath.c_str(), "w");
+            assert(file != nullptr);
+            poll_thread_op_stats[POLL_OP::WAITING_IN_SYSTHREAD_QUEUE]->print(file, 5);
+            fclose(file);
+            save_clean_stat(result_dir, "WAITING_IN_SYSTHREAD_QUEUE");
+        }
+
+        filePath = result_directory / std::experimental::filesystem::path("WAITING_NOT_TARGET" + common_suffix);
         file = fopen(filePath.c_str(), "w");
         assert(file != nullptr);
-        app_thread_op_stats[APP_THREAD_OP::AFTER_PROCESS_LOCAL_REQUEST_LOCK]->print(file, 5);
+        poll_thread_op_stats[POLL_OP::WAITING_NOT_TARGET]->print(file, 5);
+        fclose(file);
+        save_clean_stat(result_dir, "WAITING_NOT_TARGET");
+
+        filePath = result_directory / std::experimental::filesystem::path("RECV_PACKET_COUNT" + common_suffix);
+        file = fopen(filePath.c_str(), "a");
+        assert(file != nullptr);
+        int home_recv_count_total = 0;
+        int request_recv_count_total = 0;
+        int cache_recv_count_total = 0;
+        int recv_count_total = 0;
+        for(int i = 0; i < MAX_SYS_THREAD; i++){
+            home_recv_count_total += home_recv_count[i];
+            request_recv_count_total += request_recv_count[i];
+            cache_recv_count_total += cache_recv_count[i];
+            recv_count_total += home_recv_count[i] + request_recv_count[i] + cache_recv_count[i];
+        }
+        fprintf(file, "%d\t%d\t%d\t%d\t\n", home_recv_count_total, request_recv_count_total, cache_recv_count_total, recv_count_total);
         fclose(file);
 
-        filePath = result_directory / std::experimental::filesystem::path("AFTER_PROCESS_LOCAL_REQUEST_UNLOCK" + common_suffix);
-        file = fopen(filePath.c_str(), "w");
-        assert(file != nullptr);
-        app_thread_op_stats[APP_THREAD_OP::AFTER_PROCESS_LOCAL_REQUEST_UNLOCK]->print(file, 5);
-        fclose(file);
 
-        filePath = result_directory / std::experimental::filesystem::path("AFTER_PROCESS_LOCAL_REQUEST_READ" + common_suffix);
-        file = fopen(filePath.c_str(), "w");
+        filePath = result_directory / std::experimental::filesystem::path("SEND_PACKET_COUNT" + common_suffix);
+        file = fopen(filePath.c_str(), "a");
         assert(file != nullptr);
-        app_thread_op_stats[APP_THREAD_OP::AFTER_PROCESS_LOCAL_REQUEST_READ]->print(file, 5);
-        fclose(file);
-
-        filePath = result_directory / std::experimental::filesystem::path("AFTER_PROCESS_LOCAL_REQUEST_READP2P" + common_suffix);
-        file = fopen(filePath.c_str(), "w");
-        assert(file != nullptr);
-        app_thread_op_stats[APP_THREAD_OP::AFTER_PROCESS_LOCAL_REQUEST_READP2P]->print(file, 5);
-        fclose(file);
-
-        filePath = result_directory / std::experimental::filesystem::path("AFTER_PROCESS_LOCAL_REQUEST_WRITE" + common_suffix);
-        file = fopen(filePath.c_str(), "w");
-        assert(file != nullptr);
-        app_thread_op_stats[APP_THREAD_OP::AFTER_PROCESS_LOCAL_REQUEST_WRITE]->print(file, 5);
-        fclose(file);
-
-        filePath = result_directory / std::experimental::filesystem::path("AFTER_PROCESS_LOCAL_REQUEST_OTHER" + common_suffix);
-        file = fopen(filePath.c_str(), "w");
-        assert(file != nullptr);
-        app_thread_op_stats[APP_THREAD_OP::AFTER_PROCESS_LOCAL_REQUEST_OTHER]->print(file, 5);
-        fclose(file);
-
-        filePath = result_directory / std::experimental::filesystem::path("WAIT_ASYNC_FINISH" + common_suffix);
-        file = fopen(filePath.c_str(), "w");
-        assert(file != nullptr);
-        app_thread_op_stats[APP_THREAD_OP::WAIT_ASYNC_FINISH]->print(file, 5);
-        fclose(file);
-
-        filePath = result_directory / std::experimental::filesystem::path("WAKEUP_2_READ_RETURN" + common_suffix);
-        file = fopen(filePath.c_str(), "w");
-        assert(file != nullptr);
-        app_thread_op_stats[APP_THREAD_OP::WAKEUP_2_READ_RETURN]->print(file, 5);
-        fclose(file);
-
-        filePath = result_directory / std::experimental::filesystem::path("WAKEUP_2_WRITE_RETURN" + common_suffix);
-        file = fopen(filePath.c_str(), "w");
-        assert(file != nullptr);
-        app_thread_op_stats[APP_THREAD_OP::WAKEUP_2_WRITE_RETURN]->print(file, 5);
-        fclose(file);
-
-        filePath = result_directory / std::experimental::filesystem::path("WAKEUP_2_RLOCK_RETURN" + common_suffix);
-        file = fopen(filePath.c_str(), "w");
-        assert(file != nullptr);
-        app_thread_op_stats[APP_THREAD_OP::WAKEUP_2_RLOCK_RETURN]->print(file, 5);
-        fclose(file);
-
-        filePath = result_directory / std::experimental::filesystem::path("WAKEUP_2_WLOCK_RETURN" + common_suffix);
-        file = fopen(filePath.c_str(), "w");
-        assert(file != nullptr);
-        app_thread_op_stats[APP_THREAD_OP::WAKEUP_2_WLOCK_RETURN]->print(file, 5);
-        fclose(file);
-
-        filePath = result_directory / std::experimental::filesystem::path("WAKEUP_2_UNLOCK_RETURN" + common_suffix);
-        file = fopen(filePath.c_str(), "w");
-        assert(file != nullptr);
-        app_thread_op_stats[APP_THREAD_OP::WAKEUP_2_UNLOCK_RETURN]->print(file, 5);
-        fclose(file);
-
-        filePath = result_directory / std::experimental::filesystem::path("MEMSET" + common_suffix);
-        file = fopen(filePath.c_str(), "w");
-        assert(file != nullptr);
-        app_thread_op_stats[APP_THREAD_OP::MEMSET]->print(file, 5);
-        fclose(file);
-
-        filePath = result_directory / std::experimental::filesystem::path("WAITING_IN_SYSTHREAD_QUEUE" + common_suffix);
-        file = fopen(filePath.c_str(), "w");
-        assert(file != nullptr);
-        poll_thread_op_stats[POLL_OP::WAITING_IN_SYSTHREAD_QUEUE]->print(file, 5);
+        int home_send_count_total = 0;
+        int request_send_count_total = 0;
+        int cache_send_count_total = 0;
+        int send_count_total = 0;
+        for(int i = 0; i < MAX_GLB_THREAD; i++){
+            home_send_count_total += home_send_count[i];
+            request_send_count_total += request_send_count[i];
+            cache_send_count_total += cache_send_count[i];
+            send_count_total += home_send_count[i] + request_send_count[i] + cache_send_count[i];
+        }
+        fprintf(file, "%d\t%d\t%d\t%d\t\n", home_send_count_total, request_send_count_total, cache_send_count_total, send_count_total);
         fclose(file);
 
         for (size_t i = 0;i < sys_thread_num; i++) {
-            filePath = result_directory / std::experimental::filesystem::path("SYS_THREAD_" + to_string(i) + "_PROCESS_IN_HOME_NODE" + common_suffix);
-            file = fopen(filePath.c_str(), "w");
-            assert(file != nullptr);
-            multi_sys_thread_op_stats[i][MULTI_SYS_THREAD_OP::PROCESS_IN_HOME_NODE]->print(file, 5);
-            fclose(file);
+            if(is_home){
+                filePath = result_directory / std::experimental::filesystem::path("SYS_THREAD_" + to_string(i) + "_PROCESS_IN_HOME_NODE" + common_suffix);
+                file = fopen(filePath.c_str(), "w");
+                assert(file != nullptr);
+                multi_sys_thread_op_stats[i][MULTI_SYS_THREAD_OP::PROCESS_IN_HOME_NODE]->print(file, 5);
+                fclose(file);
+                save_clean_stat(result_dir, "SYS_THREAD_" + to_string(i) + "_PROCESS_IN_HOME_NODE");
+            }
 
-            filePath = result_directory / std::experimental::filesystem::path("SYS_THREAD_" + to_string(i) + "_PROCESS_PENDING_IN_HOME_OR_REQ_NODE" + common_suffix);
-            file = fopen(filePath.c_str(), "w");
-            assert(file != nullptr);
-            multi_sys_thread_op_stats[i][MULTI_SYS_THREAD_OP::PROCESS_PENDING_IN_HOME_OR_REQ_NODE]->print(file, 5);
-            fclose(file);
+            if(is_request || is_home){
+                filePath = result_directory / std::experimental::filesystem::path("SYS_THREAD_" + to_string(i) + "_PROCESS_PENDING_IN_HOME_OR_REQ_NODE" + common_suffix);
+                file = fopen(filePath.c_str(), "w");
+                assert(file != nullptr);
+                multi_sys_thread_op_stats[i][MULTI_SYS_THREAD_OP::PROCESS_PENDING_IN_HOME_OR_REQ_NODE]->print(file, 5);
+                fclose(file);
+                save_clean_stat(result_dir, "SYS_THREAD_" + to_string(i) + "_PROCESS_PENDING_IN_HOME_OR_REQ_NODE");
+            }
 
-            filePath = result_directory / std::experimental::filesystem::path("SYS_THREAD_" + to_string(i) + "_PROCESS_IN_CACHE_NODE" + common_suffix);
-            file = fopen(filePath.c_str(), "w");
-            assert(file != nullptr);
-            multi_sys_thread_op_stats[i][MULTI_SYS_THREAD_OP::PROCESS_IN_CACHE_NODE]->print(file, 5);
-            fclose(file);
+            if(is_cache){
+                filePath = result_directory / std::experimental::filesystem::path("SYS_THREAD_" + to_string(i) + "_PROCESS_IN_CACHE_NODE" + common_suffix);
+                file = fopen(filePath.c_str(), "w");
+                assert(file != nullptr);
+                multi_sys_thread_op_stats[i][MULTI_SYS_THREAD_OP::PROCESS_IN_CACHE_NODE]->print(file, 5);
+                fclose(file);
+                save_clean_stat(result_dir, "SYS_THREAD_" + to_string(i) + "_PROCESS_IN_CACHE_NODE");
+            }
         }
     }
 
 
     bool is_valid_gaddr(GAddr gaddr) {
-        return valid_gaddrs.count(gaddr);
+        if(!start){
+            return false;
+        }
+        else{
+            return valid_gaddrs.count(gaddr);
+        }
     }
 
     void push_valid_gaddr(GAddr gaddr) {

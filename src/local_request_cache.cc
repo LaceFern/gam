@@ -1,6 +1,7 @@
 // Copyright (c) 2018 The GAM Authors
 
 int Worker::ProcessLocalRead(WorkRequest *wr) {
+  uint64_t glb_thread_id = wr->glb_thread_id;
   epicAssert(wr->addr);
   epicAssert(!(wr->flag & ASYNC));
   //long init_time = get_time();
@@ -68,6 +69,7 @@ int Worker::ProcessLocalRead(WorkRequest *wr) {
         epicAssert(!directory.IsBlockLocked(entry));
         directory.ToToShared(entry, rc);
         SubmitRequest(cli, lwr, ADD_TO_PENDING | REQUEST_SEND);
+        agent_stats_inst.update_home_send_count(glb_thread_id);
       } else {
         GAddr gs = i > start ? i : start;
         void *ls = (void *)((ptr_t)wr->ptr + GMINUS(gs, start));
@@ -182,7 +184,7 @@ int Worker::ProcessLocalReadP2P(WorkRequest *wr) {
   epicAssert(!(wr->flag & ASYNC));
 
   //just a hard code !!!
-  Client *cli = GetClientByIP("10.0.0.8");
+  Client *cli = GetClientByIP("10.0.0.5");
   if (cli == nullptr) {
     epicLog(LOG_WARNING, "Cannot find the client by IP");
     epicAssert(false);
@@ -206,6 +208,7 @@ int Worker::ProcessLocalReadP2P(WorkRequest *wr) {
 }
 
 int Worker::ProcessLocalWrite(WorkRequest *wr) {
+  uint64_t glb_thread_id = wr->glb_thread_id;
   epicAssert(wr->addr);
   Fence *fence = fences_.at(wr->fd);
   if (!(wr->flag & FENCE)) {
@@ -309,6 +312,7 @@ int Worker::ProcessLocalWrite(WorkRequest *wr) {
           epicLog(LOG_DEBUG, "invalidate (%d) cache from worker %d (lwr = %lx)",
             lwr->op, cli->GetWorkerId(), lwr);
           SubmitRequest(cli, lwr);
+          agent_stats_inst.update_home_send_count(glb_thread_id);
           //lwr->counter++;
         }
       } else {
@@ -416,6 +420,7 @@ int Worker::ProcessLocalWrite(WorkRequest *wr) {
 }
 
 int Worker::ProcessLocalRLock(WorkRequest *wr) {
+  uint64_t glb_thread_id = wr->glb_thread_id;
   epicAssert(wr->addr);
   epicAssert(!(wr->flag & ASYNC));
   //epicAssert(!(wr->flag & FENCE));
@@ -471,6 +476,7 @@ int Worker::ProcessLocalRLock(WorkRequest *wr) {
       epicAssert(!directory.IsBlockLocked(entry));
       directory.ToToShared(entry, rc);
       SubmitRequest(cli, lwr, ADD_TO_PENDING | REQUEST_SEND);
+      agent_stats_inst.update_home_send_count(glb_thread_id);
     } else {
       int ret;
       if (entry) {
@@ -532,6 +538,7 @@ int Worker::ProcessLocalRLock(WorkRequest *wr) {
 }
 
 int Worker::ProcessLocalWLock(WorkRequest *wr) {
+  uint64_t glb_thread_id = wr->glb_thread_id;
   epicAssert(wr->addr);
   epicAssert(!(wr->flag & ASYNC));
   if (!(wr->flag & FENCE)) {
@@ -595,6 +602,7 @@ int Worker::ProcessLocalWLock(WorkRequest *wr) {
           "invalidate (%d) cache from worker %d, state = %d, lwr->counter = %d",
           lwr->op, cli->GetWorkerId(), state, lwr->counter.load());
         SubmitRequest(cli, lwr);
+        agent_stats_inst.update_home_send_count(glb_thread_id);
         //lwr->counter++;
       }
     } else if (DIR_UNSHARED == state) {

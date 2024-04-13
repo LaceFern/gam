@@ -299,7 +299,7 @@ public:
   void ProcessRemoteEvictShared(Client *client, WorkRequest *wr);
   void ProcessRemoteEvictDirty(Client *client, WorkRequest *wr);
   void ProcessRequest(Client *client, unsigned int work_id);
-  MULTI_SYS_THREAD_OP ProcessRequestWithOpRes(Client *client, unsigned int work_id);
+  MULTI_SYS_THREAD_OP ProcessRequestWithOpRes(Client *client, unsigned int work_id, uint64_t sys_thread_id);
   void ProcessPendingRequest(Client *cli, WorkRequest *wr);
   void ProcessPendingRead(Client *cli, WorkRequest *wr);
   void ProcessPendingReadP2P(Client *cli, WorkRequest *wr);

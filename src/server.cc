@@ -31,7 +31,7 @@ Client *Server::NewClient(bool isMaster, const char *rdmaConn) {
   }
 }
 
-MULTI_SYS_THREAD_OP Server::ProcessRdmaRequest(ibv_wc &wc) {
+MULTI_SYS_THREAD_OP Server::ProcessRdmaRequest(ibv_wc &wc, uint64_t sys_thread_id) {
   void *ctx;
   Client *cli;
   uint32_t immdata, id;
@@ -136,13 +136,20 @@ MULTI_SYS_THREAD_OP Server::ProcessRdmaRequest(ibv_wc &wc) {
       }
       // need check before ProcessRequest, because ProcessRequest will delete wr!
       if (agent_stats_inst.is_valid_gaddr(wr->addr)) {
-        if (wr->op == READ_FORWARD || wr->op == READ_P2P || wr->op == FETCH_AND_SHARED || wr->op == INVALIDATE || wr->op == FETCH_AND_INVALIDATE
+        if (wr->op == READ_P2P){
+          // just a hard code !!!
+          res_op = MULTI_SYS_THREAD_OP::PROCESS_IN_CACHE_NODE;
+        }
+        else if (wr->op == READ_FORWARD || wr->op == FETCH_AND_SHARED || wr->op == INVALIDATE || wr->op == FETCH_AND_INVALIDATE
           || wr->op == WRITE_FORWARD || wr->op == INVALIDATE_FORWARD || wr->op == WRITE_PERMISSION_ONLY_FORWARD) {
           res_op = MULTI_SYS_THREAD_OP::PROCESS_IN_CACHE_NODE;
         } else {
           res_op = MULTI_SYS_THREAD_OP::PROCESS_IN_HOME_NODE;
+          // epicLog(LOG_WARNING, "Home node: op = %d\n", wr->op);
         }
       }
+
+      wr->glb_thread_id = sys_thread_id;
       ProcessRequest(cli, wr);
     }
 #endif
@@ -156,7 +163,7 @@ MULTI_SYS_THREAD_OP Server::ProcessRdmaRequest(ibv_wc &wc) {
     char *data = cli->RecvComp(wc);
 
     epicAssert(wc.wc_flags & IBV_WC_WITH_IMM);
-    res_op = ProcessRequestWithOpRes(cli, ntohl(wc.imm_data));
+    res_op = ProcessRequestWithOpRes(cli, ntohl(wc.imm_data), sys_thread_id);
     //resource->ClearSlot(wc.wr_id);
     int n = resource->PostRecvSlot(wc.wr_id);
     //epicAssert(n == 1);

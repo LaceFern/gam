@@ -71,7 +71,7 @@ public:
   }
 
   void ProcessRdmaRequest();
-  MULTI_SYS_THREAD_OP ProcessRdmaRequest(ibv_wc &wc);
+  MULTI_SYS_THREAD_OP ProcessRdmaRequest(ibv_wc &wc, uint64_t sys_thread_id = 0);
   virtual int PostAcceptWorker(int, void *) {
     return 0;
   }
@@ -80,7 +80,7 @@ public:
   }
   virtual void ProcessRequest(Client *client, WorkRequest *wr) = 0;
   virtual void ProcessRequest(Client *client, unsigned int id) {}
-  virtual MULTI_SYS_THREAD_OP ProcessRequestWithOpRes(Client *client, unsigned int id) {
+  virtual MULTI_SYS_THREAD_OP ProcessRequestWithOpRes(Client *client, unsigned int id, uint64_t sys_thread_id) {
     return MULTI_SYS_THREAD_OP::NONE;
   }
 
