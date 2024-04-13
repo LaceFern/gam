@@ -16,6 +16,8 @@
 #include "atomic_queue/atomic_queue.h"
 #include "numautil.h"
 
+#include <regex>
+
 using GAddr = uint64_t;
 
 class queue_entry {
@@ -26,6 +28,17 @@ public:
 };
 
 using SPSC_QUEUE = atomic_queue::AtomicQueueB2<queue_entry, std::allocator<queue_entry>, true, false, true>;
+
+
+#ifndef MEMACCESS_TYPE_STAT
+#define MEMACCESS_TYPE_STAT
+#endif
+enum class MEMACCESS_TYPE {
+    WITH_CC,
+    WITHOUT_CC,
+    DONT_DISTINGUISH,
+};
+
 
 enum class APP_THREAD_OP {
     NONE,
@@ -64,6 +77,12 @@ extern __thread std::thread::id now_thread_id;
 
 class agent_stats {
 private:
+
+    // only collect mem access stat from 1 special app thread 
+    uint64_t memaccess_counter;
+    MEMACCESS_TYPE memaccess_type;
+    std::unordered_map<MEMACCESS_TYPE, Histogram *> memaccess_type_stats;
+
     // only collect 1 special app thread stat
     Histogram *app_thread_stats;
     uint64_t app_thread_counter;
@@ -96,6 +115,11 @@ public:
     uint64_t lcores_num_per_numa = 12;
     explicit agent_stats() {
         // TODO
+
+        memaccess_type_stats[MEMACCESS_TYPE::WITH_CC] = new Histogram(1, 10000000, 3, 10);
+        memaccess_type_stats[MEMACCESS_TYPE::WITHOUT_CC] = new Histogram(1, 10000000, 3, 10);
+        memaccess_type_stats[MEMACCESS_TYPE::DONT_DISTINGUISH] = new Histogram(1, 10000000, 3, 10);
+
         app_thread_stats = new Histogram(1, 10000000, 3, 10);
         app_thread_op_stats[APP_THREAD_OP::AFTER_PROCESS_LOCAL_REQUEST_LOCK] = new Histogram(1, 10000000, 3, 10);
         app_thread_op_stats[APP_THREAD_OP::AFTER_PROCESS_LOCAL_REQUEST_UNLOCK] = new Histogram(1, 10000000, 3, 10);
@@ -130,6 +154,15 @@ public:
 
     ~agent_stats() {
         // TODO
+    }
+
+    void print_memaccess_type_stat() {
+        std::cout << "\nWITH_CC: " << std::endl;
+        memaccess_type_stats[MEMACCESS_TYPE::WITH_CC]->print(stdout, 5);
+        std::cout << "\nWITHOUT_CC: " << std::endl;
+        memaccess_type_stats[MEMACCESS_TYPE::WITHOUT_CC]->print(stdout, 5);
+        std::cout << "\nDONT_DISTINGUISH: " << std::endl;
+        memaccess_type_stats[MEMACCESS_TYPE::DONT_DISTINGUISH]->print(stdout, 5);
     }
 
     void print_app_thread_stat() {
@@ -174,6 +207,98 @@ public:
     void print_poll_thread_stat() {
         std::cout << "\nWAITING_IN_SYSTHREAD_QUEUE: " << std::endl;
         poll_thread_op_stats[POLL_OP::WAITING_IN_SYSTHREAD_QUEUE]->print(stdout, 5);
+    }
+
+
+    void save_clean_stat(std::string result_dir, std::string Tag){
+        std::string common_suffix = ".txt";
+        double result_99 = -1;
+        double result_avg = -1;
+        double result_count = -1;
+        
+        std::ifstream file;
+        std::string file_name = result_dir + "/" + Tag + common_suffix;
+        file.open(file_name);
+        if (!file.is_open()) {
+            std::cerr << "Error: Unable to open file" << file_name << std::endl;
+        }
+
+        std::string line;
+        std::getline(file, line); // Skip first line
+        std::getline(file, line); // Skip second line
+
+        while (std::getline(file, line)) {
+            if (line[0] != '#') {
+                std::istringstream iss(line);
+                std::string word;
+                std::vector<std::string> wordlist;
+
+                while (iss >> word) {
+                    wordlist.push_back(word);
+                }
+
+                double value = std::stod(wordlist[0]);
+                double percentile = std::stod(wordlist[1]);
+
+                if (percentile >= 0.99 && result_99 == -1) {
+                    result_99 = value;
+                }
+            } else {
+                std::smatch match;
+                if (std::regex_search(line, match, std::regex(R"(\bMean\s*=\s*([-+]?\d*\.\d+|\d+))"))) {
+                    result_avg = std::stod(match[1]);
+                }
+                if (std::regex_search(line, match, std::regex(R"(\bTotal count\s*=\s*([-+]?\d*\.\d+|\d+))"))) {
+                    result_count = std::stod(match[1]);
+                }
+            }
+        }
+        file.close();
+
+        std::ofstream result;
+        std::string result_name = result_dir + "/" + "clean_" + Tag + common_suffix;
+        result.open(result_name, ios::app);
+        if (!result.is_open()) {
+            std::cerr << "Error: Unable to open file " << result_name << std::endl;
+        }
+        result << result_count << "\t" << result_avg << "\t" << result_99 << "\n";
+        result.close();
+    }
+
+    void save_memaccess_type_stat_to_file(std::string result_dir) {
+        std::string common_suffix = ".txt";
+        if (!std::experimental::filesystem::exists(result_dir)) {
+            if (!std::experimental::filesystem::create_directory(result_dir)) {
+                std::cerr << "Error creating folder " << result_dir << std::endl;
+                exit(1);
+            }
+        }
+        FILE *file;
+        std::experimental::filesystem::path result_directory(result_dir);
+        std::experimental::filesystem::path filePath;
+
+        filePath = result_directory / std::experimental::filesystem::path("WITH_CC" + common_suffix);
+        file = fopen(filePath.c_str(), "w");
+        assert(file != nullptr);
+        memaccess_type_stats[MEMACCESS_TYPE::WITH_CC]->print(file, 5);
+        fclose(file);
+
+        filePath = result_directory / std::experimental::filesystem::path("WITHOUT_CC" + common_suffix);
+        file = fopen(filePath.c_str(), "w");
+        assert(file != nullptr);
+        memaccess_type_stats[MEMACCESS_TYPE::WITHOUT_CC]->print(file, 5);
+        fclose(file);
+
+        filePath = result_directory / std::experimental::filesystem::path("DONT_DISTINGUISH" + common_suffix);
+        file = fopen(filePath.c_str(), "w");
+        assert(file != nullptr);
+        memaccess_type_stats[MEMACCESS_TYPE::DONT_DISTINGUISH]->print(file, 5);
+        fclose(file);
+
+
+        save_clean_stat(result_dir, "WITH_CC");
+        save_clean_stat(result_dir, "WITHOUT_CC");
+        save_clean_stat(result_dir, "DONT_DISTINGUISH");
     }
 
 
@@ -311,6 +436,25 @@ public:
     bool is_start() {
         return start;
     }
+
+    inline void start_record_with_memaccess_type() {
+        if (start) {
+            app_thread_counter = rdtsc();
+        }
+    }
+    inline void set_memaccess_type(MEMACCESS_TYPE type = MEMACCESS_TYPE::DONT_DISTINGUISH) {
+        if (start) {
+            memaccess_type = type;
+        }
+    }
+    inline void stop_record_with_memaccess_type() {
+        if (start) {
+            uint64_t ns = rdtscp() - app_thread_counter;
+            memaccess_type_stats[memaccess_type]->record(ns);
+            memaccess_type_stats[MEMACCESS_TYPE::DONT_DISTINGUISH]->record(ns);
+        }
+    }
+
 
     inline void start_record_app_thread(GAddr gaddr) {
         if (is_valid_gaddr(gaddr) && start) {

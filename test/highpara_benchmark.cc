@@ -379,6 +379,7 @@ void Run_request(GAlloc *alloc, GAddr data[], GAddr access[],
   for (int i = 0; i < ITERATION && count_4_breakdown < breakdown_times; i++) {
 
 
+#ifndef MEMACCESS_TYPE_STAT
     /***********************************/
     /******** MY CODE STARTS ********/
     if (is_request == 1 && !warmup && id == 0) {
@@ -465,6 +466,7 @@ void Run_request(GAlloc *alloc, GAddr data[], GAddr access[],
         }
       }
     }
+#endif
 
 #ifdef STATS_COLLECTION
     int pos;
@@ -486,6 +488,9 @@ void Run_request(GAlloc *alloc, GAddr data[], GAddr access[],
     //printf("%lx,%lx\n", TOBLOCK(to_access), to_access);
     stat_lock.unlock();
 #endif
+
+    if(id == 0) agent_stats_inst.start_record_with_memaccess_type();
+
     switch (op_type) {
     case 0:  //read/write
       if (TrueOrFalse(read_ratio, seedp)) {
@@ -495,7 +500,7 @@ void Run_request(GAlloc *alloc, GAddr data[], GAddr access[],
         memcpy(buf, (void *)to_access, item_size);
         ret = item_size;
 #else
-        ret = alloc->Read(to_access, buf, item_size);
+        ret = alloc->Read_with_thread_id(id, to_access, buf, item_size);
 #endif
 #ifdef STATS_COLLECTION
         read_access++;
@@ -508,7 +513,7 @@ void Run_request(GAlloc *alloc, GAddr data[], GAddr access[],
         memcpy((void *)to_access, buf, item_size);
         ret = item_size;
 #else
-        ret = alloc->Write(to_access, buf, item_size);
+        ret = alloc->Write_with_thread_id(id, to_access, buf, item_size);
         //if (!warmup)
         //    alloc->MFence();
 #ifdef BENCHMARK_DEBUG
@@ -524,12 +529,12 @@ void Run_request(GAlloc *alloc, GAddr data[], GAddr access[],
     case 1:  //rlock/wlock
     {
       if (TrueOrFalse(read_ratio, seedp)) {
-        alloc->RLock(to_access, item_size);
+        alloc->RLock_with_thread_id(id, to_access, item_size);
 #ifdef STATS_COLLECTION
         read_access++;
 #endif
       } else {
-        alloc->WLock(to_access, item_size);
+        alloc->WLock_with_thread_id(id, to_access, item_size);
       }
       alloc->UnLock(to_access, item_size);
       break;
@@ -537,14 +542,14 @@ void Run_request(GAlloc *alloc, GAddr data[], GAddr access[],
     case 2:  //rlock+read/wlock+write
     {
       if (TrueOrFalse(read_ratio, seedp)) {
-        alloc->RLock(to_access, item_size);
+        alloc->RLock_with_thread_id(id, to_access, item_size);
         memset(buf, 0, item_size);
         ret = alloc->Read(to_access, buf, item_size);
 #ifdef STATS_COLLECTION
         read_access++;
 #endif
       } else {
-        alloc->WLock(to_access, item_size);
+        alloc->WLock_with_thread_id(id, to_access, item_size);
         memset(buf, i, item_size);
         ret = alloc->Write(to_access, buf, item_size);
 #ifdef BENCHMARK_DEBUG
@@ -562,12 +567,12 @@ void Run_request(GAlloc *alloc, GAddr data[], GAddr access[],
     {
       int lret;
       if (TrueOrFalse(read_ratio, seedp)) {
-        lret = alloc->Try_RLock(to_access, item_size);
+        lret = alloc->Try_RLock_with_thread_id(id, to_access, item_size);
 #ifdef STATS_COLLECTION
         read_access++;
 #endif
       } else {
-        lret = alloc->Try_WLock(to_access, item_size);
+        lret = alloc->Try_WLock_with_thread_id(id, to_access, item_size);
       }
       if (!lret)
         alloc->UnLock(to_access, item_size);
@@ -599,7 +604,16 @@ void Run_request(GAlloc *alloc, GAddr data[], GAddr access[],
       to_access = access[j];
       //epicAssert(buf == to_access || addr_to_pos.count(buf) == 0);
     }
+
+    if(id == 0){
+      agent_stats_inst.stop_record_with_memaccess_type();
+    }
+
   }
+
+
+
+
   if (op_type == 0) {
     // issue a fence and a read request to the last address to ensure all previous
     // op have been done
@@ -608,8 +622,13 @@ void Run_request(GAlloc *alloc, GAddr data[], GAddr access[],
   }
 
   long end = get_time();
+#ifndef MEMACCESS_TYPE_STAT
   long throughput = (ITERATION + breakdown_times) / ((double)(end - start) / 1000 / 1000 / 1000);
   long latency = (end - start) / (ITERATION + breakdown_times);
+#else
+  long throughput = (ITERATION) / ((double)(end - start) / 1000 / 1000 / 1000);
+  long latency = (end - start) / (ITERATION);
+#endif
   epicLog(
     LOG_WARNING,
     "node_id %d, thread %d, average throughput = %ld per-second, latency = %ld ns %s",
@@ -752,10 +771,15 @@ void Benchmark(int id) {
   epicLog(LOG_WARNING, "benchmark ends on thread %d", id);
 
   if (id == 0) {
+#ifndef MEMACCESS_TYPE_STAT
     agent_stats_inst.print_app_thread_stat();
     agent_stats_inst.print_poll_thread_stat();
     agent_stats_inst.print_multi_sys_thread_stat();
     agent_stats_inst.save_stat_to_file(std::string(result_directory), agent_stats_inst.sys_thread_num, no_thread);
+#else
+    // agent_stats_inst.print_memaccess_type_stat();
+    agent_stats_inst.save_memaccess_type_stat_to_file(std::string(result_directory));
+#endif
   }
   // #ifndef LOCAL_MEMORY
   //   //make sure all the requests are complete
@@ -892,6 +916,7 @@ int main(int argc, char *argv[]) {
   conf.loglevel = LOG_WARNING;//DEBUG_LEVEL; //LOG_FATAL
   // long size = ((long) BLOCK_SIZE) * STEPS * no_thread * 4;
   // conf.size = size < conf.size ? conf.size : size;
+  conf.size = 10 * 1024 * 1024L * 1024;
   cout << "conf.size = " << conf.size << endl;
   conf.cache_th = cache_th;
   cout << "conf.cache_th = " << conf.cache_th << endl;
@@ -1002,6 +1027,26 @@ int main(int argc, char *argv[]) {
       no_node, agent_stats_inst.sys_thread_num, no_thread, remote_ratio, shared_ratio, read_ratio,
       space_locality, time_locality, op_type, memory_type, item_size, t_thr,
       a_thr, a_lat, cache_th);
+
+    std::string common_suffix = ".txt";
+    if (!std::experimental::filesystem::exists(result_directory)) {
+        if (!std::experimental::filesystem::create_directory(result_directory)) {
+            std::cerr << "Error creating folder " << result_directory << std::endl;
+            exit(1);
+        }
+    }
+    FILE *file;
+    std::experimental::filesystem::path dir(result_directory);
+    std::experimental::filesystem::path filePath = dir / std::experimental::filesystem::path("end_to_end" + common_suffix);
+    file = fopen(filePath.c_str(), "a");
+    assert(file != nullptr);
+    fprintf(
+      file,
+      "%d\t%ld\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%ld\t%ld\t%ld\t%f\n",
+      no_node, agent_stats_inst.sys_thread_num, no_thread, remote_ratio, shared_ratio, read_ratio,
+      space_locality, time_locality, op_type, memory_type, item_size, 
+      t_thr, a_thr, a_lat, cache_th);
+    fclose(file);
   }
 
   // #ifdef STATS_COLLECTION

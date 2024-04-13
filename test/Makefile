@@ -3,9 +3,11 @@ INCLUDE = -I../include -I../lib/libcuckoo/src -I../lib/libcuckoo/cityhash-1.1.1/
 LIBS = ../src/libgalloc.a -libverbs -lpthread ../lib/libcuckoo/cityhash-1.1.1/src/.libs/libcityhash.a -lboost_thread -lboost_system
 CFLAGS += -g -rdynamic
 
-build: benchmark lru_test example example-r worker master slab_test rw_test fence_test lock_test hashtable_test hashtable_throw_test garray_test cs_test gam_test gam_profile_test
+build: benchmark
+# build: benchmark lru_test example example-r worker master slab_test rw_test fence_test lock_test hashtable_test hashtable_throw_test garray_test cs_test gam_test gam_profile_test
 
-benchmark: benchmark.cc
+
+benchmark: highpara_benchmark.cc
 	$(CPP) $(CFLAGS) $(INCLUDE) -o $@ $^ $(LIBS) 
 
 lru_test: lru_test.cc

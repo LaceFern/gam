@@ -81,6 +81,9 @@ void WorkerHandle::DeRegisterThread() {
 }
 
 int WorkerHandle::SendRequest(WorkRequest *wr) {
+
+  int thread_id = wr->thread_id;
+
   wr->flag |= LOCAL_REQUEST;
 #ifdef MULTITHREAD
   *notify_buf = 1;  //not useful to set it to 1 if boost_queue is enabled
@@ -94,6 +97,15 @@ int WorkerHandle::SendRequest(WorkRequest *wr) {
   long start_time = get_time();
   int ret = worker->ProcessLocalRequest(wr);  //not complete due to remote or previously-sent similar requests
 
+  if(thread_id == 0){
+    // printf("thread_id = %d\n", thread_id);
+    if(ret){ //not complete due to remote or previously-sent similar requests
+      agent_stats_inst.set_memaccess_type(MEMACCESS_TYPE::WITH_CC);
+    }
+    else{
+      agent_stats_inst.set_memaccess_type(MEMACCESS_TYPE::WITHOUT_CC);
+    }
+  }  
 
   if (wr->op == RLOCK || wr->op == WLOCK) {
     agent_stats_inst.stop_record_app_thread_with_op(wr->addr, APP_THREAD_OP::AFTER_PROCESS_LOCAL_REQUEST_LOCK);

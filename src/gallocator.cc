@@ -327,3 +327,162 @@ int GAlloc::HTable(void *addr) {
 GAlloc::~GAlloc() {
   delete wh;
 }
+
+
+
+int GAlloc::Read_with_thread_id(int thread_id, const GAddr addr, void *buf, const Size count, Flag flag) {
+  return Read_with_thread_id(thread_id, addr, 0, buf, count, flag);
+}
+int GAlloc::Read_with_thread_id(int thread_id, const GAddr addr, const Size offset, void *buf,
+  const Size count, Flag flag) {
+#ifdef LOCAL_MEMORY_HOOK
+  char *laddr = (char *)addr;
+  memcpy(buf, laddr + offset, count);
+  return count;
+#else
+  WorkRequest wr{ };
+  wr.thread_id = thread_id;
+  wr.op = READ;
+  wr.flag = flag;
+  wr.size = count;
+  wr.addr = GADD(addr, offset);
+  wr.ptr = buf;
+
+  if (wh->SendRequest(&wr)) {
+    epicLog(LOG_WARNING, "read failed");
+    return 0;
+  } else {
+    return wr.size;
+  }
+#endif
+}
+
+#ifdef GFUNC_SUPPORT
+int GAlloc::Write_with_thread_id(int thread_id, const GAddr addr, void *buf, const Size count, GFunc *func,
+  uint64_t arg, Flag flag) {
+  return Write_with_thread_id(thread_id, addr, 0, buf, count, flag, func, arg);
+}
+#endif
+
+int GAlloc::Write_with_thread_id(int thread_id, const GAddr addr, void *buf, const Size count, Flag flag) {
+  return Write_with_thread_id(thread_id, addr, 0, buf, count, flag);
+}
+
+#ifdef GFUNC_SUPPORT
+int GAlloc::Write_with_thread_id(int thread_id, const GAddr addr, const Size offset, void *buf,
+  const Size count, Flag flag, GFunc *func, uint64_t arg) {
+#else
+int GAlloc::Write_with_thread_id(int thread_id, const GAddr addr, const Size offset, void *buf, const Size count, Flag flag) {
+#endif
+#ifdef LOCAL_MEMORY_HOOK
+  char *laddr = (char *)addr;
+  memcpy(laddr + offset, buf, count);
+  return count;
+#else
+  //for asynchronous request, we must ensure the WorkRequest is valid after this function returns
+  WorkRequest wr{ };
+  wr.thread_id = thread_id;
+  wr.op = WRITE;
+  wr.flag = flag | ASYNC;
+  //wr.flag = flag;
+  wr.size = count;
+  wr.addr = GADD(addr, offset);
+  wr.ptr = buf;
+#ifdef GFUNC_SUPPORT
+  if (func) {
+    wr.gfunc = func;
+    wr.arg = arg;
+    wr.flag |= GFUNC;
+  }
+#endif
+
+  if (wh->SendRequest(&wr)) {
+    epicLog(LOG_WARNING, "write failed");
+    return 0;
+  } else {
+    return wr.size;
+  }
+#endif
+}
+int GAlloc::Lock_with_thread_id(int thread_id, Work op, const GAddr addr, const Size count, Flag flag) {
+#ifdef LOCAL_MEMORY_HOOK
+  return 0;
+#else
+  WorkRequest wr{ };
+  wr.thread_id = thread_id;
+  wr.op = op;
+  wr.addr = addr;
+#ifdef ASYNC_UNLOCK
+  if (op == UNLOCK)
+    flag |= ASYNC;
+#endif
+  wr.flag = flag;
+  int i = 0, j = 0;
+  GAddr start_blk = TOBLOCK(addr);
+  GAddr end = GADD(addr, count - 1);
+  GAddr end_blk = TOBLOCK(end);
+  while (!wh->SendRequest(&wr)) {
+    i++;
+    GAddr next = GADD(start_blk, i * BLOCK_SIZE);
+    if (next > end_blk)
+      break;
+
+    epicLog(LOG_DEBUG, "lock split to multiple blocks");
+    wr.Reset();
+    wr.op = op;
+    wr.addr = next;
+    wr.flag = flag;
+    epicAssert(wr.addr % BLOCK_SIZE == 0);
+  }
+  if (op == UNLOCK) {
+    epicAssert(!wr.status);
+  } else {
+    if (wr.status) {  //failed at ith lock
+      if (i >= 1) {  //first lock succeed
+        wr.Reset();
+        wr.op = UNLOCK;
+        wr.addr = addr;
+        wr.flag = flag;
+#ifdef ASYNC_UNLOCK
+        wr.flag |= ASYNC;
+#endif
+        int ret = wh->SendRequest(&wr);
+        epicAssert(!ret);
+      }
+      for (j = 1; j < i; j++) {
+        wr.Reset();
+        wr.addr = GADD(start_blk, j * BLOCK_SIZE);
+        epicAssert(wr.addr % BLOCK_SIZE == 0);
+        epicAssert(wr.addr <= end_blk);
+        wr.op = UNLOCK;
+        wr.flag = flag;
+#ifdef ASYNC_UNLOCK
+        wr.flag |= ASYNC;
+#endif
+        int ret = wh->SendRequest(&wr);
+        epicAssert(!ret);
+      }
+      epicLog(LOG_DEBUG, "lock failed");
+      return -1;
+    }
+  }
+  epicLog(LOG_DEBUG, "lock succeed");
+  return 0;
+#endif
+}
+
+void GAlloc::RLock_with_thread_id(int thread_id, const GAddr addr, const Size count) {
+  Lock_with_thread_id(thread_id, RLOCK, addr, count);
+}
+
+void GAlloc::WLock_with_thread_id(int thread_id, const GAddr addr, const Size count) {
+  Lock_with_thread_id(thread_id, WLOCK, addr, count);
+}
+
+int GAlloc::Try_RLock_with_thread_id(int thread_id, const GAddr addr, const Size count) {
+  return Lock_with_thread_id(thread_id, RLOCK, addr, count, TRY_LOCK);
+}
+
+int GAlloc::Try_WLock_with_thread_id(int thread_id, const GAddr addr, const Size count) {
+  return Lock_with_thread_id(thread_id, WLOCK, addr, count, TRY_LOCK);
+}

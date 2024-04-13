@@ -19,6 +19,8 @@ class GAlloc {
   WorkerHandle *wh;  //handle to communicate with local worker
 
   int Lock(Work op, const GAddr addr, const Size count, Flag flag = 0);
+  int Lock_with_thread_id(int thread_id, Work op, const GAddr addr, const Size count, Flag flag = 0);
+
 public:
   GAlloc(Worker *worker);
 
@@ -68,6 +70,25 @@ public:
 
   int Try_RLock(const GAddr addr, const Size count);
   int Try_WLock(const GAddr addr, const Size count);
+
+  int Read_with_thread_id(int thread_id, const GAddr addr, void *buf, const Size count, Flag flag = 0);
+  int Read_with_thread_id(int thread_id, const GAddr addr, const Size offset, void *buf, const Size count,
+    Flag flag = 0);
+  int Write_with_thread_id(int thread_id, const GAddr addr, void *buf, const Size count, Flag flag = 0);
+#ifdef GFUNC_SUPPORT
+  int Write_with_thread_id(int thread_id, const GAddr addr, const Size offset, void *buf, const Size count,
+    Flag flag = 0, GFunc *func = nullptr, uint64_t arg = 0);
+  int Write_with_thread_id(int thread_id, const GAddr addr, void *buf, const Size count, GFunc *func,
+    uint64_t arg = 0, Flag flag = 0);
+#else
+  int Write_with_thread_id(int thread_id, const GAddr addr, const Size offset, void *buf, const Size count, Flag flag = 0);
+#endif
+  void RLock_with_thread_id(int thread_id, const GAddr addr, const Size count);
+  void WLock_with_thread_id(int thread_id, const GAddr addr, const Size count);
+  int Try_RLock_with_thread_id(int thread_id, const GAddr addr, const Size count);
+  int Try_WLock_with_thread_id(int thread_id, const GAddr addr, const Size count);
+
+
 
   Size Put(uint64_t key, const void *value, Size count);
   Size Get(uint64_t key, void *value);
