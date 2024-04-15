@@ -138,7 +138,7 @@ MULTI_SYS_THREAD_OP Server::ProcessRdmaRequest(ibv_wc &wc, uint64_t sys_thread_i
       if (agent_stats_inst.is_valid_gaddr(wr->addr)) {
         if (wr->op == READ_P2P){
           // just a hard code !!!
-          res_op = MULTI_SYS_THREAD_OP::PROCESS_IN_CACHE_NODE;
+          res_op = MULTI_SYS_THREAD_OP::PROCESS_IN_HOME_NODE;
         }
         else if (wr->op == READ_FORWARD || wr->op == FETCH_AND_SHARED || wr->op == INVALIDATE || wr->op == FETCH_AND_INVALIDATE
           || wr->op == WRITE_FORWARD || wr->op == INVALIDATE_FORWARD || wr->op == WRITE_PERMISSION_ONLY_FORWARD) {

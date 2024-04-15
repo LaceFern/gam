@@ -22,12 +22,6 @@ master_ip = "10.0.0.1"
 requester_machine = "192.168.189.9"
 requester_ip = "10.0.0.3"
 
-# cache_machine = "192.168.189.11"
-# cache_ip = "10.0.0.5"
-
-# home_machine = "192.168.189.10"
-# home_ip = "10.0.0.4"
-
 cache_machine = "192.168.189.10"
 cache_ip = "10.0.0.4"
 
@@ -36,21 +30,21 @@ home_ip = "10.0.0.5"
 
 # other_machine = []
 # other_ip = []
-other_machine = ["192.168.189.13", "192.168.189.14"]
-other_ip = ["10.0.0.7", "10.0.0.8"]
+other_machine = ["192.168.189.8", "192.168.189.12", "192.168.189.13", "192.168.189.14"]
+other_ip = ["10.0.0.2", "10.0.0.6", "10.0.0.7", "10.0.0.8"]
 
 
-output_directory = "/home/zxy/gam_result_cxz_5_wHome_wRequest_wCache"
+output_directory = "/home/zxy/gam_result_cxz_6_wRequest_wHome"
 
 program_name = "highpara_benchmark"
 
-# bench_thread = [12]
+# bench_thread = [24]
 # sys_thread = [4, 8]
 bench_thread = [24]
-sys_thread = [8]
+sys_thread = [1, 2, 4, 8]
 
 # RLock is 0, READ_P2P is 4
-request_type = 0
+request_type = 4
 
 def make_and_clean(ssh, extra_flag=""):
     stdin, stdout, stderr = ssh.exec_command(
@@ -323,13 +317,13 @@ if __name__ == '__main__':
                 
                 
                 t1.start()
-                time.sleep(2)
+                time.sleep(1)
                 t2.start()
-                time.sleep(2)
+                # time.sleep(2)
                 t3.start()
-                time.sleep(2)
+                # time.sleep(2)
                 t4.start()
-                time.sleep(2)
+                # time.sleep(2)
                 for i in range(len(ssh_others)):
                     tother_list[i].start()
 

@@ -31,6 +31,12 @@ public:
 
 using SPSC_QUEUE = atomic_queue::AtomicQueueB2<queue_entry, std::allocator<queue_entry>, true, false, true>;
 
+enum class MEMACCESS_TYPE {
+    WITH_CC,
+    WITHOUT_CC,
+    DONT_DISTINGUISH,
+};
+
 enum class APP_THREAD_OP {
     NONE,
     AFTER_PROCESS_LOCAL_REQUEST_LOCK,
@@ -71,6 +77,12 @@ extern __thread std::thread::id now_thread_id;
 
 class agent_stats {
 private:
+
+    // only collect mem access stat from 1 special app thread 
+    uint64_t memaccess_counter;
+    MEMACCESS_TYPE memaccess_type;
+    std::unordered_map<MEMACCESS_TYPE, Histogram *> memaccess_type_stats;
+
     // only collect 1 special app thread stat
     Histogram *app_thread_stats;
     uint64_t app_thread_counter;
@@ -149,6 +161,11 @@ public:
     uint64_t lcores_num_per_numa = 12;
     explicit agent_stats() {
         // TODO
+
+        memaccess_type_stats[MEMACCESS_TYPE::WITH_CC] = new Histogram(1, 10000000, 3, 10);
+        memaccess_type_stats[MEMACCESS_TYPE::WITHOUT_CC] = new Histogram(1, 10000000, 3, 10);
+        memaccess_type_stats[MEMACCESS_TYPE::DONT_DISTINGUISH] = new Histogram(1, 10000000, 3, 10);
+
         app_thread_stats = new Histogram(1, 10000000, 3, 10);
         app_thread_op_stats[APP_THREAD_OP::AFTER_PROCESS_LOCAL_REQUEST_LOCK] = new Histogram(1, 10000000, 3, 10);
         app_thread_op_stats[APP_THREAD_OP::AFTER_PROCESS_LOCAL_REQUEST_UNLOCK] = new Histogram(1, 10000000, 3, 10);
@@ -309,6 +326,29 @@ public:
         FILE *file;
         std::experimental::filesystem::path result_directory(result_dir);
         std::experimental::filesystem::path filePath;
+
+        filePath = result_directory / std::experimental::filesystem::path("WITH_CC" + common_suffix);
+        file = fopen(filePath.c_str(), "w");
+        assert(file != nullptr);
+        memaccess_type_stats[MEMACCESS_TYPE::WITH_CC]->print(file, 5);
+        fclose(file);
+
+        filePath = result_directory / std::experimental::filesystem::path("WITHOUT_CC" + common_suffix);
+        file = fopen(filePath.c_str(), "w");
+        assert(file != nullptr);
+        memaccess_type_stats[MEMACCESS_TYPE::WITHOUT_CC]->print(file, 5);
+        fclose(file);
+
+        filePath = result_directory / std::experimental::filesystem::path("DONT_DISTINGUISH" + common_suffix);
+        file = fopen(filePath.c_str(), "w");
+        assert(file != nullptr);
+        memaccess_type_stats[MEMACCESS_TYPE::DONT_DISTINGUISH]->print(file, 5);
+        fclose(file);
+
+        save_clean_stat(result_dir, "WITH_CC");
+        save_clean_stat(result_dir, "WITHOUT_CC");
+        save_clean_stat(result_dir, "DONT_DISTINGUISH");
+
         if(is_request){
             filePath = result_directory / std::experimental::filesystem::path("AFTER_PROCESS_LOCAL_REQUEST_LOCK" + common_suffix);
             file = fopen(filePath.c_str(), "w");
@@ -509,6 +549,24 @@ public:
 
     bool is_start() {
         return start;
+    }
+
+    inline void start_record_with_memaccess_type() {
+        if (start) {
+            app_thread_counter = rdtsc();
+        }
+    }
+    inline void set_memaccess_type(MEMACCESS_TYPE type = MEMACCESS_TYPE::DONT_DISTINGUISH) {
+        if (start) {
+            memaccess_type = type;
+        }
+    }
+    inline void stop_record_with_memaccess_type() {
+        if (start) {
+            uint64_t ns = rdtscp() - app_thread_counter;
+            memaccess_type_stats[memaccess_type]->record(ns);
+            memaccess_type_stats[MEMACCESS_TYPE::DONT_DISTINGUISH]->record(ns);
+        }
     }
 
     inline void start_record_app_thread(GAddr gaddr) {
