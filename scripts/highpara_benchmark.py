@@ -10,45 +10,61 @@ base = "/home/zxy/nfs/DSM_prj/gam_cxz"
 user = "zxy"
 
 # whether rebuild from source code
-init_build = False # True False
+init_build = True # True False
 
 # attention!
 # centralized dir: master_ip/machine = home_ip/machine, remote ratio = 0
 # distributed dir: remote ratio = 88
 
-master_machine = "192.168.189.7"
-master_ip = "10.0.0.1"
+# 8 machines
+# master_machine = "192.168.189.7"
+# master_ip = "10.0.0.1"
 
-requester_machine = "192.168.189.9"
-requester_ip = "10.0.0.3"
+# requester_machine = "192.168.189.9"
+# requester_ip = "10.0.0.3"
 
-cache_machine = "192.168.189.10"
-cache_ip = "10.0.0.4"
+# cache_machine = "192.168.189.10"
+# cache_ip = "10.0.0.4"
 
-home_machine = "192.168.189.11"
-home_ip = "10.0.0.5"
+# home_machine = "192.168.189.11"
+# home_ip = "10.0.0.5"
 
-# other_machine = []
-# other_ip = []
-other_machine = ["192.168.189.8", "192.168.189.12", "192.168.189.13", "192.168.189.14"]
-other_ip = ["10.0.0.2", "10.0.0.6", "10.0.0.7", "10.0.0.8"]
+# other_machine = ["192.168.189.8", "192.168.189.12", "192.168.189.13", "192.168.189.14"]
+# other_ip = ["10.0.0.2", "10.0.0.6", "10.0.0.7", "10.0.0.8"]
 
+# 4 machines
+master_machine = "192.168.189.10"
+master_ip = "10.0.0.4"
 
-output_directory = "/home/zxy/gam_result_cxz_6_wRequest_wHome"
+requester_machine = "192.168.189.11"
+requester_ip = "10.0.0.5"
+
+cache_machine = "192.168.189.12"
+cache_ip = "10.0.0.6"
+
+home_machine = "192.168.189.13"
+home_ip = "10.0.0.7"
+other_machine = []
+other_ip = []
+
+output_directory = "/home/zxy/gam_result_cxz_7"
 
 program_name = "highpara_benchmark"
 
 # bench_thread = [24]
-# sys_thread = [4, 8]
-bench_thread = [24]
-sys_thread = [1, 2, 4, 8]
+# sys_thread = [1, 2, 4, 8]
+bench_thread = [1]
+sys_thread = [1]
 
-# RLock is 0, READ_P2P is 4
-request_type = 4
+# RLock is 0, WLock is 1, READ_P2P is 4
+request_type = 1
+
+# Attention: if need to test latency under low throughput, replace Run_request() with Run_request_only() in Benchmark(); change breakdown_times from 1024 to 204800
+
 
 def make_and_clean(ssh, extra_flag=""):
     stdin, stdout, stderr = ssh.exec_command(
-        "cd {0}  && rm -rf ./build && mkdir build && cd build &&  cmake .. {1} && make -j".format(
+        "cd {0} && cd build &&  cmake .. {1} && make -j".format(
             base,
             extra_flag))
     str1 = stdout.read().decode('utf-8')
@@ -60,7 +76,7 @@ def make_and_clean(ssh, extra_flag=""):
 
 def create_dir(ssh, filename):
     stdin, stdout, stderr = ssh.exec_command(
-        "mkdir -p $(dirname {0})".format(filename)
+        "mkdir {0}".format(filename)
     )
     str1 = stdout.read().decode('utf-8')
     str2 = stderr.read().decode('utf-8')
@@ -251,6 +267,8 @@ if __name__ == '__main__':
         ssh_home = ssh_connect(home_machine, user)
 
     ssh_others = [ssh_connect(other_machine[i], user) for i in range(len(other_machine))]
+
+    create_dir(ssh_master, base + "/build")
 
     if init_build:
         t0 = threading.Thread(target=make_and_clean,

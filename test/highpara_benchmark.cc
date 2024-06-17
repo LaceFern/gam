@@ -34,7 +34,7 @@ int is_cache = 0;
 int is_request = 0;
 int cache_rw = 0;
 int request_rw = 0;
-int breakdown_times = 1024;//204800;
+int breakdown_times = 204800;//1024;//204800;
 // unsigned int seedp = 0;
 // int is_home = 0; // = is_master
 
@@ -712,6 +712,127 @@ void Run_request(GAlloc *alloc, GAddr data[], GAddr access[],
 }
 
 
+void Run_request_only(GAlloc *alloc, GAddr data[], GAddr access[],
+  unordered_map<GAddr, int> &addr_to_pos, bool shared[], int id,
+  unsigned int *seedp, bool warmup) {
+  int count_4_nobreakdown = 0;
+  int count_4_breakdown = 0;
+  // edited by cxz, multi 0.75 is used for let app thread 0 stop early than other app thread, so that we can get the "congestion" result
+  int thres_4_nobreakdown = 0.75 * (ITERATION / (breakdown_times + 1)) + 1;
+
+  GAddr to_access = access[0];  //access starting point
+  char buf[item_size];
+  int ret;
+  int j = 0;
+
+  long start = get_time();
+  
+    /***********************************/
+    /******** MY CODE STARTS ********/
+  if (is_request == 1 && !warmup && id == 0) {
+    for (int i = 0; i < ITERATION && count_4_breakdown < breakdown_times; i++) {
+      count_4_nobreakdown++;
+      if (count_4_nobreakdown == thres_4_nobreakdown) {
+        // printf("i = %d\n", i);
+        count_4_nobreakdown = 0;
+        GAddr to_access_breakdown = access[ITERATION + count_4_breakdown];
+        count_4_breakdown++;
+
+
+        switch (request_rw) {
+        case 0: {
+          agent_stats_inst.start_record_app_thread(to_access_breakdown);
+          // alloc->RLock(to_access_breakdown, item_size);
+          alloc->RLock_with_thread_id(id, to_access_breakdown, item_size);
+          agent_stats_inst.stop_record_app_thread_with_op(to_access_breakdown, APP_THREAD_OP::WAKEUP_2_RLOCK_RETURN);
+
+          agent_stats_inst.start_record_app_thread(to_access_breakdown);
+          memset(buf, 0, item_size);
+          agent_stats_inst.stop_record_app_thread_with_op(to_access_breakdown, APP_THREAD_OP::MEMSET);
+
+          agent_stats_inst.start_record_app_thread(to_access_breakdown);
+          ret = alloc->Read_with_thread_id(id, to_access_breakdown, buf, item_size);
+          agent_stats_inst.stop_record_app_thread_with_op(to_access_breakdown, APP_THREAD_OP::WAKEUP_2_READ_RETURN);
+
+          agent_stats_inst.start_record_app_thread(to_access_breakdown);
+          alloc->UnLock_with_thread_id(id, to_access_breakdown, item_size);
+          agent_stats_inst.stop_record_app_thread_with_op(to_access_breakdown, APP_THREAD_OP::WAKEUP_2_UNLOCK_RETURN);
+          read_access++;
+          break;
+        }
+
+        case 1: {
+          agent_stats_inst.start_record_app_thread(to_access_breakdown);
+          alloc->WLock_with_thread_id(id, to_access_breakdown, item_size);
+          agent_stats_inst.stop_record_app_thread_with_op(to_access_breakdown, APP_THREAD_OP::WAKEUP_2_WLOCK_RETURN);
+
+          agent_stats_inst.start_record_app_thread(to_access_breakdown);
+          memset(buf, i, item_size);
+          agent_stats_inst.stop_record_app_thread_with_op(to_access_breakdown, APP_THREAD_OP::MEMSET);
+
+          agent_stats_inst.start_record_app_thread(to_access_breakdown);
+          ret = alloc->Write_with_thread_id(id, to_access_breakdown, buf, item_size);
+          agent_stats_inst.stop_record_app_thread_with_op(to_access_breakdown, APP_THREAD_OP::WAKEUP_2_WRITE_RETURN);
+
+#ifdef BENCHMARK_DEBUG
+          char readback[item_size];
+          int back_ret = alloc->Read(to_access_breakdown, &readback, item_size);
+          epicAssert(back_ret == item_size);
+          epicAssert(Equal(readback, buf, item_size));
+#endif
+
+          agent_stats_inst.start_record_app_thread(to_access_breakdown);
+          alloc->UnLock_with_thread_id(id, to_access_breakdown, item_size);
+          agent_stats_inst.stop_record_app_thread_with_op(to_access_breakdown, APP_THREAD_OP::WAKEUP_2_UNLOCK_RETURN);
+
+          epicAssert(item_size == ret);
+          break;
+        }
+
+        case 2: {
+          agent_stats_inst.start_record_app_thread(to_access_breakdown);
+          ret = alloc->Read_with_thread_id(id, to_access_breakdown, buf, item_size);
+          agent_stats_inst.stop_record_app_thread_with_op(to_access_breakdown, APP_THREAD_OP::WAKEUP_2_READ_RETURN);
+          read_access++;
+          break;
+        }
+
+              //         case 3:{
+              //           memset(buf, i, item_size);
+              //           ret = alloc->Write(to_access_breakdown, buf, item_size);
+              // #ifdef BENCHMARK_DEBUG
+              //           char readback[item_size];
+              //           int back_ret = alloc->Read(to_access_breakdown, &readback, item_size);
+              //           epicAssert(back_ret == item_size);
+              //           epicAssert(Equal(readback, buf, item_size));
+              // #endif
+              //           epicAssert(item_size == ret);
+              //           break;}
+        case 4: {
+          agent_stats_inst.start_record_app_thread(to_access_breakdown);
+          ret = alloc->ReadP2P(to_access_breakdown, buf, item_size);
+          agent_stats_inst.stop_record_app_thread_with_op(to_access_breakdown, APP_THREAD_OP::WAKEUP_2_READ_RETURN);
+          read_access++;
+          break;
+        }
+        default: {
+          break;
+        }
+        }
+      }
+    }
+  }
+  else if((is_master == 1 || is_cache == 1 || is_home == 1) && !warmup && id == 0){
+    uint64_t start = rdtsc();
+    uint64_t thres = 1.0 * 2200 * 1000 * 1000 * 120; //120s
+    while(1){
+      uint64_t now = rdtsc();
+      if(now - start >= thres){
+        break;
+      }
+    }
+  }
+}
 
 
 void Benchmark(int id) {
@@ -802,7 +923,8 @@ void Benchmark(int id) {
   bool warmup = true;
 
   epicLog(LOG_WARNING, "start warmup the cache for no-breakdown on thread %d", id);
-  Run_request(alloc, data, access, addr_to_pos, shared, id, &seedp, warmup);
+  Run_request_only(alloc, data, access, addr_to_pos, shared, id, &seedp, warmup);
+  // Run_request(alloc, data, access, addr_to_pos, shared, id, &seedp, warmup);
   SYNC_RUN_BASE = SYNC_KEY + no_node * 2;
   sync_id = SYNC_RUN_BASE + no_node * node_id + id;
   alloc->Put(sync_id, &sync_id, sizeof(int));
@@ -861,8 +983,8 @@ void Benchmark(int id) {
 
 
   epicLog(LOG_WARNING, "start run the benchmark on thread %d", id);
-  // if(is_request && id == 0) Run_request_ITER0(alloc, data, access, addr_to_pos, shared, id, &seedp, warmup);
-  Run_request(alloc, data, access, addr_to_pos, shared, id, &seedp, warmup);
+  Run_request_only(alloc, data, access, addr_to_pos, shared, id, &seedp, warmup);
+  // Run_request(alloc, data, access, addr_to_pos, shared, id, &seedp, warmup);
   epicLog(LOG_WARNING, "benchmark ends on thread %d", id);
 
   if (id == 0) {
