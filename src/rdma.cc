@@ -326,9 +326,20 @@ RdmaResource *RdmaResourceFactory::GetRdmaResource(bool isMaster, const char *de
   }
 
   ibv_device **list = ibv_get_device_list(NULL);
-
-  if (!devName && list[0])
-    devName = defaultDevname = ibv_get_device_name(list[0]);
+  if (!devName) {
+    int devCount = 0;
+    for (devCount;list[devCount];devCount++) {
+      ibv_gid now_gid;
+      struct ibv_context *now_context = ibv_open_device(list[devCount]);
+      epicAssert(ibv_query_gid(now_context, 1, 3, &now_gid) == 0);
+      ibv_close_device(now_context);
+      // 检查guid的倒数第二Byte是不是0，倒数四Bytes数字是ip
+      if (now_gid.raw[14] == 0) {
+        defaultDevname = ibv_get_device_name(list[devCount]);
+        break;
+      }
+    }
+  }
 
   for (int i = 0; list[i]; ++i) {
     if (!strcmp(devName, ibv_get_device_name(list[i]))) {
