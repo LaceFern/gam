@@ -123,7 +123,7 @@ private:
     int cache_send_count[MAX_GLB_THREAD] = {0};
 
 public:
-
+    std::string local_ip;
     inline void update_home_send_count(uint64_t thread_id) {
         if(start && thread_id != GLB_INVALID) home_send_count[thread_id]++;
     }

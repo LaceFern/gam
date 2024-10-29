@@ -169,6 +169,9 @@ int Cache::ReadWrite(WorkRequest *wr) {
           wr->flag &= ~NOT_CACHE;
 #endif
           wr->is_cache_hit_ = false;
+
+          // if(agent_stats_inst.is_start()) printf("im here 0, current state = %d\n", state);
+
           WorkRequest *lwr = new WorkRequest(*wr);
           lwr->counter = 0;
           lwr->op = WRITE_PERMISSION_ONLY;  //diff
@@ -287,6 +290,9 @@ int Cache::ReadWrite(WorkRequest *wr) {
       lwr->size = BLOCK_SIZE;
       lwr->ptr = cline->line;
       wr->is_cache_hit_ = false;
+      
+      // if(agent_stats_inst.is_start()) printf("im here 1\n");
+
       if (wr->flag & ASYNC) {
         if (!wr->IsACopy()) {
           wr->unlock();
@@ -399,6 +405,7 @@ int Cache::Lock(WorkRequest * wr) {
     if (InTransitionState(state)) {
       epicLog(LOG_INFO, "in transition state while cache read/write(%d)", wr->op);
       wr->is_cache_hit_ = false;
+      // if(agent_stats_inst.is_start()) printf("im here 2\n");
       worker->AddToServeLocalRequest(i, wr);
       unlock(i);
       wr->unlock();
@@ -416,6 +423,7 @@ int Cache::Lock(WorkRequest * wr) {
         epicLog(LOG_INFO, "cannot shared lock addr %lx, will try later", wr->addr);
 
         wr->is_cache_hit_ = false;
+        // if(agent_stats_inst.is_start()) printf("im here 3\n");
 
         if (wr->flag & TRY_LOCK) {
           wr->status = LOCK_FAILED;
@@ -443,6 +451,7 @@ int Cache::Lock(WorkRequest * wr) {
       if (state != CACHE_DIRTY) {
         epicAssert(state == CACHE_SHARED);
         wr->is_cache_hit_ = false;
+        // if(agent_stats_inst.is_start()) printf("im here 4\n");
 
         //        we comment below deadlock handle since we add it the worker deadlock case 3
         //				/*
@@ -508,6 +517,7 @@ int Cache::Lock(WorkRequest * wr) {
         if (WLock(cline, wr->addr)) {  //failed to lock
 
           wr->is_cache_hit_ = false;
+          // if(agent_stats_inst.is_start()) printf("im here 5\n");
           epicLog(LOG_INFO, "cannot exclusive lock addr %lx, will try later", wr->addr);
 
           if (wr->flag & TRY_LOCK) {
@@ -539,6 +549,7 @@ int Cache::Lock(WorkRequest * wr) {
     cline = SetCLine(i);
 #endif
     wr->is_cache_hit_ = false;
+    // if(agent_stats_inst.is_start()) printf("im here 6\n");
     WorkRequest *lwr = new WorkRequest(*wr);
     //we hide the fact that it is whether a lock op or read/write from the remote side
     //as lock is completely maintained locally
@@ -662,9 +673,9 @@ void Cache::LinkLRU(CacheLine * cline) {
     }
   }
   if (j == sample_num) {
-    epicLog(LOG_WARNING,
-      "cannot link to any random lru list by trying %d times",
-      sample_num);
+    // epicLog(LOG_WARNING,
+    //   "cannot link to any random lru list by trying %d times",
+    //   sample_num);
     for (j = 0; j < LRU_NUM; j++) {
       i = j;
       if (lru_locks_[i].try_lock()) {
@@ -683,8 +694,8 @@ void Cache::LinkLRU(CacheLine * cline) {
       }
     }
     if (j == LRU_NUM) {
-      epicLog(LOG_WARNING, "cannot link to any lru list (total lru list %d)",
-        LRU_NUM);
+      // epicLog(LOG_WARNING, "cannot link to any lru list (total lru list %d)",
+      //   LRU_NUM);
       i = GetRandom(0, LRU_NUM);
       lru_locks_[i].lock();
       epicAssert(cline != heads[i]);
@@ -743,7 +754,7 @@ void Cache::Evict(uint64_t glb_thread_id, int secondhand_flag) {
     "used_bytes = %ld, max_cache_mem = %ld,  BLOCK_SIZE = %ld, th = %lf, to_evicted = %ld",
     used_bytes.load(), max_cache_mem, BLOCK_SIZE, worker->conf->cache_th, to_evicted.load());
   long long used = used_bytes - to_evicted * BLOCK_SIZE;
-  double evict_th = 0.9;
+  double evict_th = 0.99;
   if (used > 0 && used > max_cache_mem * evict_th) {
     int n = (used - max_cache_mem * evict_th) / BLOCK_SIZE;
     epicLog(LOG_DEBUG,
@@ -751,7 +762,7 @@ void Cache::Evict(uint64_t glb_thread_id, int secondhand_flag) {
       n, used, max_cache_mem, used > max_cache_mem);
     int ret = Evict(n, glb_thread_id, secondhand_flag);
     if (ret < n) {
-      epicLog(LOG_WARNING, "only able to evict %d, but expect to evict %d", ret, n);
+      // epicLog(LOG_WARNING, "only able to evict %d, but expect to evict %d", ret, n);
     }
     num_evict += ret;
   }
@@ -763,7 +774,7 @@ void Cache::Evict(uint64_t glb_thread_id, int secondhand_flag) {
  * 		   false if we don't have enough free space for n more cache lines
  */
 int Cache::Evict(int n, uint64_t glb_thread_id, int secondhand_flag) {
-  double evict_th = 0.8;
+  double evict_th = 0.99;
   long long used = used_bytes - to_evicted * BLOCK_SIZE;
   if (used < 0 || used <= max_cache_mem * evict_th)
     return 0;
@@ -1378,6 +1389,7 @@ Cache_return_t Cache::ReadWriteCollect(WorkRequest * wr) {
           wr->flag &= ~NOT_CACHE;
 #endif
           wr->is_cache_hit_ = false;
+          // if(agent_stats_inst.is_start()) printf("im here 7\n");
           WorkRequest *lwr = new WorkRequest(*wr);
           lwr->counter = 0;
           lwr->op = WRITE_PERMISSION_ONLY;  //diff
@@ -1495,6 +1507,7 @@ Cache_return_t Cache::ReadWriteCollect(WorkRequest * wr) {
       lwr->size = BLOCK_SIZE;
       lwr->ptr = cline->line;
       wr->is_cache_hit_ = false;
+      // if(agent_stats_inst.is_start()) printf("im here 8\n");
       if (wr->flag & ASYNC) {
         if (!wr->IsACopy()) {
           wr->unlock();

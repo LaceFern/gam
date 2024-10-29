@@ -16,6 +16,7 @@
 #include "kernel.h"
 #include "workrequest.h"
 #include "numautil.h"
+#include "agent_stat.h"
 
 static int page_size = 4096;
 int MAX_RDMA_INLINE_SIZE = 256;
@@ -325,10 +326,73 @@ RdmaResource *RdmaResourceFactory::GetRdmaResource(bool isMaster, const char *de
     }
   }
 
-  ibv_device **list = ibv_get_device_list(NULL);
+  int num_devices;
+  ibv_device **list = ibv_get_device_list(&num_devices);
 
-  if (!devName && list[0])
-    devName = defaultDevname = ibv_get_device_name(list[0]);
+  // if (!devName && list[0])
+  //   devName = defaultDevname = ibv_get_device_name(list[0]);
+  printf("num_devices=%d\t", num_devices);
+
+  if (!devName) {
+    int devCount = 0;
+    for (devCount;list[devCount];devCount++) {
+      ibv_gid now_gid;
+      struct ibv_context *now_context = ibv_open_device(list[devCount]);
+      epicAssert(ibv_query_gid(now_context, 1, 3, &now_gid) == 0);
+      ibv_close_device(now_context);
+      devName = ibv_get_device_name(list[devCount]);
+      printf("devName = %s\n", devName);
+    }
+  }
+  printf("agent_stats_inst.local_ip = %s\n", agent_stats_inst.local_ip.c_str());
+
+  // if(!devName){
+    if(agent_stats_inst.local_ip == "10.0.0.1"){
+      devName = defaultDevname = "mlx5_1";
+    }
+    else if(agent_stats_inst.local_ip == "10.0.0.2"){
+      devName = defaultDevname = "mlx5_0";
+    }
+    else if(agent_stats_inst.local_ip == "10.0.0.3"){
+      devName = defaultDevname = "mlx5_0";
+    }
+    else if(agent_stats_inst.local_ip == "10.0.0.4"){
+      devName = defaultDevname = "mlx5_1";
+    }
+    else if(agent_stats_inst.local_ip == "10.0.0.5"){
+      devName = defaultDevname = "mlx5_0";
+    }
+    else if(agent_stats_inst.local_ip == "10.0.0.6"){
+      devName = defaultDevname = "mlx5_1";
+    }
+    else if(agent_stats_inst.local_ip == "10.0.0.7"){
+      devName = defaultDevname = "mlx5_1";
+    }
+    else if(agent_stats_inst.local_ip == "10.0.0.8"){
+      devName = defaultDevname = "mlx5_0";
+    }
+  // }
+
+  // if (!devName) {
+  //   int devCount = 0;
+  //   for (devCount;list[devCount];devCount++) {
+  //     ibv_gid now_gid;
+  //     struct ibv_context *now_context = ibv_open_device(list[devCount]);
+  //     epicAssert(ibv_query_gid(now_context, 1, 3, &now_gid) == 0);
+  //     ibv_close_device(now_context);
+  //     // 检查guid的倒数第二Byte是不是0，倒数四Bytes数字是ip，使得只有10.0.0.1-8的网卡能参与建立qp
+  //     if (now_gid.raw[14] == 0 && now_gid.raw[15] < 9) {
+  //       defaultDevname = ibv_get_device_name(list[devCount]);
+  //       devName = ibv_get_device_name(list[devCount]);
+  //       // printf(devName);
+  //       // printf("im here, devName = %s, now_gid.raw[14]=%d, now_gid.raw[15]=%d!\n", devName, (int)now_gid.raw[14], (int)now_gid.raw[15]);
+  //       for(int i = 0; i < 16; i++){
+  //         printf("[%d]=%hhu\t", i, now_gid.raw[i]);
+  //       }
+  //       break;
+  //     }
+  //   }
+  // }
 
   for (int i = 0; list[i]; ++i) {
     if (!strcmp(devName, ibv_get_device_name(list[i]))) {

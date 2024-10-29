@@ -26,15 +26,15 @@ using namespace std;
 using namespace chrono;
 // #define STEPS 204800 //100M much larger than 10M L3 cache
 // long ITERATION = 2000000;
-#define STEPS 204800//409600//1638400//409600
-long ITERATION = STEPS * 10;//STEPS * 10;//STEPS/160;//STEPS
+#define STEPS 13653//13653//409600//1638400//409600
+long ITERATION = STEPS * 100;//STEPS * 10;//STEPS * 10;//STEPS/160;//STEPS
 // long ITERATION = 0;
 int is_home = 0;
 int is_cache = 0;
 int is_request = 0;
 int cache_rw = 0;
 int request_rw = 0;
-int breakdown_times = 204800;//1024;//204800;
+int breakdown_times = 1;//1024;//204800;
 // unsigned int seedp = 0;
 // int is_home = 0; // = is_master
 
@@ -95,7 +95,7 @@ set<GAddr> real_accesses;
 LockWrapper stat_lock;
 
 int addr_size = sizeof(GAddr);
-int item_size = addr_size;
+int item_size = 4096;//4096;//addr_size;
 int items_per_block = BLOCK_SIZE / item_size;
 
 bool TrueOrFalse(double probability, unsigned int *seedp) {
@@ -252,11 +252,11 @@ void Init(GAlloc *alloc, GAddr data[], GAddr access[], bool shared[], int id,
         //revise the l_remote_ratio accordingly if we get the shared addr violate the remote probability
         if (TrueOrFalse(l_remote_ratio, seedp)) {  //should be remote
           if (alloc->GetID() == WID(addr)) {  //false negative
-            l_remote_ratio = Revise(l_remote_ratio, STEPS - i - 1, false);
+            if(STEPS - i - 1 != 0) l_remote_ratio = Revise(l_remote_ratio, STEPS - i - 1, false);
           }
         } else {  //shouldn't be remote
           if (alloc->GetID() != WID(addr)) {  //false positive
-            l_remote_ratio = Revise(l_remote_ratio, STEPS - i - 1, true);
+            if(STEPS - i - 1 != 0) l_remote_ratio = Revise(l_remote_ratio, STEPS - i - 1, true);
           }
         }
         shared[i] = true;
@@ -290,11 +290,11 @@ void Init(GAlloc *alloc, GAddr data[], GAddr access[], bool shared[], int id,
         //revise the l_remote_ratio accordingly if we get the shared addr violate the remote probability
         if (TrueOrFalse(l_remote_ratio, seedp)) {  //should be remote
           if (alloc->GetID() == WID(addr)) {  //false negative
-            l_remote_ratio = Revise(l_remote_ratio, STEPS - i - 1, false);
+            if(STEPS - i - 1 != 0) l_remote_ratio = Revise(l_remote_ratio, STEPS - i - 1, false);
           }
         } else {  //shouldn't be remote
           if (alloc->GetID() != WID(addr)) {  //false positive
-            l_remote_ratio = Revise(l_remote_ratio, STEPS - i - 1, true);
+            if(STEPS - i - 1 != 0) l_remote_ratio = Revise(l_remote_ratio, STEPS - i - 1, true);
           }
         }
         shared[i] = true;
@@ -447,7 +447,8 @@ void Run_request(GAlloc *alloc, GAddr data[], GAddr access[],
   int count_4_nobreakdown = 0;
   int count_4_breakdown = 0;
   // edited by cxz, multi 0.75 is used for let app thread 0 stop early than other app thread, so that we can get the "congestion" result
-  int thres_4_nobreakdown = 0.75 * (ITERATION / (breakdown_times + 1)) + 1;
+  // int thres_4_nobreakdown = 0.75 * (ITERATION / (breakdown_times + 1)) + 1;
+  int thres_4_nobreakdown = (ITERATION / (breakdown_times + 1)) + 1;
 
   GAddr to_access = access[0];  //access starting point
   char buf[item_size];
@@ -455,7 +456,7 @@ void Run_request(GAlloc *alloc, GAddr data[], GAddr access[],
   int j = 0;
 
   long start = get_time();
-  for (int i = 0; i < ITERATION && count_4_breakdown < breakdown_times; i++) {
+  for (int i = 0; i < ITERATION; i++) {
 
 
     /***********************************/
@@ -468,6 +469,7 @@ void Run_request(GAlloc *alloc, GAddr data[], GAddr access[],
         GAddr to_access_breakdown = access[ITERATION + count_4_breakdown];
         count_4_breakdown++;
 
+        if(count_4_breakdown <= breakdown_times){
 
         switch (request_rw) {
         case 0: {
@@ -549,6 +551,7 @@ void Run_request(GAlloc *alloc, GAddr data[], GAddr access[],
           break;
         }
         }
+        }
       }
     }
 
@@ -584,6 +587,7 @@ void Run_request(GAlloc *alloc, GAddr data[], GAddr access[],
         memcpy(buf, (void *)to_access, item_size);
         ret = item_size;
 #else
+        if (!warmup) alloc->MFence();
         ret = alloc->Read_with_thread_id(id, to_access, buf, item_size);
 #endif
 #ifdef STATS_COLLECTION
@@ -598,7 +602,7 @@ void Run_request(GAlloc *alloc, GAddr data[], GAddr access[],
         ret = item_size;
 #else
         ret = alloc->Write_with_thread_id(id, to_access, buf, item_size);
-        //if (!warmup)
+        // if (!warmup)
         //    alloc->MFence();
 #ifdef BENCHMARK_DEBUG
         char readback[item_size];
@@ -923,8 +927,8 @@ void Benchmark(int id) {
   bool warmup = true;
 
   epicLog(LOG_WARNING, "start warmup the cache for no-breakdown on thread %d", id);
-  Run_request_only(alloc, data, access, addr_to_pos, shared, id, &seedp, warmup);
-  // Run_request(alloc, data, access, addr_to_pos, shared, id, &seedp, warmup);
+  // Run_request_only(alloc, data, access, addr_to_pos, shared, id, &seedp, warmup);
+  Run_request(alloc, data, access, addr_to_pos, shared, id, &seedp, warmup);
   SYNC_RUN_BASE = SYNC_KEY + no_node * 2;
   sync_id = SYNC_RUN_BASE + no_node * node_id + id;
   alloc->Put(sync_id, &sync_id, sizeof(int));
@@ -983,8 +987,8 @@ void Benchmark(int id) {
 
 
   epicLog(LOG_WARNING, "start run the benchmark on thread %d", id);
-  Run_request_only(alloc, data, access, addr_to_pos, shared, id, &seedp, warmup);
-  // Run_request(alloc, data, access, addr_to_pos, shared, id, &seedp, warmup);
+  // Run_request_only(alloc, data, access, addr_to_pos, shared, id, &seedp, warmup);
+  Run_request(alloc, data, access, addr_to_pos, shared, id, &seedp, warmup);
   epicLog(LOG_WARNING, "benchmark ends on thread %d", id);
 
   if (id == 0) {
@@ -1120,6 +1124,7 @@ int main(int argc, char *argv[]) {
   //srand(1);
 
   Conf conf;
+  agent_stats_inst.local_ip = ip_worker;
   conf.is_master = is_master;
   conf.master_ip = ip_master;
   conf.master_port = port_master;
@@ -1130,19 +1135,20 @@ int main(int argc, char *argv[]) {
 
   /***********************************/
   /******** MY CODE STARTS ********/
-  conf.loglevel = LOG_WARNING;//DEBUG_LEVEL; //LOG_FATAL
-  // long size = ((long) BLOCK_SIZE) * STEPS * no_thread * 4;
-  // conf.size = size < conf.size ? conf.size : size;
+  conf.loglevel = LOG_WARNING;//LOG_DEBUG;//LOG_WARNING;
+  long size = ((long) BLOCK_SIZE) * STEPS * no_thread * 6;
+  conf.size = size < conf.size ? conf.size : size;
+  // conf.size = 1024 * 1024L * 1024 * 2;
   cout << "conf.size = " << conf.size << endl;
   conf.cache_th = cache_th;
   cout << "conf.cache_th = " << conf.cache_th << endl;
-  conf.cache_th = ((long)BLOCK_SIZE) * STEPS * conf.cache_th * 1.0 / conf.size;
+  conf.cache_th = ((long)BLOCK_SIZE) * STEPS * no_thread * conf.cache_th * 1.0 / conf.size;
   cout << "revised conf.cache_th = " << conf.cache_th << endl;
   cout << "gmem size = " << conf.size / (1024 * 1024 * 1024) << "GB" << endl;
-  cout << "----------" << endl;
-  cout << "user access space = " << ((long)BLOCK_SIZE) * STEPS * 1.0 / (1024 * 1024 * 1024) << "GB" << endl;
-  cout << "cache size = " << conf.size * conf.cache_th / (1024 * 1024 * 1024) << "GB" << endl;
-  cout << "cache ratio = " << conf.size * conf.cache_th / (((long)BLOCK_SIZE) * STEPS) << endl;
+  // cout << "----------" << endl;
+  // cout << "user access space = " << ((long)BLOCK_SIZE) * STEPS * 1.0 / (1024 * 1024 * 1024) << "GB" << endl;
+  // cout << "cache size = " << conf.size * conf.cache_th / (1024 * 1024 * 1024) << "GB" << endl;
+  // cout << "cache ratio = " << conf.size * conf.cache_th / (((long)BLOCK_SIZE) * STEPS) << endl;
   agent_stats_inst.end_collection();
   /******** MY CODE ENDS ********/
   /***********************************/
@@ -1223,11 +1229,11 @@ int main(int argc, char *argv[]) {
   res[0] = t_thr;  //total throughput for the current node
   res[1] = a_thr;  //avg throuhgput for the current node
   res[2] = a_lat;  //avg latency for the current node
-  alloc->Put(SYNC_KEY + no_node + node_id, res, sizeof(long) * 3);
+  alloc->Put(SYNC_KEY * 4 + no_node + node_id, res, sizeof(long) * 3);
   t_thr = a_thr = a_lat = 0;
   for (int i = 1; i <= no_node; i++) {
     memset(res, 0, sizeof(long) * 3);
-    alloc->Get(SYNC_KEY + no_node + i, &res);
+    alloc->Get(SYNC_KEY * 4 + no_node + i, &res);
     t_thr += res[0];
     a_thr += res[1];
     a_lat += res[2];
@@ -1276,7 +1282,7 @@ int main(int argc, char *argv[]) {
   //       real_accesses.size(), gen_accesses.size());
   // #endif
 
-  long time = 1;
+  long time = 5;
   epicLog(LOG_WARNING, "sleep for %ld s\n\n", time);
   sleep(time);
 

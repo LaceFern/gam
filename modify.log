@@ -1,0 +1,47 @@
+1.  在 highpara_benchmark.py 中添加 sharing ratio配置参数
+    修改 highpara_benchmark.py 中的所有 op_type : 2 -> 0
+    修改 highpara_benchmark.py 中的所有 read_ratio : 50 -> 60
+    在 highpara_benchmark.cc 中为 op_type=0 分支下的写操作增加MFence
+    在 highpara_benchmark.py 中新增mtu初始化功能
+2.  修改cacheline大小 (修改 BLOCK_POWER 和 BLOCK_MASK): 512 -> 4 KB 
+3.  修改单机预分配的内存大小(conf.size): 1 GB -> ((long) BLOCK_SIZE) * STEPS * no_thread * 8;
+4.  修改revised cache比例(conf.cache_th): ((long)BLOCK_SIZE) * STEPS * conf.cache_th * 1.0 / conf.size; -> ((long)BLOCK_SIZE) * STEPS * no_thread * conf.cache_th * 1.0 / conf.size;
+4.  修改单次GMem内存操作的位宽(item_size): addr_size -> 4 KB
+5.  注释"only able to evict...", "cannot link to any random lru list...", "cannot link to any lru list"
+6.  修改 breakdown_times : 1024 -> 1
+7.  修改 ITERATION : STEPS * 10 -> STEPS * 100
+8.  修改 LRU_NUM : 10 -> 24 (已改回)
+9.  修改 evict_th : 0.8 -> 0.99
+10. 在 rdma.cc 中增加对网卡的选择
+11. 修改 worker.cc  CacheEvictor 事务的启动状态: /
+12. 在 settings.h 中修改 #define USE_LRU 状态：#define USE_LRU -> //#define USE_LRU (已改回)
+    注: 若启动USE_LRU, 则GAM的驱逐是只要新建了缓存行,且缓存空间不足，就会强制触发的
+13. 修改 thres_4_nobreakdown 系数: 0.75 -> 1
+14. 修改 count_4_breakdown <= breakdown_times 判定的位置: 从 "if (is_request == 1 && !warmup && id == 0) {" 所在行, 移到了"count_4_breakdown++;"之后"switch (request_rw) {"之前
+15. 预热cache时, 全以写操作触发（还未实现）
+16. 修改 worker_handle.cc 中检测是否触发一致性维护判断: (op == RLOCK || op == WLOCK) -> (op == READ || op == WRITE)
+    注: 因为当前测试的type全是READ和WRITE, 所以进行了修改, 如果是要加锁测试, 应改回
+    注: Concordia的read和write是天然保证SC的, 但GAM的read和write只天然保证PSO, 所以为了达成同等一致性, GAM应该使用加了mfence的版本
+17. 修改 worker_handle.cc 中检测是否触发一致性维护判断: app_thread_id == 0 -> app_thread_id == 3 (已改回)
+
+5.  concordia把系统总共开出的GMem空间叫做working set, 可以抄一下, 表面开出了10G(或者说在sharing ratio=0的情况下用上了10GB), 而在sharing ratio增加的情况下访问空间实则不满10GB。
+    若要在sharing ratio=0的情况下得到10GB GMem空间, 取cache line大小为4KB, 则单机Step应该达到 10 GB(总GMem空间) / 8 机(节点数) / 4 KB(cacheLine) / 24(单机App线程数)= 13653
+    若要在sharing ratio=100的情况下得到10GB GMem空间, 取cache line大小为4KB, 则单机Step应该达到 10 GB(总GMem空间) / 4 KB(cacheLine)= 2621440
+    已把steps设置为13653
+
+6.  GAM的GMem总空间计算方式 = Step*sharingRatio*cacheLine + Step*(1-sharingRatio)*cacheline*nodeNum
+    同一时刻不同app thread访问地址出现时间冲突的概率= sharingRatio * 1/(Step*sharingRatio) * (1-((Step - 1)/Step)^(appNum-1)) * (Step*sharingRatio)
+    8机每机24app thread情况下, 访问地址出现时间冲突的概率= 1 * (1 - (204799/204800)^196)=0.1%
+    该冲突概率理论值与cache line大小、gmem空间无关 (但实际上可能因为一个事务卡太久而上升), 无需通过增加GMem空间降低冲突率 (但如果你增加GMem空间的方法是增加Step数量, 那就有关了)
+
+7. GAM在更新统计信息时要上锁,app thread多了之后上锁冲突会增加, 猜测可以通过增加LRU list数量解决
+
+debug:
+1.  如果访问空间+缓存空间+一些master所需空间超过了 conf.size 则会出现找不到 addr(0:0) 之类的问题
+2.  要是 conf.size 开不出来, 会报segment fault
+3.  即便是 sharing ratio=100% 且 cache 有预热, 也可能存在如下一种触发缓存一致性维护的情况：
+    预热cache时, 针对某地址随机触发了读操作; 而测试环节针对某地址随机触发了写操作
+    通过在预热cache与测试时使用相同的随机种子可以避免这个问题, 通过增加iter轮数也可以解决这个问题
+4.  为什么 optype=0 时, WAIT_AYSNC_FINISH log中会没有记录（但包又真的发出去了）
+5.  CC事务的吞吐其实在app线程增加到一定数量后会约等于一个定值（仅缓慢增长），此时CC事务延迟也不会有明显变化
+6.  为什么app_thread_id == 3时统计得到的CC事务触发概率会特别高？

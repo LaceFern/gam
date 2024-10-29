@@ -99,7 +99,8 @@ int WorkerHandle::SendRequest(WorkRequest *wr) {
   int ret = worker->ProcessLocalRequest(wr);  //not complete due to remote or previously-sent similar requests
 
   // just a hard code !!!
-  if(app_thread_id == 0 && (op == RLOCK || op == WLOCK)){
+  // if(app_thread_id == 0 && (op == RLOCK || op == WLOCK)){
+  if(app_thread_id == 0 && (op == READ || op == WRITE)){
     // printf("thread_id = %d\n", thread_id);
     if(ret){ //not complete due to remote or previously-sent similar requests
       agent_stats_inst.set_memaccess_type(MEMACCESS_TYPE::WITH_CC);
