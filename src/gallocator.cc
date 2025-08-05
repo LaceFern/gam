@@ -216,6 +216,9 @@ int GAlloc::Lock(Work op, const GAddr addr, const Size count, Flag flag) {
 #ifdef LOCAL_MEMORY_HOOK
   return 0;
 #else
+  if (this == nullptr){
+    return -1;
+  }
   WorkRequest wr{ };
   wr.op = op;
   wr.addr = addr;

@@ -26,6 +26,7 @@ struct DirEntry {
   //if lock == 0, no one is holding the lock. otherwise, there are #lock ones holding the lock
   //but if lock = EXCLUSIVE_LOCK_TAG, it is a exclusive lock
   //int lock = 0;
+  // std::mutex dir_entry_mutex_;
   unordered_map<ptr_t, int> locks;
 };
 

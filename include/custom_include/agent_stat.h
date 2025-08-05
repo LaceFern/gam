@@ -73,7 +73,7 @@ enum class POLL_OP {
 };
 
 
-extern __thread std::thread::id now_thread_id;
+extern thread_local std::thread::id now_thread_id;
 
 class agent_stats {
 private:

@@ -28,7 +28,7 @@ typedef void *raddr;  //raddr means registered addr
 
 #define WORKER_RDMA_CONN_STRLEN (MASTER_RDMA_CONN_STRLEN + 8 + 16 + 2)
 
-#define MAX_CONN_STRLEN (WORKER_RDMA_CONN_STRLEN+4+1) //4: four-digital wid, 1: ':', 1: \0
+#define MAX_CONN_STRLEN (WORKER_RDMA_CONN_STRLEN+4+1+8) //4: four-digital wid, 1: ':', 1: \0
 
 #define HALF_BITS 0xffffffff
 #define QUARTER_BITS 0xffff

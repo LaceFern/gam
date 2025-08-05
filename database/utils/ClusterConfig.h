@@ -53,7 +53,8 @@ namespace Database {
     bool IsMaster() const {
       ServerInfo my = GetMyHostInfo();
       ServerInfo master = GetMasterHostInfo();
-      return my.addr_ == master.addr_ && my.port_no_ == master.port_no_;
+      bool ret = my.addr_ == master.addr_ && my.port_no_ == master.port_no_;
+      return ret;
     }
 
   private:

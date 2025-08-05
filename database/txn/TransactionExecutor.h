@@ -125,8 +125,8 @@ namespace Database {
           if (procedures[tuple->type_]->Execute(tuple, ret) == false) {
             ret.size_ = 0;
             ++abort_count;
-            if (is_finish_ == true) {
-              total_count_ += count;
+            if (is_finish_.load(std::memory_order_acquire) == true) {
+              total_count_.fetch_add(count, std::memory_order_acq_rel);
               total_abort_count_ += abort_count;
               PROFILE_TIME_END(thread_id, TXN_EXECUTE);
               //txn_manager->CleanUp();
@@ -148,8 +148,8 @@ namespace Database {
 
               ret.size_ = 0;
               ++abort_count;
-              if (is_finish_ == true) {
-                total_count_ += count;
+              if (is_finish_.load(std::memory_order_acquire) == true) {
+                total_count_.fetch_add(count, std::memory_order_acq_rel);
                 total_abort_count_ += abort_count;
                 PROFILE_TIME_END(thread_id, TXN_ABORT);PROFILE_TIME_END(
                   thread_id, TXN_EXECUTE);
@@ -172,8 +172,8 @@ namespace Database {
           }
           ++count;
           PROFILE_TIME_END(thread_id, TXN_EXECUTE);
-          if (is_finish_ == true) {
-            total_count_ += count;
+          if (is_finish_.load(std::memory_order_acquire) == true) {
+            total_count_.fetch_add(count, std::memory_order_acq_rel);
             total_abort_count_ += abort_count;
             //txn_manager->CleanUp();
             return;
@@ -182,9 +182,9 @@ namespace Database {
       }
       time_lock_.lock();
       end_timestamp_ = timer_.GetTimePoint();
-      is_finish_ = true;
+      is_finish_.store(true, std::memory_order_release);
       time_lock_.unlock();
-      total_count_ += count;
+      total_count_.fetch_add(count, std::memory_order_acq_rel);
       total_abort_count_ += abort_count;
       //txn_manager->CleanUp();
       return;
@@ -207,7 +207,7 @@ namespace Database {
     // multi-thread util
     volatile bool *is_ready_;
     volatile bool is_begin_;
-    volatile bool is_finish_;
+    std::atomic<bool> is_finish_;
     // profile count
     std::atomic<size_t> total_count_;
     std::atomic<size_t> total_abort_count_;

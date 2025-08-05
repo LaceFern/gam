@@ -524,7 +524,7 @@ int Worker::ProcessLocalRLock(WorkRequest *wr) {
     }
 #ifdef MULTITHREAD
   } else {
-    epicAssert(wr->is_cache_hit_);
+    epicAssert(wr->is_cache_hit_ || ((wr->status == 261)));
     if (IsLocal(wr->addr)) {
       ++no_local_reads_;
       ++no_local_reads_hit_;
@@ -651,7 +651,11 @@ int Worker::ProcessLocalWLock(WorkRequest *wr) {
     }
 #ifdef MULTITHREAD
   } else {
-    epicAssert(wr->is_cache_hit_);
+    // if (!wr->is_cache_hit_) {
+    //   printf("ProcessLocalWLock: wr->is_cache_hit_ = false, wr->op = %d, wr->addr = %lx , wr->id = %lx\n",
+    //          wr->op, wr->addr, wr->id);
+    // }
+    epicAssert(wr->is_cache_hit_ || (wr->status == 261));
     if (IsLocal(wr->addr)) {
       ++no_local_writes_;
       ++no_local_writes_hit_;

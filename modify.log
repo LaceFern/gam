@@ -45,3 +45,38 @@ debug:
 4.  为什么 optype=0 时, WAIT_AYSNC_FINISH log中会没有记录（但包又真的发出去了）
 5.  CC事务的吞吐其实在app线程增加到一定数量后会约等于一个定值（仅缓慢增长），此时CC事务延迟也不会有明显变化
 6.  为什么app_thread_id == 3时统计得到的CC事务触发概率会特别高？
+
+tpcc:
+0. 修改了cmake
+1. 将database/txn/TransactionExecutor.h中的原子变量的加法从 += 改为 fetch_add
+实际上这并不能让每次的count变为一致的整数，因为tpcc的测试逻辑是第一个线程运行完之后更改is_finish并结束所有线程。
+所以此时不知道其他线程运行完没有，这样测试的tps仍然是准确的，如果以后有需要可以继续修改。
+2.修改 database/tpcc/TpccPopulator.h GenerateDistrictNewOrderRecord函数的返回类型
+3.修改 database/tpcc/TpccProcedure.h 里的 all_local 变量 bool->int 四字节对齐
+4.修改 database/tpcc/TpccSource.h 里 ModifyPayment() 中的 memcpy -> 复制构造
+5.修改 rdma.cc 和 rdma.h 中一些 c-style string 的长度
+6.修改 src/pending_request.cc ProcessRequestWithOpRes() 里 wr->addr 的 use-after-free
+7.修改 src/local_request_cache.cc 里的assert逻辑 
+之前同节点对同一 remote addr 同时 trylock 会导致 assert false
+t1(app):ProcessLocalWLock()
+    Cache::Lock()
+    新增cacheline 
+    把cacheline状态置为 CACHE_TO_DIRTY
+    SubmitRequest lwr to remote 
+
+t2(app): ProcessLocalWLock()
+    Cache::Lock()
+    获取到t1新增的cacheline
+    此时状态已经变为 CACHE_DIRTY 但 t1 未释放锁
+    因为无法上锁 is_cache_hit = false, 但是由于是trylock直接返回SUCCESS
+    因为返回了SUCCESS，被误认为是cache命中，导致assert false
+
+t3(Service):
+    接收remote的wr
+    将 CACHE_TO_DIRTY 的cacheline状态置为 CACHE_DIRTY
+
+remote:
+    ProcessRemoteWrite()
+    SubmitRequest to t3
+
+    
