@@ -43,10 +43,10 @@ echo "launch..."
 run_test () {
   local d_value=$1
 
-  local USER_ARGS="-p11111 -sf64 -sf10 -c4 -t200000 -d${d_value} -f../database/tpcc/config.txt"
+  local USER_ARGS="-p11111 -sf16 -sf100 -c4 -t200000 -d${d_value} -f../database/tpcc/config.txt"
   
   output_dir=${output_dir:-.}
-  output_file="${output_dir}/${bin_file}-c12-d${d_value}-r30.log"
+  output_file="${output_dir}/${bin_file}-h1-d${d_value}.log"
   
   script="cd ${bin_dir} && ./${bin_file} ${USER_ARGS} > ${output_file} 2>&1"
   
@@ -65,7 +65,7 @@ run_test () {
 }
 
 arp (){
-  for ((i=1;i<${#hosts[@]};i++)); do
+  for ((i=0;i<${#hosts[@]};i++)); do
     host=${hosts[$i]}
     arp_script="cd ${proj_dir} && sudo bash ./arp-${host}.sh"
     echo "start worker: ssh ${ssh_opts} ${host} "$arp_script" &"
@@ -84,7 +84,7 @@ arp
 # bin_file=hash_index_test
 # run_test
 bin_file=tpcc
-for d_val in 0; do
+for d_val in 0 10 20 30 40 50 60 70 80 90 100; do
     
     run_test "${d_val}" 
     

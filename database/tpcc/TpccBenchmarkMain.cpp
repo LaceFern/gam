@@ -72,6 +72,11 @@ int main(int argc, char *argv[]) {
     (gThreadCount);
     ExchPerfStatistics(&config, &synchronizer, &executor.GetPerfStatistics());
   }
+  
+  for (int i = 0; i < gThreadCount; ++i) {
+    delete gallocators[i];
+    gallocators[i] = nullptr;
+  }
 
   std::cout << "prepare to exit..." << std::endl;
   synchronizer.Fence();

@@ -72,6 +72,19 @@ enum class POLL_OP {
     WAITING_NOT_TARGET,
 };
 
+enum class MULTI_APP_THREAD_OP {
+    NONE,
+    READ,
+    WRITE,
+    RLOCK,
+    RUNLOCK,
+    WLOCK,
+    WUNLOCK,
+    MALLOC,
+    _count,
+};
+
+
 
 extern thread_local std::thread::id now_thread_id;
 
@@ -124,6 +137,7 @@ private:
 
 public:
     std::string local_ip;
+    std::unordered_map<MULTI_APP_THREAD_OP, Histogram *> multi_app_thread_op_stats[10];
     inline void update_home_send_count(uint64_t thread_id) {
         if(start && thread_id != GLB_INVALID) home_send_count[thread_id]++;
     }
@@ -184,6 +198,14 @@ public:
 
         sys_thread_stats = new Histogram(1, 10000000, 3, 10);
 
+        start = true;
+
+        for(int i = 0; i < 10; i++){
+            for(int j = 0; j < static_cast<int>(MULTI_APP_THREAD_OP::_count); j++){
+                multi_app_thread_op_stats[i][(MULTI_APP_THREAD_OP) j] = new Histogram(1, 10000000, 3, 10);
+            }
+        }
+
         for (int i = 0; i < MAX_SYS_THREAD; i++) {
             multi_sys_thread_stats[i] = new Histogram(1, 10000000, 3, 10);
             multi_sys_thread_op_stats[i][MULTI_SYS_THREAD_OP::PROCESS_IN_HOME_NODE] = new Histogram(1, 10000000, 3, 10);
@@ -201,7 +223,16 @@ public:
     }
 
     ~agent_stats() {
-        // TODO
+        print_app_thread_stat();
+    }
+
+    void print_multi_app_thread_op_stats() {
+        for(int i = 0; i < 10; i++){
+            std::cout << "app thread " << i << " multi app thread op stats: " << std::endl;
+            for(int j = 0; j < static_cast<int>(MULTI_APP_THREAD_OP::_count); j++){
+                multi_app_thread_op_stats[i][(MULTI_APP_THREAD_OP) j]->print(stdout, 5);
+            }
+        }
     }
 
     void print_app_thread_stat() {
@@ -523,12 +554,13 @@ public:
 
 
     bool is_valid_gaddr(GAddr gaddr) {
-        if(!start){
-            return false;
-        }
-        else{
-            return valid_gaddrs.count(gaddr);
-        }
+        // if(!start){
+        //     return false;
+        // }
+        // else{
+        //     return valid_gaddrs.count(gaddr);
+        // }
+        return true;
     }
 
     void push_valid_gaddr(GAddr gaddr) {
@@ -625,3 +657,34 @@ public:
 };
 
 extern agent_stats agent_stats_inst;
+
+class RAII_Timer {
+    public:
+    RAII_Timer(MULTI_APP_THREAD_OP code,int iid){
+        start_time = rdtsc();
+        this->iid = iid;
+        multi_app_thread_op = code;
+    }
+
+    ~RAII_Timer() {
+        uint64_t end_time = rdtscp();
+        uint64_t elapsed_time = end_time - start_time;
+        agent_stats_inst.multi_app_thread_op_stats[iid][multi_app_thread_op]->record(elapsed_time);
+    }
+    private:
+    uint64_t start_time;
+    int iid;
+    MULTI_APP_THREAD_OP multi_app_thread_op = MULTI_APP_THREAD_OP::NONE;
+
+    uint64_t rdtsc() {
+      unsigned int lo, hi;
+      __asm__ __volatile__("rdtsc" : "=a" (lo), "=d" (hi));
+      return ((uint64_t)hi << 32) | lo;
+    }
+
+    uint64_t rdtscp() {
+      unsigned int lo, hi;
+      __asm__ __volatile__("rdtscp" : "=a" (lo), "=d" (hi));
+      return ((uint64_t)hi << 32) | lo;
+    }
+};

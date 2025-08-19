@@ -15,6 +15,9 @@
 #include "gfunc.h"
 #endif
 
+extern thread_local size_t profile_thread_id;
+extern size_t thread_id_counter;
+
 class GAlloc {
   WorkerHandle *wh;  //handle to communicate with local worker
 

@@ -53,12 +53,19 @@ namespace Database {
 
     virtual void ProcessQuery() {
       std::cout << "start process query" << std::endl;
+      static bool flag = false;
       boost::thread_group thread_group;
       for (size_t i = 0; i < thread_count_; ++i) {
         // can bind threads to cores here
+        if (flag == false) {
         thread_group.create_thread(
           boost::bind(&TransactionExecutor::ProcessQueryThread, this, i));
+        } else {
+        thread_group.create_thread(
+          boost::bind(&TransactionExecutor::ProcessQueryThread, this, i+4));
+        }
       }
+      flag = true;
       bool is_all_ready = true;
       while (1) {
         for (size_t i = 0; i < thread_count_; ++i) {
@@ -95,8 +102,13 @@ namespace Database {
       perf_statistics_.throughput_ = throughput;
     }
 
-    virtual void ProcessQueryThread(const size_t &thread_id) {
-      //std::cout << "start thread " << thread_id << std::endl;
+    virtual void ProcessQueryThread(size_t &thread_id) {
+      std::cout << "start thread " << thread_id << std::endl;
+      profile_thread_id = thread_id; // set thread id for profiler
+      if (thread_id >= 4){
+        thread_id -= 4; // for second run
+      }
+
       std::vector<ParamBatch *> &execution_batches =
         *(redirector_ptr_->GetParameterBatches(thread_id));
 
