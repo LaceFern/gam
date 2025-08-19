@@ -744,8 +744,9 @@ MULTI_SYS_THREAD_OP Worker::ProcessRequestWithOpRes(Client *cli, unsigned int wo
   wr->glb_thread_id = sys_thread_id;
   epicAssert(wr);
   epicAssert(wr->id == work_id);
+  auto addr = wr->addr;
   ProcessPendingRequest(cli, wr);
-  if (agent_stats_inst.is_valid_gaddr(wr->addr)) {
+  if (agent_stats_inst.is_valid_gaddr(addr)) {
     return MULTI_SYS_THREAD_OP::PROCESS_PENDING_IN_HOME_OR_REQ_NODE;
   }
   return MULTI_SYS_THREAD_OP::NONE;

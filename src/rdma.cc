@@ -563,7 +563,7 @@ int RdmaContext::SetRemoteConnParam(const char *conn) {
   int ret;
   uint32_t rlid, rpsn, rqpn, rrkey;
   uint64_t rvaddr;
-  char gid_str[32];
+  char gid_str[40];
 
   if (IsMaster()) {
     /* conn should be of the format "lid:qpn:psn:gid" */
@@ -575,7 +575,18 @@ int RdmaContext::SetRemoteConnParam(const char *conn) {
     this->vaddr = rvaddr;
   }
   union ibv_gid gid;
+//   union ibv_gid my_gid;
+//     if (ibv_query_gid(resource->context, 1, 0, &my_gid)) {
+//         std::cerr << "Failed to query GID\n";
+//         return 1;
+//     }
+    // inet_ntop(AF_INET6, &my_gid, gid_str, sizeof(gid_str));
   wire_gid_to_gid(gid_str, &gid);
+
+    // 使用 printf 打印结果
+    // printf("%s: %s\n", "gid", gid_str);
+    // gid_str[32] = 0; // ensure null-termination
+    
   /* modify qp to RTR state */
   {
     ibv_qp_attr attr = { };  //zero init the POD value (DON'T FORGET!!!!)
@@ -626,6 +637,12 @@ int RdmaContext::SetRemoteConnParam(const char *conn) {
       return 1;
     }
   }
+
+  struct ibv_qp_attr attr1;
+  struct  ibv_qp_init_attr qp_attr = { };
+  
+//   ibv_query_qp(qp, &attr1, IBV_QP_STATE, &qp_attr);
+//   printf("QP state = %d (RTS=%d)\n", attr1.qp_state, IBV_QPS_RTS);
   auto hexCharToInt = [](char c) -> int {
     if (c >= '0' && c <= '9') return c - '0';
     if (c >= 'A' && c <= 'F') return c - 'A' + 10;
@@ -650,12 +667,12 @@ int RdmaContext::SetRemoteConnParam(const char *conn) {
 
 const char *RdmaContext::GetRdmaConnString() {
   int rc;
-  char gid[32];
+  char gid[40];
   if (!msg) {
     if (IsMaster())
-      msg = (char *)zmalloc(MASTER_RDMA_CONN_STRLEN + 1);  //1 for \0
+      msg = (char *)zmalloc(MASTER_RDMA_CONN_STRLEN + 1 + 8);  //1 for \0
     else
-      msg = (char *)zmalloc(WORKER_RDMA_CONN_STRLEN + 1);
+      msg = (char *)zmalloc(WORKER_RDMA_CONN_STRLEN + 1 + 8);
   }
 
   if (unlikely(!msg)) {

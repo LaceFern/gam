@@ -252,10 +252,11 @@ namespace Database {
           InsertRecord(&context_, NEW_ORDER_TABLE_ID,
             &new_order_key, 1, new_order_record, new_order_addr));
 
-        bool all_local = true;
+        bool all_local_flag = true;
         for (auto &w_id : new_order_param->i_w_ids_) {
-          all_local = (all_local && (new_order_param->w_id_ == w_id));
+          all_local_flag = (all_local_flag && (new_order_param->w_id_ == w_id));
         }
+        int all_local = all_local_flag ? 1 : 0;
         // "createOrder": "INSERT INTO ORDERS (O_ID, O_D_ID, O_W_ID, O_C_ID, O_ENTRY_D, O_CARRIER_ID, O_OL_CNT, O_ALL_LOCAL) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
         GAddr order_addr = gallocators[thread_id_]->Malloc(
           transaction_manager_->storage_manager_->

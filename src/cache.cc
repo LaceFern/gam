@@ -404,6 +404,8 @@ int Cache::Lock(WorkRequest * wr) {
     //we allow to advance without checking
     if (InTransitionState(state)) {
       epicLog(LOG_INFO, "in transition state while cache read/write(%d)", wr->op);
+    //   printf("false1 wr->op = %d, wr->addr = %lx , wr->id = %lx\n",
+    //          wr->op, wr->addr, wr->id);
       wr->is_cache_hit_ = false;
       // if(agent_stats_inst.is_start()) printf("im here 2\n");
       worker->AddToServeLocalRequest(i, wr);
@@ -423,6 +425,8 @@ int Cache::Lock(WorkRequest * wr) {
         epicLog(LOG_INFO, "cannot shared lock addr %lx, will try later", wr->addr);
 
         wr->is_cache_hit_ = false;
+        // printf("false2 wr->op = %d, wr->addr = %lx , wr->id = %lx\n",
+        //        wr->op, wr->addr, wr->id);
         // if(agent_stats_inst.is_start()) printf("im here 3\n");
 
         if (wr->flag & TRY_LOCK) {
@@ -450,6 +454,8 @@ int Cache::Lock(WorkRequest * wr) {
 #endif
       if (state != CACHE_DIRTY) {
         epicAssert(state == CACHE_SHARED);
+        // printf("false3 wr->op = %d, wr->addr = %lx , wr->id = %lx\n",
+        //        wr->op, wr->addr, wr->id);
         wr->is_cache_hit_ = false;
         // if(agent_stats_inst.is_start()) printf("im here 4\n");
 
@@ -515,18 +521,22 @@ int Cache::Lock(WorkRequest * wr) {
 #endif
 
         if (WLock(cline, wr->addr)) {  //failed to lock
-
+          
           wr->is_cache_hit_ = false;
           // if(agent_stats_inst.is_start()) printf("im here 5\n");
           epicLog(LOG_INFO, "cannot exclusive lock addr %lx, will try later", wr->addr);
 
           if (wr->flag & TRY_LOCK) {
+            // printf("false41 wr->op = %d, wr->addr = %lx , wr->id = %lx, tid = %d \n ",
+            //      wr->op, wr->addr, wr->id,gettid());  
             wr->status = LOCK_FAILED;
             unlock(i);
             wr->unlock();
             return SUCCESS;
           } else {
             //to_serve_local_requests[TOBLOCK(wr->addr)].push(wr);
+            // printf("false42 wr->op = %d, wr->addr = %lx , wr->id = %lx, tid = %d \n ",
+            //      wr->op, wr->addr, wr->id,gettid());  
             worker->AddToServeLocalRequest(i, wr);
             unlock(i);
             wr->unlock();
@@ -548,6 +558,8 @@ int Cache::Lock(WorkRequest * wr) {
 #else
     cline = SetCLine(i);
 #endif
+    // printf("false5 wr->op = %d, wr->addr = %lx , wr->id = %lx tid = %d\n",
+    //        wr->op, wr->addr, wr->id , gettid());
     wr->is_cache_hit_ = false;
     // if(agent_stats_inst.is_start()) printf("im here 6\n");
     WorkRequest *lwr = new WorkRequest(*wr);

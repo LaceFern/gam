@@ -266,6 +266,7 @@ DirEntry *Directory::ToToDirty(void *ptr, GAddr addr) {
 int Directory::RLock(DirEntry *entry, ptr_t ptr) {
   epicAssert(entry);
   epicAssert(!InTransitionState(entry));
+  // std::lock_guard<std::mutex> lock(entry->dir_entry_mutex_);
   if (IsWLocked(entry, ptr)) {
     return -1;
   }
@@ -300,6 +301,7 @@ int Directory::RLock(ptr_t ptr) {
 int Directory::WLock(DirEntry *entry, ptr_t ptr) {
   epicAssert(entry);
   epicAssert(!InTransitionState(entry));
+  // std::lock_guard<std::mutex> lock(entry->dir_entry_mutex_);
   if (IsWLocked(entry, ptr) || IsRLocked(entry, ptr)) {
     return -1;
   }
@@ -409,12 +411,14 @@ void Directory::UnLock(DirEntry *&entry, ptr_t ptr) {
     || ((entry->state == DIR_SHARED || entry->state == DIR_TO_UNSHARED)
       && IsRLocked(ptr)));
   epicAssert(entry->locks.count(ptr) && entry->locks.at(ptr) > 0);
+  // std::unique_lock<std::mutex> lock(entry->dir_entry_mutex_);
   entry->locks[ptr] = IsWLocked(entry, ptr) ? 0 : entry->locks[ptr] - 1;
   if (entry->locks[ptr] == 0) {
     entry->locks.erase(ptr);
   }
   if (entry->state == DIR_UNSHARED && entry->locks.size() == 0) {
     dir.erase(entry->addr);
+    //lock.unlock();
     delete entry;
     entry = nullptr;
   }

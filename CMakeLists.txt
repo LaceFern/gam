@@ -5,8 +5,15 @@ project(GAM)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
+# 强制使用 clang++ 作为 C++ 编译器
+if(NOT DEFINED CMAKE_CXX_COMPILER)
+    set(CMAKE_CXX_COMPILER "clang++" CACHE STRING "C++ compiler" FORCE)
+endif()
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -std=c++17 -DNDEBUG -rdynamic")
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -std=c++17 -g -rdynamic")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -latomic")
+set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -latomic")
 
 option(DHT OFF)
 
@@ -67,32 +74,83 @@ set(GAMSOURCE
 
 add_subdirectory(${CMAKE_SOURCE_DIR}/lib/HdrHistogram)
 
-add_library(galloc ${GAMSOURCE})
+# Define library
+add_library(galloc STATIC ${GAMSOURCE})
+target_link_libraries(galloc ${LIBRARIES})
 
-if(NOT EXISTS "${CMAKE_SOURCE_DIR}/lib/libcuckoo/cityhash-1.1.1/src/.libs/libcityhash.a")
-    add_custom_command(OUTPUT LIBCUCKOO
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/lib/libcuckoo
-        COMMAND "autoreconf" "-fis"
-        COMMAND "./configure"
-        COMMAND "make"
+# Build libcuckoo
+add_custom_command(
+    OUTPUT ${CMAKE_SOURCE_DIR}/lib/libcuckoo/cityhash-1.1.1/src/.libs/libcityhash.a
+    COMMAND cd ${CMAKE_SOURCE_DIR}/lib/libcuckoo && autoreconf -fis && ./configure && make
+    DEPENDS ${CMAKE_SOURCE_DIR}/lib/libcuckoo/cityhash-1.1.1/src/city.cc
+    COMMENT "Building libcuckoo"
+)
+add_custom_target(libcuckoo DEPENDS ${CMAKE_SOURCE_DIR}/lib/libcuckoo/cityhash-1.1.1/src/.libs/libcityhash.a)
+add_dependencies(galloc libcuckoo)
+
+# Database module sources
+set(DATABASE_COMMON_SOURCES
+    database/Meta.cpp
+    database/txn/TransactionManager2PL.cpp
+    database/txn/TransactionManagerST.cpp
+    database/utils/Profiler.cpp
+    database/tpcc/TpccRandomGenerator.cpp
+)
+
+# Database include directories
+set(DATABASE_INCLUDES
+    ${CMAKE_SOURCE_DIR}/database
+    ${CMAKE_SOURCE_DIR}/database/bench
+    ${CMAKE_SOURCE_DIR}/database/storage
+    ${CMAKE_SOURCE_DIR}/database/txn
+    ${CMAKE_SOURCE_DIR}/database/utils
+    ${CMAKE_SOURCE_DIR}/database/tpcc
+)
+
+# TPCC executable
+add_executable(tpcc
+    database/tpcc/TpccBenchmarkMain.cpp
+    ${DATABASE_COMMON_SOURCES}
+)
+target_include_directories(tpcc PRIVATE ${DATABASE_INCLUDES})
+target_compile_definitions(tpcc PRIVATE LOCK BACKOFF)
+target_link_libraries(tpcc galloc ${CMAKE_SOURCE_DIR}/lib/libcuckoo/cityhash-1.1.1/src/.libs/libcityhash.a ${LIBRARIES})
+add_dependencies(tpcc libcuckoo)
+
+# Test executables
+add_executable(tpcc_populate_test
+    database/test/TpccPopulateTest.cpp
+    ${DATABASE_COMMON_SOURCES}
+)
+target_include_directories(tpcc_populate_test PRIVATE ${DATABASE_INCLUDES})
+target_compile_definitions(tpcc_populate_test PRIVATE LOCK BACKOFF)
+target_link_libraries(tpcc_populate_test galloc ${CMAKE_SOURCE_DIR}/lib/libcuckoo/cityhash-1.1.1/src/.libs/libcityhash.a ${LIBRARIES})
+add_dependencies(tpcc_populate_test libcuckoo)
+
+add_executable(hash_index_test
+    database/test/HashIndexTest.cpp
+    ${DATABASE_COMMON_SOURCES}
+)
+target_include_directories(hash_index_test PRIVATE ${DATABASE_INCLUDES})
+target_compile_definitions(hash_index_test PRIVATE LOCK BACKOFF)
+target_link_libraries(hash_index_test galloc ${CMAKE_SOURCE_DIR}/lib/libcuckoo/cityhash-1.1.1/src/.libs/libcityhash.a ${LIBRARIES})
+add_dependencies(hash_index_test libcuckoo)
+
+# Create test programs from test/*.cc files
+file(GLOB TEST_SOURCES "test/*.cc")
+foreach(TEST_SOURCE ${TEST_SOURCES})
+    get_filename_component(TEST_NAME ${TEST_SOURCE} NAME_WE)
+    add_executable(${TEST_NAME} ${TEST_SOURCE})
+    target_include_directories(${TEST_NAME} PRIVATE
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/include/custom_include
+        ${CMAKE_SOURCE_DIR}/lib/libcuckoo/cityhash-1.1.1/src
     )
-
-    add_custom_target(libcuckoo ALL DEPENDS LIBCUCKOO)
-
-    add_dependencies(galloc libcuckoo)
-endif()
-
-
-
-
-file(GLOB TESTSOURCESLIST ${CMAKE_SOURCE_DIR}/test/*.cc)
-list(APPEND TESTSOURCE ${TESTSOURCESLIST})
-
-foreach (test_file_path IN LISTS TESTSOURCE)
-    file(RELATIVE_PATH test_name ${CMAKE_SOURCE_DIR}/test ${test_file_path})
-    string(REPLACE ".cc" "" test_name ${test_name})  
-
-    add_executable(${test_name} ${test_file_path})
-    target_link_libraries(${test_name} galloc ${CMAKE_SOURCE_DIR}/lib/libcuckoo/cityhash-1.1.1/src/.libs/libcityhash.a ${LIBRARIES})
-  
+    target_compile_definitions(${TEST_NAME} PRIVATE
+        GALLOCLIB
+        GANET
+        LIBCUCKOO
+    )
+    target_link_libraries(${TEST_NAME} galloc ${CMAKE_SOURCE_DIR}/lib/libcuckoo/cityhash-1.1.1/src/.libs/libcityhash.a)
+    add_dependencies(${TEST_NAME} libcuckoo)
 endforeach()

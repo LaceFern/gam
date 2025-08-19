@@ -17,7 +17,7 @@ using namespace std;
 
 #define ASYNC_UNLOCK
 
-//#define FINE_SLAB_LOCK
+#define FINE_SLAB_LOCK
 
 /*
  * test switch

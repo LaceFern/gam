@@ -439,13 +439,13 @@ namespace Database {
             <= (int)gTimeLocality);
           if (use_last_txn) {
             // time_locality will entirely use last txn
-            memcpy(param, &last_payment_param_, sizeof(PaymentParam));
+            last_payment_param_ = *param;
           } else if (gForceRandomAccess) {
             param->c_id_ = TpccRandomGenerator::GenerateCustomerIdUniform(
               scale_params_->num_customers_per_district_);
           }
         }
-        memcpy(&last_payment_param_, param, sizeof(PaymentParam));
+        last_payment_param_ = *param;
 
         param->warehouse_access_type_ =
           (TpccRandomGenerator::GenerateInteger(1, 100) <= gReadRatio) ?

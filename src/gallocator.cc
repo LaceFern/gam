@@ -6,7 +6,11 @@
 #include "workrequest.h"
 #include "zmalloc.h"
 #include <cstring>
+#include "agent_stat.h"
 #include "../include/lockwrapper.h"
+
+thread_local size_t profile_thread_id = 0;
+size_t thread_id_counter = 0;
 
 const Conf *GAllocFactory::conf = nullptr;
 Worker *GAllocFactory::worker;
@@ -16,6 +20,7 @@ LockWrapper GAllocFactory::lock;
 GFunc *GAllocFactory::gfuncs[] = { Incr, IncrDouble, GatherPagerank,
     ApplyPagerank, ScatterPagerank };
 #endif
+std::atomic<size_t> g_total_new_record_bytes(0);
 
 GAlloc::GAlloc(Worker *worker)
   : wh(new WorkerHandle(worker)) {
@@ -29,6 +34,7 @@ GAddr GAlloc::Malloc(const Size size, GAddr base, Flag flag) {
   void *laddr = zmalloc(size);
   return (GAddr)laddr;
 #else
+ g_total_new_record_bytes.fetch_add(size, std::memory_order_relaxed);
   WorkRequest wr = { };
   wr.op = MALLOC;
   wr.flag = flag;
@@ -58,6 +64,8 @@ GAddr GAlloc::AlignedMalloc(const Size size, GAddr base, Flag flag) {
   epicAssert(!rret && (GAddr)ret % BLOCK_SIZE == 0);
   return (GAddr)ret;
 #else
+  RAII_Timer timer(MULTI_APP_THREAD_OP::MALLOC, profile_thread_id);
+  g_total_new_record_bytes.fetch_add(size, std::memory_order_relaxed);
   WorkRequest wr = { };
   wr.op = MALLOC;
   wr.flag = flag;
@@ -111,6 +119,7 @@ int GAlloc::Read(const GAddr addr, const Size offset, void *buf,
   memcpy(buf, laddr + offset, count);
   return count;
 #else
+    RAII_Timer timer(MULTI_APP_THREAD_OP::READ, profile_thread_id);
   WorkRequest wr{ };
   wr.op = READ;
   wr.flag = flag;
@@ -165,6 +174,7 @@ int GAlloc::Write(const GAddr addr, const Size offset, void *buf, const Size cou
   memcpy(laddr + offset, buf, count);
   return count;
 #else
+  RAII_Timer timer(MULTI_APP_THREAD_OP::WRITE, profile_thread_id);
   //for asynchronous request, we must ensure the WorkRequest is valid after this function returns
   WorkRequest wr{ };
   wr.op = WRITE;
@@ -216,6 +226,9 @@ int GAlloc::Lock(Work op, const GAddr addr, const Size count, Flag flag) {
 #ifdef LOCAL_MEMORY_HOOK
   return 0;
 #else
+  if (this == nullptr){
+    return -1;
+  }
   WorkRequest wr{ };
   wr.op = op;
   wr.addr = addr;
@@ -279,22 +292,27 @@ int GAlloc::Lock(Work op, const GAddr addr, const Size count, Flag flag) {
 }
 
 void GAlloc::RLock(const GAddr addr, const Size count) {
+  RAII_Timer timer(MULTI_APP_THREAD_OP::RLOCK,profile_thread_id);
   Lock(RLOCK, addr, count);
 }
 
 void GAlloc::WLock(const GAddr addr, const Size count) {
+    RAII_Timer timer(MULTI_APP_THREAD_OP::WLOCK,profile_thread_id);
   Lock(WLOCK, addr, count);
 }
 
 int GAlloc::Try_RLock(const GAddr addr, const Size count) {
+    RAII_Timer timer(MULTI_APP_THREAD_OP::RLOCK,profile_thread_id);
   return Lock(RLOCK, addr, count, TRY_LOCK);
 }
 
 int GAlloc::Try_WLock(const GAddr addr, const Size count) {
+    RAII_Timer timer(MULTI_APP_THREAD_OP::WLOCK,profile_thread_id);
   return Lock(WLOCK, addr, count, TRY_LOCK);
 }
 
 void GAlloc::UnLock(const GAddr addr, const Size count) {
+    RAII_Timer timer(MULTI_APP_THREAD_OP::RUNLOCK,profile_thread_id);
   Lock(UNLOCK, addr, count);
 }
 
@@ -341,6 +359,7 @@ int GAlloc::HTable(void *addr) {
 #endif
 
 GAlloc::~GAlloc() {
+  std::cout << "total alloc" << g_total_new_record_bytes.load(std::memory_order_relaxed) << " bytes" << std::endl;
   delete wh;
 }
 
