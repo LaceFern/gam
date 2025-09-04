@@ -750,16 +750,16 @@ void Cache::UnLinkLRU(CacheLine * cline) {
 }
 
 void Cache::Evict(uint64_t glb_thread_id, int secondhand_flag) {
-  epicLog(LOG_DEBUG,
-    "used_bytes = %ld, max_cache_mem = %ld,  BLOCK_SIZE = %ld, th = %lf, to_evicted = %ld",
-    used_bytes.load(), max_cache_mem, BLOCK_SIZE, worker->conf->cache_th, to_evicted.load());
+  // epicLog(LOG_DEBUG,
+  //   "used_bytes = %ld, max_cache_mem = %ld,  BLOCK_SIZE = %ld, th = %lf, to_evicted = %ld",
+  //   used_bytes.load(), max_cache_mem, BLOCK_SIZE, worker->conf->cache_th, to_evicted.load());
   long long used = used_bytes - to_evicted * BLOCK_SIZE;
   double evict_th = 0.99;
   if (used > 0 && used > max_cache_mem * evict_th) {
     int n = (used - max_cache_mem * evict_th) / BLOCK_SIZE;
-    epicLog(LOG_DEBUG,
-      "tryng to evict %d, used = %ld, max_cache_mem = %ld, used > max_cache_mem = %d",
-      n, used, max_cache_mem, used > max_cache_mem);
+    // epicLog(LOG_DEBUG,
+    //   "tryng to evict %d, used = %ld, max_cache_mem = %ld, used > max_cache_mem = %d",
+    //   n, used, max_cache_mem, used > max_cache_mem);
     int ret = Evict(n, glb_thread_id, secondhand_flag);
     if (ret < n) {
       // epicLog(LOG_WARNING, "only able to evict %d, but expect to evict %d", ret, n);

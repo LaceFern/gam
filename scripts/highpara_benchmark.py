@@ -18,11 +18,11 @@ init_build = True # True False
 
 # # 8 machines
 master_machine = "192.168.189.7"
-master_nic_name = "enp68s0np0"
+master_nic_name = "enp28s0np0"
 master_ip = "10.0.0.1"
 
 requester_machine = "192.168.189.8"
-requester_nic_name = "enp28s0np0"
+requester_nic_name = "enp63s0np0"
 requester_ip = "10.0.0.2"
 
 home_machine = "192.168.189.9"
@@ -30,12 +30,16 @@ home_nic_name = "enp28s0np0"
 home_ip = "10.0.0.3"
 
 cache_machine = "192.168.189.10"
-cache_nic_name = "enp65s0np0"
+cache_nic_name = "enp62s0np0"
 cache_ip = "10.0.0.4"
 
-other_machine = ["192.168.189.11", "192.168.189.12", "192.168.189.13", "192.168.189.14"]
-other_nic_name = ["enp65s0np0", "enp28s0np0", "enp28s0np0", "enp28s0np0"]
-other_ip = ["10.0.0.5", "10.0.0.6", "10.0.0.7", "10.0.0.8"]
+# other_machine = ["192.168.189.11", "192.168.189.12", "192.168.189.13", "192.168.189.14"]
+# other_nic_name = ["enp65s0np0", "enp28s0np0", "enp28s0np0", "enp28s0np0"]
+# other_ip = ["10.0.0.5", "10.0.0.6", "10.0.0.7", "10.0.0.8"]
+
+other_machine = []
+other_nic_name = []
+other_ip = []
 
 # # # 4 machines
 # master_machine = "192.168.189.11"
@@ -83,7 +87,7 @@ other_ip = ["10.0.0.5", "10.0.0.6", "10.0.0.7", "10.0.0.8"]
 # other_nic_name = ["enp28s0np0"]
 # other_ip = ["10.0.0.6"]
 
-output_directory = "/home/zxy/gam_result_cxz_20241023_v2"
+output_directory = "/home/zxy/gam_result_cxz_20250904_v1"
 
 program_name = "highpara_benchmark"
 
@@ -93,7 +97,7 @@ bench_thread = [24]
 # sys_thread = [8]
 # sharing_ratio = [12, 14, 16, 18, 20, 40, 60, 80, 100]
 sys_thread = [8]
-sharing_ratio = [40, 60, 80, 100]
+sharing_ratio = [100]
 
 # RLock is 0, WLock is 1, READ_P2P is 4
 request_type = 1

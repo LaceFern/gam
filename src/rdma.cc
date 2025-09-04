@@ -348,7 +348,7 @@ RdmaResource *RdmaResourceFactory::GetRdmaResource(bool isMaster, const char *de
 
   // if(!devName){
     if(agent_stats_inst.local_ip == "10.0.0.1"){
-      devName = defaultDevname = "mlx5_1";
+      devName = defaultDevname = "mlx5_0";
     }
     else if(agent_stats_inst.local_ip == "10.0.0.2"){
       devName = defaultDevname = "mlx5_0";
@@ -357,16 +357,16 @@ RdmaResource *RdmaResourceFactory::GetRdmaResource(bool isMaster, const char *de
       devName = defaultDevname = "mlx5_0";
     }
     else if(agent_stats_inst.local_ip == "10.0.0.4"){
-      devName = defaultDevname = "mlx5_1";
+      devName = defaultDevname = "mlx5_0";
     }
     else if(agent_stats_inst.local_ip == "10.0.0.5"){
       devName = defaultDevname = "mlx5_0";
     }
     else if(agent_stats_inst.local_ip == "10.0.0.6"){
-      devName = defaultDevname = "mlx5_1";
+      devName = defaultDevname = "mlx5_0";
     }
     else if(agent_stats_inst.local_ip == "10.0.0.7"){
-      devName = defaultDevname = "mlx5_1";
+      devName = defaultDevname = "mlx5_0";
     }
     else if(agent_stats_inst.local_ip == "10.0.0.8"){
       devName = defaultDevname = "mlx5_0";

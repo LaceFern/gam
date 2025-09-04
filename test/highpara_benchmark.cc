@@ -95,7 +95,7 @@ set<GAddr> real_accesses;
 LockWrapper stat_lock;
 
 int addr_size = sizeof(GAddr);
-int item_size = 4096;//4096;//addr_size;
+int item_size = addr_size;//4096;//addr_size;
 int items_per_block = BLOCK_SIZE / item_size;
 
 bool TrueOrFalse(double probability, unsigned int *seedp) {
@@ -1076,6 +1076,10 @@ int main(int argc, char *argv[]) {
     else {
       fprintf(stderr, "Unrecognized option %s for benchmark\n", argv[i]);
     }
+  }
+  if(items_per_block == 0){
+    printf("ERROR: items_per_block = 0! BLOCK_SIZE (CACHE_LINE_SIZE) < item_size (read/write bytes)");
+    exit(0);
   }
 
 
