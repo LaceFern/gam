@@ -3,15 +3,17 @@ import threading
 
 program_name = "highpara_benchmark"
 
-# target_machine = ["192.168.189.7", "192.168.189.8", "192.168.189.9", "192.168.189.10", 
-#                   "192.168.189.11", "192.168.189.13", "192.168.189.14"]
-
 target_machine = ["192.168.189.7", "192.168.189.8", "192.168.189.9", "192.168.189.10", 
                   "192.168.189.11", "192.168.189.12", "192.168.189.13", "192.168.189.14"]
 
+# target_machine = ["192.168.189.11", "192.168.189.12", "192.168.189.13", "192.168.189.14"]
+
 def kill_process(ssh, program):
+    # stdin, stdout, stderr = ssh.exec_command(
+    #     "pkill -9 -f {0}".format(program)
+    # )
     stdin, stdout, stderr = ssh.exec_command(
-        "pkill -9 -f {0}".format(program)
+        "sudo killall {0}".format(program)
     )
     str1 = stdout.read().decode('utf-8')
     str2 = stderr.read().decode('utf-8')

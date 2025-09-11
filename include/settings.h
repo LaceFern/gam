@@ -62,11 +62,11 @@ using namespace std;
 #define MAX_SHARED_LOCK 254 //MAX(unsigned char)-1
 #define EXCLUSIVE_LOCK_TAG 255 //MAX(unsigned char)
 
-// #define BLOCK_POWER 12
-// #define BLOCK_MASK 0xFFFFFFFFFFFFF000L
-// change block size 4096 to 512
-#define BLOCK_POWER 9
-#define BLOCK_MASK 0xFFFFFFFFFFFFFE00L
+#define BLOCK_POWER 12
+#define BLOCK_MASK 0xFFFFFFFFFFFFF000L
+// // change block size 4096 to 512
+// #define BLOCK_POWER 9
+// #define BLOCK_MASK 0xFFFFFFFFFFFFFE00L
 // // change block size 4096 to 256
 // #define BLOCK_POWER 8
 // #define BLOCK_MASK 0xFFFFFFFFFFFFFF00L
@@ -87,7 +87,7 @@ using namespace std;
 
 #define MAX_CQ_EVENTS 1024
 
-#define MAX_NUM_WORKER 20
+#define MAX_NUM_WORKER 24
 #define MAX_MASTER_PENDING_MSG 1024
 #define MAX_UNSIGNALED_MSG 512
 
