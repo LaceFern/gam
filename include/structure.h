@@ -61,7 +61,7 @@ struct Conf {
   int eviction_period = 100;  //ms
 };
 
-#define MAX_SYS_THREAD 12
+#define MAX_SYS_THREAD 24
 #define MAX_GLB_THREAD 48
 #define GLB_INVALID 0xff
 #define GLB_BIAS MAX_SYS_THREAD

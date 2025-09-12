@@ -42,14 +42,14 @@ other_ip = ["10.0.0.5", "10.0.0.6", "10.0.0.7", "10.0.0.8"]
 # other_nic_name = []
 # other_ip = []
 
-output_directory = "/home/zxy/motivation_0"
+output_directory = "/home/zxy/motivation_2_v1"
 
 program_name = "highpara_benchmark"
 
 
-bench_thread = [16]
+bench_thread = [4]
 sys_thread = [8]
-sharing_ratio = [0,20,40,60,80,100]
+sharing_ratio = [100]
 
 # (Concordia pattern)Read is 0, Write is 1
 request_type = 1

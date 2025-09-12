@@ -118,10 +118,12 @@ void Init(GAlloc *alloc, GAddr data[], GAddr access[], bool shared[], int id,
       epicLog(LOG_WARNING, "master (id = 0) init starts! node_id = %d, thread=%d", node_id, id);
       for (int i = 0; i < STEPS; ++i) {
         // init unshared_data
-        if (TrueOrFalse(l_remote_ratio, seedp) && i < local_addr_num) {
-          unshared_data[i] = alloc->AlignedMalloc(BLOCK_SIZE, REMOTE);
-        } else {
-          unshared_data[i] = alloc->AlignedMalloc(BLOCK_SIZE);
+        if(i < local_addr_num){
+          if (TrueOrFalse(l_remote_ratio, seedp)) {
+            unshared_data[i] = alloc->AlignedMalloc(BLOCK_SIZE, REMOTE);
+          } else {
+            unshared_data[i] = alloc->AlignedMalloc(BLOCK_SIZE);
+          }
         }
 
         //init shared_data
@@ -154,10 +156,12 @@ void Init(GAlloc *alloc, GAddr data[], GAddr access[], bool shared[], int id,
       epicLog(LOG_WARNING, "non-master (id = 0) init starts! node_id = %d, thread=%d", node_id, id);
       for (int i = 0; i < STEPS; i++) {
         // init unshared_data
-        if (TrueOrFalse(l_remote_ratio, seedp) && i < local_addr_num) {
-          unshared_data[i] = alloc->AlignedMalloc(BLOCK_SIZE, REMOTE);
-        } else {
-          unshared_data[i] = alloc->AlignedMalloc(BLOCK_SIZE);
+        if(i < local_addr_num){
+          if (TrueOrFalse(l_remote_ratio, seedp)) {
+            unshared_data[i] = alloc->AlignedMalloc(BLOCK_SIZE, REMOTE);
+          } else {
+            unshared_data[i] = alloc->AlignedMalloc(BLOCK_SIZE);
+          }
         }
 
         //init shared_data
@@ -208,7 +212,8 @@ void Init(GAlloc *alloc, GAddr data[], GAddr access[], bool shared[], int id,
         }
         shared[i] = true;
       } else {
-        data[i] = unshared_data[i];
+        if(i < local_addr_num) data[i] = unshared_data[i];
+        else data[i] = unshared_data[GetRandom(0, local_addr_num, seedp)];
         shared[i] = false;
       }
     }
@@ -359,7 +364,7 @@ void Run_request(GAlloc *alloc, GAddr data[], GAddr access[],
           }
           case 1:{
             agent_stats_inst.start_record_app_thread(to_access_breakdown);
-            alloc->RLock_with_thread_id(id, to_access_breakdown, item_size);
+            alloc->WLock_with_thread_id(id, to_access_breakdown, item_size);
             memcpy(tmp_buf, buf, item_size); //INFO：模拟数据拷贝
             agent_stats_inst.stop_record_app_thread_with_op(to_access_breakdown, APP_THREAD_OP::WAKEUP_2_WRITE_RETURN);
             break;
@@ -457,17 +462,17 @@ void Benchmark(int id) {
 
   Init(alloc, data, access, shared, id, &seedp);
 
-  // SYNC_RUN_BASE = SYNC_KEY * 4 + no_node * 2;
-  // sync_id = SYNC_RUN_BASE + no_node * node_id + id;
-  // alloc->Put(sync_id, &sync_id, sizeof(int));
-  // for (int i = 1; i <= no_node; i++) {
-  //   for (int j = 0; j < no_thread; j++) {
-  //     epicLog(LOG_INFO, "waiting for node %d, thread %d", i, j);
-  //     alloc->Get(SYNC_RUN_BASE + no_node * i + j, &sync_id);
-  //     epicAssert(sync_id == SYNC_RUN_BASE + no_node * i + j);
-  //     epicLog(LOG_INFO, "get sync_id %d from node %d, thread %d", sync_id, i, j);
-  //   }
-  // }
+  SYNC_RUN_BASE = SYNC_KEY * 4 + no_node * 2;
+  sync_id = SYNC_RUN_BASE + no_node * node_id + id;
+  alloc->Put(sync_id, &sync_id, sizeof(int));
+  for (int i = 1; i <= no_node; i++) {
+    for (int j = 0; j < no_thread; j++) {
+      epicLog(LOG_INFO, "waiting for node %d, thread %d", i, j);
+      alloc->Get(SYNC_RUN_BASE + no_node * i + j, &sync_id);
+      epicAssert(sync_id == SYNC_RUN_BASE + no_node * i + j);
+      epicLog(LOG_INFO, "get sync_id %d from node %d, thread %d", sync_id, i, j);
+    }
+  }
 
   // sleep(2 * id);
 
