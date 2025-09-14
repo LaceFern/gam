@@ -34,7 +34,7 @@ int is_request = 0;
 int cache_rw = 0;
 int request_rw = 0;
 int breakdown_times = 1024;//1024;//204800;
-int local_addr_num = STEPS * 0.1;
+int local_addr_num = STEPS * 0.125;
 /******** MY CODE ENDS ********/
 /***********************************/
 
@@ -119,11 +119,12 @@ void Init(GAlloc *alloc, GAddr data[], GAddr access[], bool shared[], int id,
       for (int i = 0; i < STEPS; ++i) {
         // init unshared_data
         if(i < local_addr_num){
-          if (TrueOrFalse(l_remote_ratio, seedp)) {
-            unshared_data[i] = alloc->AlignedMalloc(BLOCK_SIZE, REMOTE);
-          } else {
-            unshared_data[i] = alloc->AlignedMalloc(BLOCK_SIZE);
-          }
+          unshared_data[i] = alloc->AlignedMalloc(BLOCK_SIZE);
+          // if (TrueOrFalse(l_remote_ratio, seedp)) {
+          //   unshared_data[i] = alloc->AlignedMalloc(BLOCK_SIZE, REMOTE);
+          // } else {
+          //   unshared_data[i] = alloc->AlignedMalloc(BLOCK_SIZE);
+          // }
         }
 
         //init shared_data
@@ -157,11 +158,12 @@ void Init(GAlloc *alloc, GAddr data[], GAddr access[], bool shared[], int id,
       for (int i = 0; i < STEPS; i++) {
         // init unshared_data
         if(i < local_addr_num){
-          if (TrueOrFalse(l_remote_ratio, seedp)) {
-            unshared_data[i] = alloc->AlignedMalloc(BLOCK_SIZE, REMOTE);
-          } else {
-            unshared_data[i] = alloc->AlignedMalloc(BLOCK_SIZE);
-          }
+          unshared_data[i] = alloc->AlignedMalloc(BLOCK_SIZE);
+          // if (TrueOrFalse(l_remote_ratio, seedp)) {
+          //   unshared_data[i] = alloc->AlignedMalloc(BLOCK_SIZE, REMOTE);
+          // } else {
+          //   unshared_data[i] = alloc->AlignedMalloc(BLOCK_SIZE);
+          // }
         }
 
         //init shared_data
@@ -690,8 +692,8 @@ int main(int argc, char *argv[]) {
   conf.size = size < conf.size ? conf.size : size;
   cout << "conf.sb_allc_size = " << conf.size << endl;
   conf.cache_th = cache_th;
-  cout << "conf.app_cache_ratio = " << conf.cache_th << endl;
-  conf.cache_th = (((long)BLOCK_SIZE) * STEPS * 2) * conf.cache_th / conf.size;
+  cout << "conf.app_sharedgmem_cache_ratio = " << conf.cache_th << endl;
+  conf.cache_th = (((long)BLOCK_SIZE) * STEPS) * conf.cache_th / conf.size;
   cout << "conf.reserved_cache_th = " << conf.cache_th << endl;
   cout << "gmem size = " << conf.size / (1024 * 1024 * 1024) << "GB" << endl;
   agent_stats_inst.end_collection();
